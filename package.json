@@ -1,0 +1,29 @@
+{
+  "name": "sky-cli",
+  "version": "1.0.0",
+  "description": "",
+  "bin": {
+    "sky": "bin/sky",
+    "sky-init": "bin/sky-init",
+    "sky-list": "bin/sky-list"
+  },
+  "keywords": [
+    "electron",
+    "cli",
+    "vue"
+  ],
+  "author": "umbrella 22",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "chalk": "^4.0.0",
+    "commander": "^5.1.0",
+    "del": "^5.1.0",
+    "download-git-repo": "^3.0.2",
+    "inquirer": "^7.1.0",
+    "ncp": "^2.0.0",
+    "ora": "^4.0.4",
+    "semver": "^7.3.2",
+    "shelljs": "^0.8.4"
+  }
+}
