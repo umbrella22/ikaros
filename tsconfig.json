@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "strictNullChecks": true,
+    "resolveJsonModule": true,
+    "preserveValueImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ESNext"]
+  }
+}

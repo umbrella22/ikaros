@@ -1,29 +1,22 @@
 {
-  "name": "sky-cli",
+  "name": "ikaros",
   "version": "1.0.0",
   "description": "",
-  "bin": {
-    "sky": "bin/sky",
-    "sky-init": "bin/sky-init",
-    "sky-list": "bin/sky-list"
+  "main": "index.js",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "postinstall": "pnpm --filter @ikaros/eslint-plugin build && pnpm --filter @ikaros/prettier-config build",
+    "changeset:add": "changeset add",
+    "changeset:version": "changeset version"
   },
-  "keywords": [
-    "electron",
-    "cli",
-    "vue"
-  ],
-  "author": "umbrella 22",
-  "license": "MIT",
-  "dependencies": {
-    "axios": "^0.19.2",
-    "chalk": "^4.0.0",
-    "commander": "^5.1.0",
-    "del": "^5.1.0",
-    "download-git-repo": "^3.0.2",
-    "inquirer": "^7.1.0",
-    "ncp": "^2.0.0",
-    "ora": "^4.0.4",
-    "semver": "^7.3.2",
-    "shelljs": "^0.8.4"
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@changesets/cli": "^2.26.0",
+    "@ikaros/eslint-plugin": "workspace:*",
+    "@ikaros/prettier-config": "workspace:*",
+    "@types/node": "^18.11.18",
+    "tsup": "^6.5.0"
   }
 }
