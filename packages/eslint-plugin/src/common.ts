@@ -55,3 +55,8 @@ export const tsRules = {
 
   '@typescript-eslint/explicit-function-return-type': 'off',
 }
+
+export const dtsRules = {
+  'no-var': 'off',
+  '@typescript-eslint/no-empty-interface': 'off',
+}

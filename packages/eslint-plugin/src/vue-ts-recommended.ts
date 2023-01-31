@@ -3,6 +3,7 @@ import {
   parserOptions,
   esRules,
   tsRules,
+  dtsRules,
   ignorePatterns,
   settings,
   assetExtends,
@@ -10,6 +11,8 @@ import {
 import { VueVersion } from './vue-recommended'
 import path from 'node:path'
 import process from 'node:process'
+
+import EslintRecommended from '@typescript-eslint/eslint-plugin/dist/configs/eslint-recommended'
 
 export default (ver: VueVersion) => ({
   parser: 'vue-eslint-parser',
@@ -64,6 +67,14 @@ export default (ver: VueVersion) => ({
           node: {},
         },
       },
+    },
+    {
+      files: ['*.vue'],
+      rules: EslintRecommended.overrides[0]['rules'],
+    },
+    {
+      files: ['*.d.ts'],
+      rules: dtsRules,
     },
   ],
 

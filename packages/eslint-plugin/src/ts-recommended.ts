@@ -3,6 +3,7 @@ import {
   parserOptions,
   tsRules,
   esRules,
+  dtsRules,
   ignorePatterns,
   settings,
 } from './common'
@@ -38,6 +39,13 @@ export default {
       },
     },
   },
+
+  overrides: [
+    {
+      files: ['*.d.ts'],
+      rules: dtsRules,
+    },
+  ],
 
   rules: {
     ...esRules,
