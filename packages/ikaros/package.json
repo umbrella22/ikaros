@@ -1,5 +1,5 @@
 {
-  "name": "ikaros",
+  "name": "@ikaros/ikaros",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -15,7 +15,8 @@
   "license": "MIT",
   "bin": "dist/bin/index.js",
   "dependencies": {
-    "rollup": "^3.17.2"
+    "rollup": "^3.17.2",
+    "vite": "^4.1.3"
   },
   "devDependencies": {
     "cac": "^6.7.14",

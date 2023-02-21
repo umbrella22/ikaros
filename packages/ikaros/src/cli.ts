@@ -20,13 +20,13 @@ cli
   .alias('dev')
   .alias('server')
   .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
-    console.log('dev mode', options)
+    console.log('dev mode', options, configFile)
   })
 
 cli
   .command('build [root]', 'build app with mode')
   .alias('build')
-  .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
+  .action(async (options: GlobalCLIOptions) => {
     console.log('build mode', options)
   })
 
