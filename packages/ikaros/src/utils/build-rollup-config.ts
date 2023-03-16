@@ -6,19 +6,12 @@ import alias from '@rollup/plugin-alias'
 import json from '@rollup/plugin-json'
 import esbuild from 'rollup-plugin-esbuild'
 import obfuscator from 'rollup-plugin-obfuscator'
-import type { RollupOptions } from 'rollup'
+import type { InputPluginOption, RollupOptions } from 'rollup'
 import type { MainConfig } from '../config'
 
 export const buildRollupConfig = (userConfig: MainConfig): RollupOptions => {
-  const {
-    entryDir,
-    outputDir,
-    minify,
-    obfuscate,
-    external,
-    plugins,
-    rollupAlias,
-  } = userConfig
+  const { entryDir, outputDir, obfuscate, external, plugins, rollupAlias } =
+    userConfig
 
   const config: RollupOptions = {
     input: entryDir,
@@ -26,7 +19,7 @@ export const buildRollupConfig = (userConfig: MainConfig): RollupOptions => {
       file: outputDir,
       format: 'cjs',
       exports: 'auto',
-      sourcemap: !minify,
+      sourcemap: false,
     },
     external: [...builtinModules],
     plugins: [
@@ -44,8 +37,8 @@ export const buildRollupConfig = (userConfig: MainConfig): RollupOptions => {
       json(),
       esbuild({
         target: 'es2019',
-        minify,
-        sourceMap: !minify,
+        minify: true,
+        sourceMap: false,
       }),
     ],
   }
@@ -54,10 +47,10 @@ export const buildRollupConfig = (userConfig: MainConfig): RollupOptions => {
   }
   if (config.plugins) {
     if (plugins) {
-      config.plugins.push(...plugins)
+      ;(config.plugins as InputPluginOption[]).concat(plugins)
     }
     if (obfuscate) {
-      config.plugins.push(obfuscator({}))
+      ;(config.plugins as InputPluginOption[]).push(obfuscator({}))
     }
   }
 

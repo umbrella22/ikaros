@@ -10,8 +10,8 @@ type Preload = {
 export interface MainConfig {
   entryDir: string
   outputDir: string
-  minify?: boolean
   obfuscate?: boolean
+  bytecode?: boolean
   external?: string[]
   plugins?: InputPluginOption
   rollupAlias?: readonly Alias[] | { [find: string]: string }

@@ -4,7 +4,7 @@ import type { RendererConfig } from '../config'
 import { store } from './constants'
 const { rootDir } = store
 export const buildViteConfig = (userConfig: RendererConfig) => {
-  const { entryDir, outputDir } = userConfig
+  const { entryDir, outputDir, viteOption } = userConfig
   const root = join(rootDir, entryDir)
   const defineConfig: UserConfig = {
     mode: process.env.NODE_ENV,
@@ -25,5 +25,5 @@ export const buildViteConfig = (userConfig: RendererConfig) => {
     plugins: [],
     optimizeDeps: {},
   }
-  return defineConfig
+  return Object.assign(defineConfig, viteOption)
 }
