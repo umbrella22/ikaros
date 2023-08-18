@@ -17,15 +17,15 @@
   "dependencies": {
     "postcss-html": "^1.5.0",
     "postcss-less": "^6.0.0",
-    "postcss-scss": "^4.0.3",
-    "stylelint-config-recess-order": "^4.0.0",
-    "stylelint-config-standard": "^30.0.1",
-    "stylelint-config-standard-scss": "^7.0.1",
+    "postcss-scss": "^4.0.7",
+    "stylelint-config-recess-order": "^4.3.0",
+    "stylelint-config-standard": "^34.0.0",
+    "stylelint-config-standard-scss": "^10.0.0",
     "stylelint-config-standard-vue": "^1.0.0"
   },
   "devDependencies": {
-    "postcss": "^8.4.21",
-    "stylelint": "^15.2.0"
+    "postcss": "^8.4.28",
+    "stylelint": "^15.10.2"
   },
   "peerDependencies": {
     "postcss": "^8.4.21",
