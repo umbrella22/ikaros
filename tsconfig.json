@@ -11,7 +11,7 @@
     "isolatedModules": true,
     "strictNullChecks": true,
     "resolveJsonModule": true,
-    "preserveValueImports": true,
+    "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true,
     "lib": ["ESNext"]
   }

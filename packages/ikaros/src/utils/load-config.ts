@@ -141,11 +141,14 @@ fileType.set('.yaml', (filePath) => {
  * @param {any} configName?:string  配置文件名
  * @returns {any}
  */
-export async function resolveConfig(
-  configPath: string = process.cwd(),
-  configName?: string,
-) {
-  configPath || (configPath = process.cwd())
+export async function resolveConfig({
+  configPath,
+  configName,
+}: {
+  configPath: string
+  configName?: string
+}) {
+  configPath ?? (configPath = process.cwd())
 
   let suffix = extname(configPath) as FileType
 
@@ -163,14 +166,14 @@ export async function resolveConfig(
     )
       // eslint-disable-next-line unicorn/no-await-expression-member
       .findIndex(Boolean)
-    if (index < 0) throw new Error('检测不到可以解析的配置文件！')
+    if (index < 0) throw new Error('No configuration file ! ')
 
     suffix = extname(configList[index]) as FileType
 
     configPath = resolve(configPath, `${configName}${suffix}`)
   }
 
-  if (!fileType.has(suffix)) throw new Error('检测不到可以解析的配置文件！')
+  if (!fileType.has(suffix)) throw new Error('No configuration file ! ')
 
   return fileType.get(suffix)!(configPath)
 }

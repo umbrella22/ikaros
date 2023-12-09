@@ -1,58 +1,101 @@
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import { builtinModules } from 'node:module'
 import commonjs from '@rollup/plugin-commonjs'
-import replace from '@rollup/plugin-replace'
-import alias from '@rollup/plugin-alias'
 import json from '@rollup/plugin-json'
-import esbuild from 'rollup-plugin-esbuild'
+import esbuild, { type Options } from 'rollup-plugin-esbuild'
 import obfuscator from 'rollup-plugin-obfuscator'
-import type { InputPluginOption, RollupOptions } from 'rollup'
-import type { MainConfig } from '../config'
+import type { RollupOptions } from 'rollup'
+import type { IkarosUserConfig } from '../config'
+import { rootDir } from '.'
+import { join } from 'node:path'
 
-export const buildRollupConfig = (userConfig: MainConfig): RollupOptions => {
-  const { entryDir, outputDir, obfuscate, external, plugins, rollupAlias } =
-    userConfig
+interface RollupExOptions {
+  inputFile: string
+  outputFile: string
+}
 
-  const config: RollupOptions = {
-    input: entryDir,
+/**
+ * Build rollup config
+ */
+const getRollupConfig = (
+  config: IkarosUserConfig,
+  options?: RollupExOptions,
+) => {
+  const {
+    main: { rollupOption, obfuscate = false, obfuscateOptions, esbuildOption },
+    entryDir,
+    outputDir,
+  } = config
+
+  if (!options) {
+    options = {
+      inputFile: 'index.js',
+      outputFile: 'main.js',
+    }
+  }
+  const { inputFile, outputFile } = options
+  const input = join(rootDir, entryDir, inputFile)
+  const output = join(rootDir, outputDir, outputFile)
+  const defineConfig: RollupOptions = {
+    input,
     output: {
-      file: outputDir,
+      file: output,
       format: 'cjs',
       exports: 'auto',
       sourcemap: false,
     },
-    external: [...builtinModules],
-    plugins: [
-      alias({
-        entries: rollupAlias,
-      }),
-      nodeResolve({
-        extensions: ['.js', '.ts', '.tsx'],
-      }),
+  }
+  const rollupConfig = Object.assign({}, rollupOption, defineConfig)
+
+  return {
+    obfuscate,
+    entryDir,
+    outputDir,
+    rollupConfig,
+    obfuscateOptions,
+    esbuildOption,
+  }
+}
+
+export const buildRollupConfig = (
+  userConfig: IkarosUserConfig,
+  options?: RollupExOptions,
+): RollupOptions => {
+  const { rollupConfig, obfuscate, obfuscateOptions, esbuildOption } =
+    getRollupConfig(userConfig, options)
+  const { external, plugins } = rollupConfig
+  const exExternal = external || []
+  const exPlugins = plugins || []
+
+  const defaultEsbuildOption: Options = {
+    include: /\.[jt]s?$/,
+    exclude: /node_modules/,
+    target: 'esnext',
+    // Add extra loaders
+    loaders: {
+      '.json': 'json',
+      '.js': 'jsx',
+    },
+  }
+
+  if (Array.isArray(exExternal)) {
+    exExternal.push(...builtinModules)
+  }
+
+  if (Array.isArray(exPlugins)) {
+    exPlugins.push(
       commonjs(),
-      replace({
-        preventAssignment: true,
-        'process.env.NODE_ENV': JSON.stringify('production'),
-      }),
       json(),
-      esbuild({
-        target: 'es2019',
-        minify: true,
-        sourceMap: false,
-      }),
-    ],
-  }
-  if (external && config.external) {
-    ;(config.external as string[]).push(...external)
-  }
-  if (config.plugins) {
-    if (plugins) {
-      ;(config.plugins as InputPluginOption[]).concat(plugins)
-    }
+      nodeResolve(),
+      esbuild(esbuildOption ?? defaultEsbuildOption),
+    )
     if (obfuscate) {
-      ;(config.plugins as InputPluginOption[]).push(obfuscator({}))
+      exPlugins.push(obfuscator(obfuscateOptions ?? {}))
     }
   }
 
-  return config
+  rollupConfig.plugins = exPlugins
+  rollupConfig.external = exExternal
+
+  return rollupConfig
 }

@@ -1,7 +1,8 @@
 import { cac } from 'cac'
-import type { LogLevel } from './node/logger'
-import { createLogger } from './node/logger'
-import { VERSION } from './node/constants'
+import { cliPackageJson } from './utils'
+import { resolveConfig } from './utils/load-config'
+import { buildViteConfig } from './utils/build-vite-config'
+import { buildRollupConfig } from './utils/build-rollup-config'
 
 const cli = cac('ikaros')
 
@@ -21,6 +22,12 @@ cli
   .alias('server')
   .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
     console.log('dev mode', options, configFile)
+    resolveConfig({ configPath: process.cwd(), configName: configFile }).then(
+      (config) => {
+        console.log(buildViteConfig(config))
+        console.log(buildRollupConfig(config))
+      },
+    )
   })
 
 cli
@@ -31,5 +38,5 @@ cli
   })
 
 cli.help()
-cli.version(VERSION)
+cli.version(cliPackageJson.version)
 cli.parse()

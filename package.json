@@ -7,18 +7,19 @@
     "preinstall": "npx only-allow pnpm",
     "postinstall": "pnpm --filter @ikaros/eslint-plugin build && pnpm --filter @ikaros/prettier-config build",
     "changeset:add": "changeset add",
-    "changeset:version": "changeset version"
+    "changeset:version": "changeset version",
+    "upgrade": "pnpm up -r && pnpm up -r -w"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@changesets/cli": "^2.26.2",
+    "@changesets/cli": "^2.27.1",
     "@ikaros/eslint-plugin": "workspace:*",
     "@ikaros/prettier-config": "workspace:*",
-    "@types/node": "^18.11.18",
+    "@types/node": "^18.19.3",
     "dotenv": "^16.3.1",
     "tsup": "^7.2.0",
-    "typescript": "^5.1.6"
+    "typescript": "^5.3.3"
   }
 }
