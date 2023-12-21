@@ -5,7 +5,7 @@ import json from '@rollup/plugin-json'
 import esbuild, { type Options } from 'rollup-plugin-esbuild'
 import obfuscator from 'rollup-plugin-obfuscator'
 import type { RollupOptions } from 'rollup'
-import type { IkarosUserConfig } from '../config'
+import type { IkarosUserConfig } from '../user-config'
 import { rootDir } from '.'
 import { join } from 'node:path'
 

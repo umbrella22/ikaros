@@ -1,4 +1,4 @@
-import { version, name } from '../../package.json'
+import { version, name } from '../../../package.json'
 
 /**
  * cli package.json

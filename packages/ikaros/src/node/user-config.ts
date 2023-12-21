@@ -34,3 +34,6 @@ export interface IkarosUserConfig extends BaseConfig {
   renderer: RendererConfig
   preload?: PreloadConfig
 }
+
+/** 辅助工具函数 */
+export const defineConfig = (config: IkarosUserConfig) => config

@@ -2,7 +2,9 @@ import { dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import { parse } from 'yaml'
-import { pathExists, readFile, readJson, realpathSync } from 'fs-extra'
+import { readFile } from 'fs/promises'
+import { realpathSync } from 'fs'
+import { pathExists, readJson } from 'fs-extra/esm'
 import { build } from 'esbuild'
 
 const dynamicImport = (file: string) => import(file)

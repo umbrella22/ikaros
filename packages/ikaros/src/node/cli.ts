@@ -16,18 +16,21 @@ interface GlobalCLIOptions {
   m: string
   mode: string
 }
+
 cli
   .command('[config-file]', 'start dev server')
   .alias('dev')
   .alias('server')
   .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
     console.log('dev mode', options, configFile)
-    resolveConfig({ configPath: process.cwd(), configName: configFile }).then(
-      (config) => {
+    resolveConfig({ configPath: process.cwd(), configName: configFile })
+      .then((config) => {
         console.log(buildViteConfig(config))
         console.log(buildRollupConfig(config))
-      },
-    )
+      })
+      .catch((e) => {
+        console.log(e)
+      })
   })
 
 cli

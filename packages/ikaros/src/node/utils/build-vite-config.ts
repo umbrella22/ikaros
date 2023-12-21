@@ -1,8 +1,8 @@
 import { join } from 'node:path'
 import type { UserConfig } from 'vite'
-import type { IkarosUserConfig } from '../config'
+import type { IkarosUserConfig } from '../user-config'
 import { rootDir } from '.'
-import { externalBuiltins } from '../plugin/vite-plugin/externalBuiltins'
+import { externalBuiltins } from '../plugins/vite-plugin/externalBuiltins'
 
 const getUserConfig = (config: IkarosUserConfig) => {
   const {
