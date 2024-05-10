@@ -6,6 +6,7 @@ import { readFile } from 'fs/promises'
 import { realpathSync } from 'fs'
 import { pathExists, readJson } from 'fs-extra/esm'
 import { build } from 'esbuild'
+import type { IkarosUserConfig } from '..'
 
 const dynamicImport = (file: string) => import(file)
 
@@ -148,8 +149,8 @@ export async function resolveConfig({
   configName,
 }: {
   configPath: string
-  configName?: string
-}) {
+  configName: string
+}):Promise<IkarosUserConfig> {
   configPath ?? (configPath = process.cwd())
 
   let suffix = extname(configPath) as FileType

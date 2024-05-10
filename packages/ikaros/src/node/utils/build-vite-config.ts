@@ -10,6 +10,7 @@ const getUserConfig = (config: IkarosUserConfig) => {
     entryDir,
     outputDir,
     target,
+    mode,
   } = config
   const root = join(rootDir, entryDir)
   const outDir = join(rootDir, outputDir)
@@ -23,6 +24,7 @@ const getUserConfig = (config: IkarosUserConfig) => {
   }
   const viteConfig = Object.assign({}, viteOption, defineConfig)
   return {
+    mode,
     target,
     entryDir,
     outputDir,
@@ -31,11 +33,11 @@ const getUserConfig = (config: IkarosUserConfig) => {
 }
 
 export const buildViteConfig = (userConfig: IkarosUserConfig): UserConfig => {
-  const { viteOption, target } = getUserConfig(userConfig)
+  const { viteOption, mode, target } = getUserConfig(userConfig)
 
   const plugins = viteOption.plugins || []
 
-  if (target !== 'web') {
+  if (mode !== 'web') {
     plugins.push(externalBuiltins())
   }
   viteOption.plugins = plugins

@@ -64,7 +64,7 @@ export function createLogger(
   const {
     prefix = '[ikaros]',
     allowClearScreen = true,
-    timestamp,
+    timestamp = true,
     error,
   } = options
   const thresh = LogLevels[level]

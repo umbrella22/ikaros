@@ -22,7 +22,7 @@ const getRollupConfig = (
   options?: RollupExOptions,
 ) => {
   const {
-    main: { rollupOption, obfuscate = false, obfuscateOptions, esbuildOption },
+    main:{ rollupOption, obfuscate = false, obfuscateOptions, esbuildOption },
     entryDir,
     outputDir,
   } = config
@@ -90,7 +90,9 @@ export const buildRollupConfig = (
       esbuild(esbuildOption ?? defaultEsbuildOption),
     )
     if (obfuscate) {
-      exPlugins.push(obfuscator(obfuscateOptions ?? {}))
+      exPlugins.push(obfuscator(obfuscateOptions ?? {
+        global: true,
+      }))
     }
   }
 
