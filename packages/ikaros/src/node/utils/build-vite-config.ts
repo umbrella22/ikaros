@@ -2,7 +2,8 @@ import { join } from 'node:path'
 import type { UserConfig } from 'vite'
 import type { IkarosUserConfig } from '../user-config'
 import { rootDir } from '.'
-import { externalBuiltins } from '../plugins/vite-plugin/externalBuiltins'
+import { externalBuiltins } from '../plugins/vite-plugin/external-builtins'
+import { } from "../plugins/vite-plugin/fix-name-lose"
 
 const getUserConfig = (config: IkarosUserConfig) => {
   const {
@@ -38,8 +39,14 @@ export const buildViteConfig = (userConfig: IkarosUserConfig): UserConfig => {
   const plugins = viteOption.plugins || []
 
   if (mode !== 'web') {
-    plugins.push(externalBuiltins())
+    plugins.push(externalBuiltins(),)
   }
+  if (target === 'mobile' && mode === 'web') {
+    // TODO 记得添加移动端插件
+
+  }
+
+
   viteOption.plugins = plugins
 
   return viteOption

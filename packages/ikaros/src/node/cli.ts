@@ -1,7 +1,6 @@
 import { cac } from 'cac'
 import { cliPackageJson } from './utils'
-import { resolveConfig } from './utils/load-config'
-import { runner } from './runner/runner'
+import { devRunner } from './runner/dev-runner'
 
 const cli = cac('ikaros')
 
@@ -22,7 +21,7 @@ cli
   .alias('server')
   .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
     console.log('dev mode', options, configFile)
-    runner(configFile)
+    devRunner(configFile)
   })
 
 cli

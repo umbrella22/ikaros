@@ -5,7 +5,7 @@ import type { Plugin } from 'vite'
 /**
  * `electron` and Node.js built-in modules should always be externalize.
  */
-export function externalBuiltins() {
+export const externalBuiltins = () => {
   return <Plugin>{
     name: '@ikaros/external-builtins',
     config(config) {

@@ -5,9 +5,9 @@ import type { UserConfig } from 'vite'
 
 type Preload =
   | {
-      name: string
-      entry: string
-    }
+    name: string
+    entry: string
+  }
   | string
 export interface MainConfig {
   rollupOption?: RollupOptions
@@ -26,11 +26,11 @@ export interface PreloadConfig extends MainConfig {
 export interface BaseConfig {
   /** 模式：网页或者是客户端*/
   mode: 'web' | 'client'
-  /** 标志：仅web模式生效 */ 
+  /** 标志：仅web模式生效 */
   target: 'web' | 'mobile'
-  /** 入口目录 */ 
+  /** 入口目录 */
   entryDir: string
-  /** 输出目录 */ 
+  /** 输出目录 */
   outputDir: string
 }
 
