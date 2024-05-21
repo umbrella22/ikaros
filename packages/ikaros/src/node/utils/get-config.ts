@@ -1,8 +1,10 @@
+import { join } from "node:path"
+import { pathExists } from 'fs-extra'
 import type { IkarosUserConfig } from ".."
 import { resolveConfig } from "./load-config"
 
-export const getConfig = async (fileName?: string): Promise<IkarosUserConfig> => {
-  let config: IkarosUserConfig = {
+export const getConfig = async (configFile?: string): Promise<IkarosUserConfig> => {
+  const config: IkarosUserConfig = {
     mode: 'web',
     target: 'web',
     entryDir: 'src',
@@ -10,8 +12,11 @@ export const getConfig = async (fileName?: string): Promise<IkarosUserConfig> =>
     main: {},
     renderer: {}
   }
-  if (fileName) {
-    config = await resolveConfig({ configPath: process.cwd(), configName: fileName })
+  let fileConfig: IkarosUserConfig | undefined = undefined
+
+  fileConfig = await resolveConfig({ configFile });
+  if (fileConfig) {
+    return fileConfig
   }
-  return config
+  return config;
 }

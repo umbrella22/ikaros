@@ -10,27 +10,26 @@
     "build": "tsup"
   },
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
-    "eslint-config-prettier": "^8.10.0",
+    "@typescript-eslint/eslint-plugin": "^7.9.0",
+    "@typescript-eslint/parser": "^7.9.0",
+    "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-alias": "^1.1.2",
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-prettier": "^4.2.1",
-    "eslint-plugin-unicorn": "^45.0.2",
+    "eslint-plugin-prettier": "^5.1.3",
+    "eslint-plugin-unicorn": "^53.0.0",
     "eslint-plugin-vue": "^9.26.0",
-    "espree": "^9.6.1",
+    "espree": "^10.0.1",
     "vue-eslint-parser": "^9.4.2"
   },
   "devDependencies": {
-    "eslint": "^8.57.0",
-    "prettier": "^2.8.8",
-    "typescript": "^4.9.5"
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.5"
   },
   "peerDependencies": {
-    "eslint": "^8.0.0",
-    "prettier": "^2.0.0",
-    "typescript": "^4.9.4"
+    "eslint": "^8.56.0",
+    "prettier": ">=3",
+    "typescript": "^5.4.5"
   },
   "peerDependenciesMeta": {
     "typescript": {

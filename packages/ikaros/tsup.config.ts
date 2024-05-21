@@ -2,7 +2,7 @@ import { defineConfig, type Options } from 'tsup'
 
 const commonOptions: Options = {
   sourcemap: true,
-  format: ['esm'],
+  format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: true,
   target: 'node18',
@@ -10,7 +10,7 @@ const commonOptions: Options = {
 }
 
 export default defineConfig(({ watch }) => {
-  const isWatch = true
+  const isWatch = !!watch
   return [
     {
       ...commonOptions,

@@ -7,12 +7,13 @@ import { } from "../plugins/vite-plugin/fix-name-lose"
 
 const getUserConfig = (config: IkarosUserConfig) => {
   const {
-    renderer: { viteOption },
+    renderer,
     entryDir,
     outputDir,
     target,
     mode,
   } = config
+  const { viteOption } = renderer ?? {}
   const root = join(rootDir, entryDir)
   const outDir = join(rootDir, outputDir)
   const defineConfig: UserConfig = {

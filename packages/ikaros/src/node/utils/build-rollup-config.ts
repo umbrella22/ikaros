@@ -22,11 +22,16 @@ const getRollupConfig = (
   options?: RollupExOptions,
 ) => {
   const {
-    main:{ rollupOption, obfuscate = false, obfuscateOptions, esbuildOption },
+    main,
     entryDir,
     outputDir,
   } = config
-
+  const {
+    rollupOption,
+    obfuscate,
+    obfuscateOptions,
+    esbuildOption,
+  } = main ?? {}
   if (!options) {
     options = {
       inputFile: 'index.js',

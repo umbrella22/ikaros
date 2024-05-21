@@ -10,6 +10,6 @@
     "build": "tsup"
   },
   "peerDependencies": {
-    "prettier": ">= 2"
+    "prettier": ">= 3"
   }
 }

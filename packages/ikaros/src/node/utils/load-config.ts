@@ -6,7 +6,7 @@ import { readFile } from 'fs/promises'
 import { realpathSync } from 'fs'
 import { pathExists, readJson } from 'fs-extra/esm'
 import { build } from 'esbuild'
-import type { IkarosUserConfig } from '..'
+import type { IkarosUserConfig } from '../user-config.ts'
 
 const dynamicImport = (file: string) => import(file)
 
@@ -65,7 +65,7 @@ async function requireConfig(filename: string, code: string) {
     // 只处理配置文件
     if (filename === realFileName) {
       // 直接调用 compile，传入编译好的代码
-      ;(module as NodeModuleWithCompile)._compile(code, filename)
+      ; (module as NodeModuleWithCompile)._compile(code, filename)
     } else {
       defaultLoader(module, filename)
     }
@@ -145,38 +145,33 @@ fileType.set('.yaml', (filePath) => {
  * @returns {any}
  */
 export async function resolveConfig({
-  configPath,
-  configName,
+  configFile
 }: {
-  configPath: string
-  configName: string
-}):Promise<IkarosUserConfig> {
-  configPath ?? (configPath = process.cwd())
+  configFile?: string
+}): Promise<IkarosUserConfig | undefined> {
+  let suffix: FileType | undefined
+  let configPath = process.cwd()
+  let configName = 'ikaros.config'
 
-  let suffix = extname(configPath) as FileType
+  const configList = ['ts', 'mjs', 'cjs', 'js', 'json', 'yaml'].map(
+    (suffix) => `${join(configPath, configName)}.${suffix}`,
+  )
+  const index = (
+    await Promise.all(configList.map((element) => {
+      return pathExists(element)
+    }))
+  ).findIndex(Boolean)
+  if (index < 0) return undefined
 
-  if (!suffix && !configName) throw new Error('请检查传入的参数，参数不规范！')
+  suffix = extname(configList[index]) as FileType
 
-  if (configName) {
-    suffix.includes('.') && (configPath = dirname(configPath))
+  configPath = resolve(configPath, `${configName}${suffix}`)
 
-    const configList = ['ts', 'mjs', 'cjs', 'js', 'json', 'yaml'].map(
-      (suffix) => `${join(configPath, configName)}.${suffix}`,
-    )
-
-    const index = (
-      await Promise.all(configList.map((element) => pathExists(element)))
-    )
-      // eslint-disable-next-line unicorn/no-await-expression-member
-      .findIndex(Boolean)
-    if (index < 0) throw new Error('No configuration file ! ')
-
-    suffix = extname(configList[index]) as FileType
-
-    configPath = resolve(configPath, `${configName}${suffix}`)
+  if (configFile) {
+    configPath = dirname(configFile)
+    suffix = extname(configFile) as FileType
   }
 
   if (!fileType.has(suffix)) throw new Error('No configuration file ! ')
-
   return fileType.get(suffix)!(configPath)
 }

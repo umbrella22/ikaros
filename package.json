@@ -14,10 +14,10 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@changesets/cli": "^2.27.1",
+    "@changesets/cli": "^2.27.3",
     "@ikaros/eslint-plugin": "workspace:*",
     "@ikaros/prettier-config": "workspace:*",
-    "@types/node": "^18.19.33",
+    "@types/node": "^20.12.12",
     "dotenv": "^16.4.5",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5"

@@ -6,12 +6,13 @@ import { createServer } from "vite"
 
 const logger = createLogger('info', { prefix: 'ikaros:runner' })
 
-export const devRunner: (fileName?: string) => Promise<void> = async (fileName?: string) => {
+export const devRunner = async (fileName?: string): Promise<void> => {
   const config = await getConfig(fileName)
   const { mode, target } = config
+  logger.info(`mode: ${mode}, target: ${target}`)
   if (mode === 'web') {
     const viteConfig = buildViteConfig(config)
-    const server = await createServer(viteConfig)
+    const server = await createServer({ configFile: false, ...viteConfig })
     await server.listen()
     server.printUrls()
     server.bindCLIShortcuts({ print: true })
