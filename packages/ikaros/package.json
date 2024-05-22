@@ -47,6 +47,7 @@
     "javascript-obfuscator": "^4.1.0",
     "picocolors": "^1.0.1",
     "portfinder": "^1.0.32",
+    "postcss-px-to-viewport-8-plugin": "^1.2.5",
     "rollup": "^4.17.2",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollup-plugin-obfuscator": "^1.1.0",
