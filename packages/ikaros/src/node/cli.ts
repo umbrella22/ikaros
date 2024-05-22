@@ -20,7 +20,6 @@ cli
   .alias('dev')
   .alias('server')
   .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
-    console.log('dev mode', options, configFile)
     devRunner(configFile)
   })
 

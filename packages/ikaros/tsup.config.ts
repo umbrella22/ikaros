@@ -2,7 +2,7 @@ import { defineConfig, type Options } from 'tsup'
 
 const commonOptions: Options = {
   sourcemap: true,
-  format: ['esm', 'cjs'],
+  format: ['esm'],
   outDir: 'dist',
   clean: true,
   target: 'node18',

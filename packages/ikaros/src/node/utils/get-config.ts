@@ -1,5 +1,3 @@
-import { join } from "node:path"
-import { pathExists } from 'fs-extra'
 import type { IkarosUserConfig } from ".."
 import { resolveConfig } from "./load-config"
 

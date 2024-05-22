@@ -2,15 +2,13 @@ import { dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import { parse } from 'yaml'
-import { readFile } from 'fs/promises'
-import { realpathSync } from 'fs'
-import { pathExists, readJson } from 'fs-extra/esm'
+import fs from 'fs'
+import fsp from 'node:fs/promises'
+import fse from 'fs-extra'
 import { build } from 'esbuild'
 import type { IkarosUserConfig } from '../user-config.ts'
 
-const dynamicImport = (file: string) => import(file)
-
-async function transformConfig(input: string) {
+async function transformConfig(input: string, isESM = false) {
   const result = await build({
     absWorkingDir: process.cwd(),
     entryPoints: [input],
@@ -18,7 +16,7 @@ async function transformConfig(input: string) {
     write: false,
     platform: 'node',
     bundle: true,
-    format: 'cjs',
+    format: isESM ? 'esm' : 'cjs',
     sourcemap: 'inline',
     metafile: true,
     plugins: [
@@ -52,13 +50,27 @@ interface NodeModuleWithCompile extends NodeModule {
   _compile(code: string, filename: string): any
 }
 const _require = createRequire(pathToFileURL(resolve()))
-async function requireConfig(filename: string, code: string) {
-  const extension = extname(filename)
-  const realFileName = realpathSync(filename)
+async function requireConfig(fileName: string, code: string, isESM = false) {
+
+  if (isESM) {
+    const fileBase = `${fileName}.timestamp-${Date.now()}-${Math.random()
+      .toString(16)
+      .slice(2)}`
+    const fileNameTmp = `${fileBase}.mjs`
+    const fileUrl = `${pathToFileURL(fileBase)}.mjs`
+    await fsp.writeFile(fileNameTmp, code)
+    try {
+      return (await import(fileUrl)).default
+    } finally {
+      fs.unlink(fileNameTmp, () => { }) // Ignore errors
+    }
+  }
+
+  const extension = extname(fileName)
+  const realFileName = fs.realpathSync(fileName)
   const loaderExt = extension in _require.extensions ? extension : '.js'
 
   // 保存老的 require 行为
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const defaultLoader = _require.extensions[loaderExt]!
   // 临时重写当前配置文件后缀的 require 行为
   _require.extensions[loaderExt] = (module: NodeModule, filename: string) => {
@@ -72,35 +84,31 @@ async function requireConfig(filename: string, code: string) {
   }
   // 清除缓存
   // eslint-disable-next-line unicorn/prefer-module
-  delete require.cache[require.resolve(filename)]
-  const raw = _require(filename)
+  delete require.cache[require.resolve(fileName)]
+  const raw = _require(fileName)
   // 恢复原生require行为
   _require.extensions[loaderExt] = defaultLoader
   // 如果是esm编译过的__esModule为true
   return raw.__esModule ? raw.default : raw
 }
 
-function resultConfig(filePath: string) {
-  return new Promise((resolve) => {
-    transformConfig(filePath)
-      .then(({ code }) => {
-        return requireConfig(filePath, code)
-      })
-      .then(resolve)
-  })
+async function resultConfig(filePath: string, isESM = false) {
+  const { code } = await transformConfig(filePath, isESM)
+  return requireConfig(filePath, code, isESM)
 }
 
-type FileType = '.js' | '.mjs' | '.cjs' | '.ts' | '.json' | '.yaml'
+
+type FileType = '.js' | '.mjs' | '.ts' | '.json' | '.yaml'
 
 const fileType = new Map<FileType, (filePath: string) => Promise<any>>()
 
 fileType.set('.js', async (filePath) => {
-  const pkg = await readJson(resolve(process.cwd(), 'package.json'))
+  const pkg = await fse.readJson(resolve(process.cwd(), 'package.json'))
   const { type = 'commonjs' } = pkg
   return new Promise((resolve) => {
     if (type === 'module') {
       const fileUrl = pathToFileURL(filePath)
-      dynamicImport(fileUrl.href)
+      import(fileUrl.href)
         .then((config) => config?.default)
         .then(resolve)
     }
@@ -110,39 +118,26 @@ fileType.set('.js', async (filePath) => {
   })
 })
 
-fileType.set('.mjs', (filePath) => {
-  return new Promise((resolve) => {
-    const fileUrl = pathToFileURL(filePath)
-    dynamicImport(fileUrl.href)
-      .then((config) => config?.default)
-      .then(resolve)
-  })
+fileType.set('.mjs', async (filePath) => {
+  const fileUrl = pathToFileURL(filePath)
+  return (await import(fileUrl.href)).default
 })
 
-fileType.set('.cjs', resultConfig)
 
-fileType.set('.ts', resultConfig)
-
-fileType.set('.json', (filePath) => {
-  return new Promise((resolve) => {
-    readJson(filePath).then(resolve)
-  })
+fileType.set('.json', async (filePath) => {
+  return await fse.readJson(filePath)
 })
 
-fileType.set('.yaml', (filePath) => {
-  return new Promise((resolve) => {
-    readFile(filePath, 'utf8')
-      .then((text: string) => parse(text))
-      .then(resolve)
-  })
+fileType.set('.yaml', async (filePath) => {
+  const text = await fsp.readFile(filePath, 'utf8')
+  return parse(text)
 })
 
 /**
- * 描述
- * @date 2022-12-13
- * @param {any} configPath:string  需要读取配置的路径
- * @param {any} configName?:string  配置文件名
- * @returns {any}
+ * @description 解析配置文件
+ * @date 2024-05-22
+ * @param {string} configFile 文件路径，可选，若不传入则会在项目根目录寻找配置文件
+ * @returns {Promise<IkarosUserConfig | undefined>}
  */
 export async function resolveConfig({
   configFile
@@ -153,12 +148,12 @@ export async function resolveConfig({
   let configPath = process.cwd()
   let configName = 'ikaros.config'
 
-  const configList = ['ts', 'mjs', 'cjs', 'js', 'json', 'yaml'].map(
+  const configList = ['ts', 'mjs', 'js', 'json', 'yaml'].map(
     (suffix) => `${join(configPath, configName)}.${suffix}`,
   )
   const index = (
     await Promise.all(configList.map((element) => {
-      return pathExists(element)
+      return fse.pathExists(element)
     }))
   ).findIndex(Boolean)
   if (index < 0) return undefined

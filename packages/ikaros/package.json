@@ -15,8 +15,8 @@
   ],
   "author": "sky <https://github.com/umbrella22>",
   "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "main": "dist/cli.js",
+  "module": "dist/cli.js",
   "types": "dist/index.d.ts",
   "bin": {
     "ikaros": "dist/cli.js"
