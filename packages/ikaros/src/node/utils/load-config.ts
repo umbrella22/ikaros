@@ -98,29 +98,33 @@ async function resultConfig(filePath: string, isESM = false) {
 }
 
 
-type FileType = '.js' | '.mjs' | '.ts' | '.json' | '.yaml'
+type FileType = '.mjs' | '.ts' | '.json' | '.yaml'
 
 const fileType = new Map<FileType, (filePath: string) => Promise<any>>()
 
-fileType.set('.js', async (filePath) => {
-  const pkg = await fse.readJson(resolve(process.cwd(), 'package.json'))
-  const { type = 'commonjs' } = pkg
-  return new Promise((resolve) => {
-    if (type === 'module') {
-      const fileUrl = pathToFileURL(filePath)
-      import(fileUrl.href)
-        .then((config) => config?.default)
-        .then(resolve)
-    }
+// fileType.set('.js', async (filePath) => {
+//   const pkg = await fse.readJson(resolve(process.cwd(), 'package.json'))
+//   const { type = 'commonjs' } = pkg
+//   return new Promise((resolve) => {
+//     if (type === 'module') {
+//       const fileUrl = pathToFileURL(filePath)
+//       import(fileUrl.href)
+//         .then((config) => config?.default)
+//         .then(resolve)
+//     }
 
-    // commonjs
-    resultConfig(filePath).then(resolve)
-  })
-})
+//     // commonjs
+//     resultConfig(filePath).then(resolve)
+//   })
+// })
 
 fileType.set('.mjs', async (filePath) => {
   const fileUrl = pathToFileURL(filePath)
   return (await import(fileUrl.href)).default
+})
+
+fileType.set('.ts', async (filePath) => {
+  return await resultConfig(filePath, true)
 })
 
 
@@ -148,7 +152,7 @@ export async function resolveConfig({
   let configPath = process.cwd()
   let configName = 'ikaros.config'
 
-  const configList = ['ts', 'mjs', 'js', 'json', 'yaml'].map(
+  const configList = ['ts', 'mjs', 'json', 'yaml'].map(
     (suffix) => `${join(configPath, configName)}.${suffix}`,
   )
   const index = (
