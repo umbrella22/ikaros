@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "pnpm --filter @ikaros-cli/eslint-plugin build && pnpm --filter @ikaros-cli/prettier-config build",
+    "postinstall": "pnpm --filter @ikaros-cli/eslint-plugin build && pnpm --filter @ikaros-cli/prettier-config build&& pnpm --filter @ikaros-cli/stylelint-config build",
     "changeset:add": "changeset add",
     "changeset:version": "changeset version",
     "upgrade": "pnpm up -r && pnpm up -r -w"

@@ -7,6 +7,14 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
+  "homepage": "https://github.com/umbrella22/ikaros#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/umbrella22/ikaros.git"
+  },
+  "bugs": {
+    "url": "https://github.com/umbrella22/ikaros/issues"
+  },
   "files": [
     "dist"
   ],
