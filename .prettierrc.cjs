@@ -1,1 +1,1 @@
-module.exports = require('@ikaros/prettier-config')
+module.exports = require('@ikaros-cli/prettier-config')

@@ -1,11 +1,11 @@
 {
-  "name": "ikaros",
+  "name": "ikaros-cli",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "pnpm --filter @ikaros/eslint-plugin build && pnpm --filter @ikaros/prettier-config build",
+    "postinstall": "pnpm --filter @ikaros-cli/eslint-plugin build && pnpm --filter @ikaros-cli/prettier-config build",
     "changeset:add": "changeset add",
     "changeset:version": "changeset version",
     "upgrade": "pnpm up -r && pnpm up -r -w"
@@ -15,8 +15,8 @@
   "license": "ISC",
   "devDependencies": {
     "@changesets/cli": "^2.27.3",
-    "@ikaros/eslint-plugin": "workspace:*",
-    "@ikaros/prettier-config": "workspace:*",
+    "@ikaros-cli/eslint-plugin": "workspace:*",
+    "@ikaros-cli/prettier-config": "workspace:*",
     "@types/node": "^20.12.12",
     "dotenv": "^16.4.5",
     "tsup": "^8.0.2",

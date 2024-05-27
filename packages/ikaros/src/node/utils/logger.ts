@@ -62,7 +62,7 @@ export function createLogger(
 
   const loggedErrors = new WeakSet<Error | RollupError>()
   const {
-    prefix = '[ikaros]',
+    prefix = '[ikaros-cli]',
     allowClearScreen = true,
     timestamp = true,
     error,
@@ -70,7 +70,7 @@ export function createLogger(
   const thresh = LogLevels[level]
   const canClearScreen =
     allowClearScreen && process.stdout.isTTY && !process.env.CI
-  const clear = canClearScreen ? clearScreen : () => {}
+  const clear = canClearScreen ? clearScreen : () => { }
 
   function output(type: LogType, msg: string, options: LogErrorOptions = {}) {
     if (thresh >= LogLevels[type]) {
@@ -81,8 +81,8 @@ export function createLogger(
             type === 'info'
               ? colors.cyan(colors.bold(prefix))
               : type === 'warn'
-              ? colors.yellow(colors.bold(prefix))
-              : colors.red(colors.bold(prefix))
+                ? colors.yellow(colors.bold(prefix))
+                : colors.red(colors.bold(prefix))
           return `${colors.dim(new Date().toLocaleTimeString())} ${tag} ${msg}`
         } else {
           return msg

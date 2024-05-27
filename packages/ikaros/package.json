@@ -1,8 +1,12 @@
 {
-  "name": "@ikaros/ikaros",
+  "name": "@ikaros-cli/ikaros",
   "version": "1.0.0",
   "description": "",
   "type": "module",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "scripts": {
     "dev": "tsup --watch",
     "dts": "tsup --dts",
@@ -38,6 +42,7 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-replace": "^5.0.5",
     "cac": "^6.7.14",
+    "chalk": "^5.3.0",
     "dotenv": "^16.4.5",
     "electron-builder": "^23.6.0",
     "esbuild": "^0.19.12",

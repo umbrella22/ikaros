@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
 
-  extends: 'plugin:@ikaros/ts-recommended',
+  extends: 'plugin:@ikaros-cli/ts-recommended',
 
   rules: {
     'no-console': 'off',

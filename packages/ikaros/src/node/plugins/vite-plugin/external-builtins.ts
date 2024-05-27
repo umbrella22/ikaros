@@ -7,7 +7,7 @@ import type { Plugin } from 'vite'
  */
 export const externalBuiltins = () => {
   return <Plugin>{
-    name: '@ikaros/external-builtins',
+    name: '@ikaros-cli/external-builtins',
     config(config) {
       const nativeModules = builtinModules.filter((e) => !e.startsWith('_'))
       const builtins = [

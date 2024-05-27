@@ -1,11 +1,15 @@
 {
-  "private": true,
-  "name": "@ikaros/stylelint-config",
+  "name": "@ikaros-cli/stylelint-config",
   "version": "0.0.1",
   "main": "./dist/index.js",
+  "author": "sky <https://github.com/umbrella22>",
   "exports": {
     ".": "./dist/index.js",
     "./*": "./dist/*.js"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "files": [
     "dist"

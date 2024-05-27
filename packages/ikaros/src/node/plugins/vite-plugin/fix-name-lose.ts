@@ -3,7 +3,7 @@ import type { Plugin, ResolvedConfig } from "vite";
 export const fixNameLost = () => {
   let command = "";
   return <Plugin>{
-    name: "@ikaros/fix-name-lose",
+    name: "@ikaros-cli/fix-name-lose",
     configResolved(resolvedConfig: ResolvedConfig) {
       command = resolvedConfig.command;
     },

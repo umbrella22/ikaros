@@ -1,6 +1,6 @@
-# @ikaros/stylelint-config
+# @ikaros-cli/stylelint-config
 
-## 2.0.3
+## 0.0.1
 
 ### Patch Changes
 

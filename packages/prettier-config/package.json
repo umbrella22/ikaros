@@ -1,7 +1,12 @@
 {
-  "name": "@ikaros/prettier-config",
+  "name": "@ikaros-cli/prettier-config",
   "version": "0.0.1",
   "main": "./dist/index.js",
+  "author": "sky <https://github.com/umbrella22>",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "files": [
     "dist"
   ],

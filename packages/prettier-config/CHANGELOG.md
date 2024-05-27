@@ -1,6 +1,6 @@
-# @ikaros/prettier-config
+# @ikaros-cli/prettier-config
 
-## 1.0.6
+## 0.0.1
 
 ### Patch Changes
 

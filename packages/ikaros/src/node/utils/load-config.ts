@@ -150,7 +150,7 @@ export async function resolveConfig({
 }): Promise<IkarosUserConfig | undefined> {
   let suffix: FileType | undefined
   let configPath = process.cwd()
-  let configName = 'ikaros.config'
+  let configName = 'ikaros-cli.config'
 
   const configList = ['ts', 'mjs', 'json', 'yaml'].map(
     (suffix) => `${join(configPath, configName)}.${suffix}`,
