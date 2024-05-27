@@ -6,7 +6,7 @@ import esbuild, { type Options } from 'rollup-plugin-esbuild'
 import obfuscator from 'rollup-plugin-obfuscator'
 import type { RollupOptions } from 'rollup'
 import type { IkarosUserConfig } from '../user-config'
-import { rootDir } from '.'
+import { rootDir } from './tools'
 import { join } from 'node:path'
 
 interface RollupExOptions {

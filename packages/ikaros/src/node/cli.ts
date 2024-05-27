@@ -1,5 +1,5 @@
 import { cac } from 'cac'
-import { cliPackageJson } from './utils'
+import { cliPackageJson } from './utils/tools'
 import { devRunner } from './runner/dev-runner'
 
 const cli = cac('ikaros')
