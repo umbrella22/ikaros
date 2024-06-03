@@ -70,7 +70,7 @@ export default (ver: VueVersion) => ({
     },
     {
       files: ['*.vue'],
-      rules: EslintRecommended.rules,
+      rules: EslintRecommended.configs['eslint-recommended'].overrides[0].rules,
     },
     {
       files: ['*.d.ts'],
