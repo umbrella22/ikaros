@@ -12,7 +12,7 @@ import { VueVersion } from './vue-recommended'
 import path from 'node:path'
 import process from 'node:process'
 
-import EslintRecommended from '@typescript-eslint/eslint-plugin/dist/configs/eslint-recommended'
+import EslintRecommended from '@typescript-eslint/eslint-plugin'
 
 export default (ver: VueVersion) => ({
   parser: 'vue-eslint-parser',
@@ -70,7 +70,7 @@ export default (ver: VueVersion) => ({
     },
     {
       files: ['*.vue'],
-      rules: EslintRecommended.overrides[0]['rules'],
+      rules: EslintRecommended.rules,
     },
     {
       files: ['*.d.ts'],
