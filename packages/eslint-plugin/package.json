@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/eslint-plugin",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "MIT",
   "main": "./dist/index.js",
   "author": "sky <https://github.com/umbrella22>",

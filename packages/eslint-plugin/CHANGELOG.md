@@ -4,6 +4,12 @@
 
 ### Patch Changes
 
+- fix: eslint对vue3支持;
+
+## 0.0.3
+
+### Patch Changes
+
 - fix: 修复ts-eslint对vue文件的支持;
 
 ## 0.0.1

@@ -14,7 +14,7 @@ export enum VueVersion {
   v3,
 }
 
-export default (ver: VueVersion) => ({
+export const getVueEsLint = (ver: VueVersion) => ({
   parser: 'vue-eslint-parser',
 
   env,
@@ -28,7 +28,9 @@ export default (ver: VueVersion) => ({
   },
 
   extends: [
-    'eslint:recommended',
+    ver === VueVersion.v2
+      ? 'eslint:recommended'
+      : 'plugin:vue/vue3-recommended',
 
     ver === VueVersion.v2
       ? 'plugin:vue/essential'

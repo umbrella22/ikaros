@@ -14,7 +14,7 @@ import process from 'node:process'
 
 import EslintRecommended from '@typescript-eslint/eslint-plugin'
 
-export default (ver: VueVersion) => ({
+export const getVueTsEslint = (ver: VueVersion) => ({
   parser: 'vue-eslint-parser',
 
   env,
@@ -29,7 +29,9 @@ export default (ver: VueVersion) => ({
   },
 
   extends: [
-    'eslint:recommended',
+    ver === VueVersion.v2
+      ? 'eslint:recommended'
+      : 'plugin:vue/vue3-recommended',
     'plugin:@typescript-eslint/recommended',
 
     ver === VueVersion.v2
