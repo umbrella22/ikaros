@@ -1,3 +1,4 @@
+import type { OptionType } from 'postcss-px-to-viewport-8-plugin/lib/types'
 import type { RollupOptions } from 'rollup'
 import type { Options } from 'rollup-plugin-esbuild'
 import type { RollupPluginObfuscatorOptions } from 'rollup-plugin-obfuscator'
@@ -5,9 +6,9 @@ import type { UserConfig } from 'vite'
 
 type Preload =
   | {
-    name: string
-    entry: string
-  }
+      name: string
+      entry: string
+    }
   | string
 export interface MainConfig {
   /** rollup配置 */
@@ -24,6 +25,9 @@ export interface MainConfig {
 export interface RendererConfig {
   /** vite配置 */
   viteOption?: UserConfig
+  /**是否启用px转换 */
+  pxToVW?: boolean
+  pxToVWConfig?: OptionType
 }
 export interface PreloadConfig extends MainConfig {
   /** 预加载脚本入口 */

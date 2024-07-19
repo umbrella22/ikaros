@@ -70,7 +70,7 @@ export function createLogger(
   const thresh = LogLevels[level]
   const canClearScreen =
     allowClearScreen && process.stdout.isTTY && !process.env.CI
-  const clear = canClearScreen ? clearScreen : () => { }
+  const clear = canClearScreen ? clearScreen : () => {}
 
   function output(type: LogType, msg: string, options: LogErrorOptions = {}) {
     if (thresh >= LogLevels[type]) {

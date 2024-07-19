@@ -1,5 +1,5 @@
 import { version, name } from '../../../package.json'
-import chalk from "chalk"
+import chalk from 'chalk'
 
 /**
  * cli package.json
@@ -9,16 +9,14 @@ export const cliPackageJson = { version, name }
 export const rootDir = process.cwd()
 
 export function logStats(proc: string, data: any) {
-  let log = "";
+  let log = ''
 
   log += chalk.yellow.bold(
-    `┏ ${proc}  "Process" ${new Array(
-      19 - proc.length + 1
-    ).join("-")}`
-  );
-  log += "\n\n";
+    `┏ ${proc}  "Process" ${Array.from({ length: 19 - proc.length + 1 }).join('-')}`,
+  )
+  log += '\n\n'
 
-  if (typeof data === "object") {
+  if (typeof data === 'object') {
     data
       .toString({
         colors: true,
@@ -26,14 +24,17 @@ export function logStats(proc: string, data: any) {
       })
       .split(/\r?\n/)
       .forEach((line: string) => {
-        log += "  " + line + "\n";
-      });
+        log += '  ' + line + '\n'
+      })
   } else {
-    log += `  ${data}\n`;
+    log += `  ${data}\n`
   }
 
-  log += "\n" + chalk.yellow.bold(`┗ ${new Array(28 + 1).join("-")}`) + "\n";
-  console.log(log);
+  log +=
+    '\n' +
+    chalk.yellow.bold(`┗ ${Array.from({ length: 28 + 1 }).join('-')}`) +
+    '\n'
+  console.log(log)
 }
 
 export function removeJunk(chunk: string) {
@@ -41,18 +42,17 @@ export function removeJunk(chunk: string) {
   if (
     /\d+-\d+-\d+ \d+:\d+:\d+\.\d+ Electron(?: Helper)?\[\d+:\d+] /.test(chunk)
   ) {
-    return false;
+    return false
   }
 
   // Example: [90789:0810/225804.894349:ERROR:CONSOLE(105)] "Uncaught (in promise) Error: Could not instantiate: ProductRegistryImpl.Registry", source: chrome-devtools://devtools/bundled/inspector.js (105)
-  if (/\[\d+:\d+\/|\d+\.\d+:ERROR:CONSOLE\(\d+\)\]/.test(chunk)) {
-    return false;
+  if (/\[\d+:\d+\/|\d+\.\d+:ERROR:CONSOLE\(\d+\)]/.test(chunk)) {
+    return false
   }
 
   // Example: ALSA lib confmisc.c:767:(parse_card) cannot find card '0'
-  if (/ALSA lib [a-z]+\.c:\d+:\([a-z_]+\)/.test(chunk)) {
-    return false;
+  if (/ALSA lib [a-z]+\.c:\d+:\([_a-z]+\)/.test(chunk)) {
+    return false
   }
-  return chunk;
+  return chunk
 }
-

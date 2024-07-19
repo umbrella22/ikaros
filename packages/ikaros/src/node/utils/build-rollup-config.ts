@@ -21,17 +21,9 @@ const getRollupConfig = (
   config: IkarosUserConfig,
   options?: RollupExOptions,
 ) => {
-  const {
-    main,
-    entryDir,
-    outputDir,
-  } = config
-  const {
-    rollupOption,
-    obfuscate,
-    obfuscateOptions,
-    esbuildOption,
-  } = main ?? {}
+  const { main, entryDir, outputDir } = config
+  const { rollupOption, obfuscate, obfuscateOptions, esbuildOption } =
+    main ?? {}
   if (!options) {
     options = {
       inputFile: 'index.js',
@@ -95,9 +87,13 @@ export const buildRollupConfig = (
       esbuild(esbuildOption ?? defaultEsbuildOption),
     )
     if (obfuscate) {
-      exPlugins.push(obfuscator(obfuscateOptions ?? {
-        global: true,
-      }))
+      exPlugins.push(
+        obfuscator(
+          obfuscateOptions ?? {
+            global: true,
+          },
+        ),
+      )
     }
   }
 

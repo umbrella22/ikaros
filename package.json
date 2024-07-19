@@ -14,12 +14,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@changesets/cli": "^2.27.5",
+    "@changesets/cli": "^2.27.7",
     "@ikaros-cli/eslint-plugin": "workspace:*",
     "@ikaros-cli/prettier-config": "workspace:*",
-    "@types/node": "^20.14.2",
+    "@types/node": "^20.14.11",
     "dotenv": "^16.4.5",
-    "tsup": "^8.1.0",
-    "typescript": "^5.4.5"
+    "tsup": "^8.1.2",
+    "typescript": "^5.5.3"
   }
 }

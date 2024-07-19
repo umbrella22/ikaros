@@ -2,11 +2,11 @@ import { dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import { parse } from 'yaml'
-import fs from 'fs'
+import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import fse from 'fs-extra'
 import { build } from 'esbuild'
-import type { IkarosUserConfig } from '../user-config.ts'
+import type { IkarosUserConfig } from '../user-config'
 
 async function transformConfig(input: string, isESM = false) {
   const result = await build({
@@ -51,7 +51,6 @@ interface NodeModuleWithCompile extends NodeModule {
 }
 const _require = createRequire(pathToFileURL(resolve()))
 async function requireConfig(fileName: string, code: string, isESM = false) {
-
   if (isESM) {
     const fileBase = `${fileName}.timestamp-${Date.now()}-${Math.random()
       .toString(16)
@@ -62,7 +61,7 @@ async function requireConfig(fileName: string, code: string, isESM = false) {
     try {
       return (await import(fileUrl)).default
     } finally {
-      fs.unlink(fileNameTmp, () => { }) // Ignore errors
+      fs.unlink(fileNameTmp, () => {}) // Ignore errors
     }
   }
 
@@ -77,7 +76,7 @@ async function requireConfig(fileName: string, code: string, isESM = false) {
     // 只处理配置文件
     if (filename === realFileName) {
       // 直接调用 compile，传入编译好的代码
-      ; (module as NodeModuleWithCompile)._compile(code, filename)
+      ;(module as NodeModuleWithCompile)._compile(code, filename)
     } else {
       defaultLoader(module, filename)
     }
@@ -96,7 +95,6 @@ async function resultConfig(filePath: string, isESM = false) {
   const { code } = await transformConfig(filePath, isESM)
   return requireConfig(filePath, code, isESM)
 }
-
 
 type FileType = '.mjs' | '.ts' | '.json' | '.yaml'
 
@@ -127,7 +125,6 @@ fileType.set('.ts', async (filePath) => {
   return await resultConfig(filePath, true)
 })
 
-
 fileType.set('.json', async (filePath) => {
   return await fse.readJson(filePath)
 })
@@ -144,21 +141,23 @@ fileType.set('.yaml', async (filePath) => {
  * @returns {Promise<IkarosUserConfig | undefined>}
  */
 export async function resolveConfig({
-  configFile
+  configFile,
 }: {
   configFile?: string
 }): Promise<IkarosUserConfig | undefined> {
   let suffix: FileType | undefined
   let configPath = process.cwd()
-  let configName = 'ikaros.config'
+  const configName = 'ikaros.config'
 
   const configList = ['ts', 'mjs', 'json', 'yaml'].map(
     (suffix) => `${join(configPath, configName)}.${suffix}`,
   )
   const index = (
-    await Promise.all(configList.map((element) => {
-      return fse.pathExists(element)
-    }))
+    await Promise.all(
+      configList.map((element) => {
+        return fse.pathExists(element)
+      }),
+    )
   ).findIndex(Boolean)
   if (index < 0) return undefined
 

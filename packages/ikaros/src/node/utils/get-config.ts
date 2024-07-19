@@ -1,20 +1,22 @@
-import type { IkarosUserConfig } from ".."
-import { resolveConfig } from "./load-config"
+import type { IkarosUserConfig } from '..'
+import { resolveConfig } from './load-config'
 
-export const getConfig = async (configFile?: string): Promise<IkarosUserConfig> => {
+export const getConfig = async (
+  configFile?: string,
+): Promise<IkarosUserConfig> => {
   const config: IkarosUserConfig = {
     mode: 'web',
     target: 'web',
     entryDir: 'src',
     outputDir: 'dist',
     main: {},
-    renderer: {}
+    renderer: {},
   }
   let fileConfig: IkarosUserConfig | undefined = undefined
 
-  fileConfig = await resolveConfig({ configFile });
+  fileConfig = await resolveConfig({ configFile })
   if (fileConfig) {
     return fileConfig
   }
-  return config;
+  return config
 }

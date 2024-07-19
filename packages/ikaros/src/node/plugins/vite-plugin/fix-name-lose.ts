@@ -1,17 +1,17 @@
-import type { Plugin, ResolvedConfig } from "vite";
+import type { Plugin, ResolvedConfig } from 'vite'
 
 export const fixNameLost = () => {
-  let command = "";
+  let command = ''
   return <Plugin>{
-    name: "@ikaros-cli/fix-name-lose",
+    name: '@ikaros-cli/fix-name-lose',
     configResolved(resolvedConfig: ResolvedConfig) {
-      command = resolvedConfig.command;
+      command = resolvedConfig.command
     },
     buildStart: () => {
-      if (command.includes("serve")) {
+      if (command.includes('serve')) {
         globalThis.__name = (target: string, value: Record<string, any>) =>
-          Object.defineProperty(target, "name", { value, configurable: true });
+          Object.defineProperty(target, 'name', { value, configurable: true })
       }
     },
-  };
-};
+  }
+}
