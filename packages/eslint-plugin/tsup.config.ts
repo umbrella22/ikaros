@@ -4,7 +4,7 @@ export default defineConfig(({ watch }) => ({
   entry: ['src/**/*.ts'],
   bundle: false,
   clean: true,
-  target: 'node16',
+  target: 'esnext',
   format: ['cjs'],
   outDir: 'dist',
   skipNodeModulesBundle: true,

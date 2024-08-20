@@ -28,6 +28,13 @@ export interface RendererConfig {
   /**是否启用px转换 */
   pxToVW?: boolean
   pxToVWConfig?: OptionType
+  /**
+   * 是否启用devTools
+   * mobile时启动vconsole
+   * 仅在serve时生效
+   * @default false
+   */
+  devTools?: boolean
 }
 export interface PreloadConfig extends MainConfig {
   /** 预加载脚本入口 */
@@ -38,7 +45,7 @@ export interface BaseConfig {
   /** 模式：网页或者是客户端*/
   mode: 'web' | 'client'
   /** 标志：仅web模式生效 */
-  target: 'web' | 'mobile'
+  target: 'pc' | 'mobile'
   /** 入口目录 */
   entryDir: string
   /** 输出目录 */

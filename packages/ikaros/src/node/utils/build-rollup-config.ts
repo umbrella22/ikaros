@@ -31,8 +31,8 @@ const getRollupConfig = (
     }
   }
   const { inputFile, outputFile } = options
-  const input = join(rootDir, entryDir, inputFile)
-  const output = join(rootDir, outputDir, outputFile)
+  const input = join(rootDir, entryDir, 'main', inputFile)
+  const output = join(rootDir, outputDir, 'mian', outputFile)
   const defineConfig: RollupOptions = {
     input,
     output: {
@@ -61,8 +61,8 @@ export const buildRollupConfig = (
   const { rollupConfig, obfuscate, obfuscateOptions, esbuildOption } =
     getRollupConfig(userConfig, options)
   const { external, plugins } = rollupConfig
-  const exExternal = external || []
-  const exPlugins = plugins || []
+  const exExternal = external ?? []
+  const exPlugins = plugins ?? []
 
   const defaultEsbuildOption: Options = {
     include: /\.[jt]s?$/,

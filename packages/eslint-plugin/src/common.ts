@@ -45,6 +45,7 @@ export const esRules = {
   'unicorn/no-useless-undefined': 'off',
   'unicorn/prefer-dom-node-append': 'off',
   'unicorn/numeric-separators-style': 'off',
+  'unicorn/import-style': 'off',
 }
 
 export const tsRules = {

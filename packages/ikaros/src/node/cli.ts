@@ -1,6 +1,7 @@
 import { cac } from 'cac'
 import { cliPackageJson } from './utils/tools'
 import { devRunner } from './runner/dev-runner'
+import { buildRunner } from './runner/build-runner'
 
 const cli = cac('ikaros')
 
@@ -26,8 +27,9 @@ cli
 cli
   .command('build [root]', 'build app with mode')
   .alias('build')
-  .action(async (options: GlobalCLIOptions) => {
+  .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
     console.log('build mode', options)
+    buildRunner(configFile)
   })
 
 cli.help()
