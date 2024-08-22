@@ -37,7 +37,7 @@
     "dist"
   ],
   "optionalDependencies": {
-    "electron": ">=30.0.0",
+    "electron": "^32.0.1",
     "electron-builder": "^24.13.3"
   },
   "engines": {
@@ -62,10 +62,11 @@
     "portfinder": "^1.0.32",
     "postcss": "^8.4.41",
     "postcss-px-to-viewport-8-plugin": "^1.2.5",
+    "radash": "^12.1.0",
     "rollup": "^4.21.0",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollup-plugin-obfuscator": "^1.1.0",
-    "vite": "^5.4.1",
+    "vite": "^5.4.2",
     "yaml": "^2.5.0"
   },
   "devDependencies": {

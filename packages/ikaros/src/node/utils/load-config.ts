@@ -47,7 +47,7 @@ async function transformConfig(input: string, isESM = false) {
 }
 
 interface NodeModuleWithCompile extends NodeModule {
-  _compile(code: string, filename: string): any
+  _compile(code: string, filename: string): void
 }
 const _require = createRequire(pathToFileURL(resolve()))
 async function requireConfig(fileName: string, code: string, isESM = false) {
@@ -59,7 +59,8 @@ async function requireConfig(fileName: string, code: string, isESM = false) {
     const fileUrl = `${pathToFileURL(fileBase)}.mjs`
     await fsp.writeFile(fileNameTmp, code)
     try {
-      return (await import(fileUrl)).default
+      const module = await import(fileUrl)
+      return module.default
     } finally {
       fs.unlink(fileNameTmp, () => {}) // Ignore errors
     }
@@ -98,7 +99,10 @@ async function resultConfig(filePath: string, isESM = false) {
 
 type FileType = '.mjs' | '.ts' | '.json' | '.yaml'
 
-const fileType = new Map<FileType, (filePath: string) => Promise<any>>()
+const fileType = new Map<
+  FileType,
+  (filePath: string) => Promise<IkarosUserConfig | undefined>
+>()
 
 // fileType.set('.js', async (filePath) => {
 //   const pkg = await fse.readJson(resolve(process.cwd(), 'package.json'))
@@ -118,7 +122,8 @@ const fileType = new Map<FileType, (filePath: string) => Promise<any>>()
 
 fileType.set('.mjs', async (filePath) => {
   const fileUrl = pathToFileURL(filePath)
-  return (await import(fileUrl.href)).default
+  const importedModule = await import(fileUrl.href)
+  return importedModule.default
 })
 
 fileType.set('.ts', async (filePath) => {
@@ -152,13 +157,12 @@ export async function resolveConfig({
   const configList = ['ts', 'mjs', 'json', 'yaml'].map(
     (suffix) => `${join(configPath, configName)}.${suffix}`,
   )
-  const index = (
-    await Promise.all(
-      configList.map((element) => {
-        return fse.pathExists(element)
-      }),
-    )
-  ).findIndex(Boolean)
+  const results = await Promise.all(
+    configList.map((element) => {
+      return fse.pathExists(element)
+    }),
+  )
+  const index = results.findIndex(Boolean)
   if (index < 0) return undefined
 
   suffix = extname(configList[index]) as FileType

@@ -10,7 +10,7 @@ cli
   .option('dev, server', '开发环境启动,允许衔接m[mode]参数来控制当前环境')
   .option('build', '打包模式，')
 
-interface GlobalCLIOptions {
+export interface GlobalCLIOptions {
   '--': string[]
   m: string
   mode: string
@@ -21,7 +21,8 @@ cli
   .alias('dev')
   .alias('server')
   .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
-    devRunner(configFile)
+    console.log('dev mode', options)
+    devRunner({ configFile, options })
   })
 
 cli
@@ -29,7 +30,7 @@ cli
   .alias('build')
   .action(async (configFile: undefined | string, options: GlobalCLIOptions) => {
     console.log('build mode', options)
-    buildRunner(configFile)
+    buildRunner({ configFile, options })
   })
 
 cli.help()

@@ -38,18 +38,18 @@ export interface RendererConfig {
 }
 export interface PreloadConfig extends MainConfig {
   /** 预加载脚本入口 */
-  entry: Preload | Preload[]
+  entry?: Preload | Preload[]
 }
 
 export interface BaseConfig {
-  /** 模式：网页或者是客户端*/
-  mode: 'web' | 'client'
+  /** 平台：网页或者是客户端*/
+  platform?: 'web' | 'client'
   /** 标志：仅web模式生效 */
-  target: 'pc' | 'mobile'
+  target?: 'pc' | 'mobile'
   /** 入口目录 */
-  entryDir: string
+  entryDir?: string
   /** 输出目录 */
-  outputDir: string
+  outputDir?: string
 }
 
 export interface IkarosUserConfig extends BaseConfig {
@@ -60,12 +60,17 @@ export interface IkarosUserConfig extends BaseConfig {
   /** 预加载配置 */
   preload?: PreloadConfig
 }
-export type ConfigEnv = {
-  mode: BaseConfig['mode']
-  target: BaseConfig['target']
+export type ConfigEnvPre = Readonly<{
+  mode: string
+  env: Omit<ImportMeta['env'], 'BASE'>
   command: 'serve' | 'build'
-}
-export type UserConfigFn = (env: ConfigEnv) => UserConfig | Promise<UserConfig>
+}>
+export type UserConfigFn<C> = (envPre: ConfigEnvPre) => C | Promise<C>
+
+export type UserConfigWebExport =
+  | IkarosUserConfig
+  | Promise<IkarosUserConfig>
+  | UserConfigFn<IkarosUserConfig>
 
 /** 辅助工具函数 */
-export const defineConfig = (config: IkarosUserConfig) => config
+export const defineConfig = (config: UserConfigWebExport) => config

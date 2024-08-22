@@ -18,8 +18,8 @@ export default {
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:import/recommended',
-    'plugin:import/typescript',
+    'plugin:import-x/recommended',
+    'plugin:import-x/typescript',
     'plugin:unicorn/recommended',
     'plugin:prettier/recommended',
   ],
@@ -27,11 +27,11 @@ export default {
   settings: {
     ...settings,
 
-    'import/parsers': {
+    'import-x/parsers': {
       '@typescript-eslint/parser': ['.ts'],
     },
 
-    'import/resolver': {
+    'import-x/resolver': {
       node: {},
 
       typescript: {
@@ -51,7 +51,7 @@ export default {
     ...esRules,
     ...tsRules,
 
-    'import/extensions': ['error', 'ignorePackages', { ts: 'never' }],
+    'import-x/extensions': ['error', 'ignorePackages', { ts: 'never' }],
   },
 
   ignorePatterns,

@@ -38,8 +38,8 @@ export const getVueTsEslint = (ver: VueVersion) => ({
       ? 'plugin:vue/essential'
       : 'plugin:vue/vue3-essential',
 
-    'plugin:import/recommended',
-    'plugin:import/typescript',
+    'plugin:import-x/recommended',
+    'plugin:import-x/typescript',
 
     'plugin:unicorn/recommended',
     'plugin:prettier/recommended',
@@ -48,11 +48,11 @@ export const getVueTsEslint = (ver: VueVersion) => ({
   settings: {
     ...settings,
 
-    'import/parsers': {
+    'import-x/parsers': {
       '@typescript-eslint/parser': ['.ts', '.tsx'],
     },
 
-    'import/resolver': {
+    'import-x/resolver': {
       // 如果 monorepo 则需要在用户配置覆盖此项
       alias: {
         map: [['@', path.join(process.cwd(), 'src')]],
@@ -65,7 +65,7 @@ export const getVueTsEslint = (ver: VueVersion) => ({
     {
       files: ['*.cjs', '*.mjs', '*.mts', '*.cts'],
       settings: {
-        'import/resolver': {
+        'import-x/resolver': {
           node: {},
         },
       },
@@ -86,7 +86,7 @@ export const getVueTsEslint = (ver: VueVersion) => ({
 
     'vue/component-definition-name-casing': ['error', 'kebab-case'],
 
-    'import/extensions': [
+    'import-x/extensions': [
       'error',
       'ignorePackages',
       { ts: 'never', tsx: 'never' },

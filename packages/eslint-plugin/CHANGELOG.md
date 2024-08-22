@@ -1,5 +1,11 @@
 # @ikaros-cli/prettier-config
 
+## 0.0.6
+
+### Patch Changes
+
+- chore: 更新eslint插件，为迁移eslint9做准备;
+
 ## 0.0.3
 
 ### Patch Changes

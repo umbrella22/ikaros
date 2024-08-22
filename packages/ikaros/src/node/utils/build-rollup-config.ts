@@ -21,7 +21,7 @@ const getRollupConfig = (
   config: IkarosUserConfig,
   options?: RollupExOptions,
 ) => {
-  const { main, entryDir, outputDir } = config
+  const { main, entryDir = 'src', outputDir = 'dist' } = config
   const { rollupOption, obfuscate, obfuscateOptions, esbuildOption } =
     main ?? {}
   if (!options) {

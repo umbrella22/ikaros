@@ -36,7 +36,7 @@ export const getVueEsLint = (ver: VueVersion) => ({
       ? 'plugin:vue/essential'
       : 'plugin:vue/vue3-essential',
 
-    'plugin:import/recommended',
+    'plugin:import-x/recommended',
     'plugin:unicorn/recommended',
     'plugin:prettier/recommended',
   ],
@@ -44,7 +44,7 @@ export const getVueEsLint = (ver: VueVersion) => ({
   settings: {
     ...settings,
 
-    'import/resolver': {
+    'import-x/resolver': {
       // 如果 monorepo 则需要在用户配置覆盖此项
       alias: {
         map: [['@', path.join(process.cwd(), 'src')]],
@@ -57,7 +57,7 @@ export const getVueEsLint = (ver: VueVersion) => ({
     {
       files: ['*.cjs', '*.mjs'],
       settings: {
-        'import/resolver': {
+        'import-x/resolver': {
           node: {},
         },
       },
@@ -69,7 +69,7 @@ export const getVueEsLint = (ver: VueVersion) => ({
 
     'vue/component-definition-name-casing': ['error', 'kebab-case'],
 
-    'import/extensions': [
+    'import-x/extensions': [
       'error',
       'ignorePackages',
       { js: 'never', jsx: 'never' },

@@ -8,7 +8,7 @@ export default {
 
   extends: [
     'eslint:recommended',
-    'plugin:import/recommended',
+    'plugin:import-x/recommended',
     'plugin:unicorn/recommended',
     'plugin:prettier/recommended',
   ],
@@ -16,7 +16,7 @@ export default {
   settings: {
     ...settings,
 
-    'import/resolver': {
+    'import-x/resolver': {
       node: {},
     },
   },
@@ -24,7 +24,7 @@ export default {
   rules: {
     ...esRules,
 
-    'import/extensions': ['error', 'ignorePackages', { js: 'never' }],
+    'import-x/extensions': ['error', 'ignorePackages', { js: 'never' }],
   },
 
   ignorePatterns,

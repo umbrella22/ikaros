@@ -11,13 +11,24 @@ import { viteHtmlInjectPlugin } from '../plugins/vite-plugin/vite-html-plugin'
 import { viteMobileDevtoolsPlugin } from '../plugins/vite-plugin/mobile-devtools'
 
 const getUserConfig = (config: IkarosUserConfig) => {
-  const { renderer, entryDir, outputDir, target, mode } = config
+  const {
+    renderer,
+    entryDir = 'src',
+    outputDir = 'dist',
+    target,
+    platform,
+  } = config
   const { viteOption, pxToVW, pxToVWConfig, devTools } = renderer ?? {}
-  const root = mode === 'web' ? rootDir : join(rootDir, entryDir, 'renderer')
+  const root =
+    platform === 'web' ? rootDir : join(rootDir, entryDir, 'renderer')
   const outDir =
-    mode === 'web' ? outputDir : join(rootDir, outputDir, 'renderer')
+    platform === 'web' ? outputDir : join(rootDir, outputDir, 'renderer')
+  const base =
+    platform === 'web'
+      ? `${viteOption?.define ? (viteOption.define['import.meta.env.BASE'] ?? './') : './'}`
+      : './'
   const defineConfig: UserConfig = {
-    base: './',
+    base,
     root,
     build: {
       reportCompressedSize: false,
@@ -26,7 +37,7 @@ const getUserConfig = (config: IkarosUserConfig) => {
   }
   const viteConfig = Object.assign({}, viteOption, defineConfig)
   return {
-    mode,
+    platform,
     target,
     entryDir,
     outputDir,
@@ -40,7 +51,7 @@ const getUserConfig = (config: IkarosUserConfig) => {
 export const buildViteConfig = (userConfig: IkarosUserConfig): UserConfig => {
   const {
     viteOption,
-    mode,
+    platform,
     target,
     pxToVW = true,
     pxToVWConfig,
@@ -50,7 +61,7 @@ export const buildViteConfig = (userConfig: IkarosUserConfig): UserConfig => {
   const plugins = viteOption.plugins ?? []
   const css = viteOption.css ?? {}
 
-  if (mode === 'web') {
+  if (platform === 'web') {
     if (target === 'mobile') {
       if (pxToVW) {
         plugins.push(viteHtmlInjectPlugin())

@@ -10,7 +10,7 @@ export const parserOptions = {
 }
 
 export const settings = {
-  'import/ignore': ['node_modules'],
+  'import-x/ignore': ['node_modules'],
 }
 
 export const ignorePatterns = ['!.*', '**/dist', '**/node_modules']
