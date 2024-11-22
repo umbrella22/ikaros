@@ -37,7 +37,7 @@
     "stylelint-config-standard-vue": "^1.0.0"
   },
   "devDependencies": {
-    "postcss": "^8.4.41",
+    "postcss": "^8.4.49",
     "stylelint": "^16.10.0"
   }
 }
