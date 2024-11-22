@@ -15,6 +15,8 @@ export const settings = {
 
 export const ignorePatterns = ['!.*', '**/dist', '**/node_modules']
 
+export const tsxExtends = ['.ts', '.tsx']
+
 export const assetExtends = [
   '.svg',
   '.css',
