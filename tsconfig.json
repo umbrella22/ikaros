@@ -3,18 +3,16 @@
   "compilerOptions": {
     "strict": true,
     "noEmit": true,
-    "target": "ES2022",
+    "target": "ES2021",
+    "lib": ["ES2021"],
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "isolatedModules": true,
     "strictNullChecks": true,
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
-    "forceConsistentCasingInFileNames": true,
-    "lib": [
-      "ESNext"
-    ]
+    "forceConsistentCasingInFileNames": true
   }
 }

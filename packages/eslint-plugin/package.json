@@ -21,6 +21,7 @@
   ],
   "scripts": {
     "dev": "tsup --watch",
+    "dts": "tsup --dts",
     "build": "tsup"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-unicorn": "^56.0.1",
     "eslint-plugin-vue": "^9.31.0",
+    "typescript-eslint": "^8.15.0",
     "vue-eslint-parser": "^9.4.3"
   },
   "devDependencies": {
