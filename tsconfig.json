@@ -5,14 +5,13 @@
     "noEmit": true,
     "target": "ES2021",
     "lib": ["ES2021"],
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "isolatedModules": true,
     "strictNullChecks": true,
     "resolveJsonModule": true,
-    "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true
   }
 }
