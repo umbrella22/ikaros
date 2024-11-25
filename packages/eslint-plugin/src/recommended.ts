@@ -1,31 +1,31 @@
-import { env, parserOptions, esRules, ignorePatterns, settings } from './common'
+import type { FlatConfig } from '@typescript-eslint/utils/ts-eslint'
 
-export default {
-  parser: 'espree',
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
+import eslintPluginUnicorn from 'eslint-plugin-unicorn'
+import pluginImport from 'eslint-plugin-import-x'
+import { esRules, settings, jsFileExtensions, ignores } from './common'
 
-  env,
-  parserOptions,
+export const recommended = (): FlatConfig.ConfigArray => {
+  return [
+    eslintPluginPrettierRecommended,
+    {
+      name: 'ikaros/recommended-imports',
+      files: jsFileExtensions,
+      plugins: {
+        import: pluginImport,
+        unicorn: eslintPluginUnicorn,
+      },
+      settings: {
+        ...settings,
 
-  extends: [
-    'eslint:recommended',
-    'plugin:import-x/recommended',
-    'plugin:unicorn/recommended',
-    'plugin:prettier/recommended',
-  ],
-
-  settings: {
-    ...settings,
-
-    'import-x/resolver': {
-      node: {},
+        'import-x/resolver': {
+          node: {},
+        },
+      },
+      rules: {
+        ...esRules,
+      },
+      ignores,
     },
-  },
-
-  rules: {
-    ...esRules,
-
-    'import-x/extensions': ['error', 'ignorePackages', { js: 'never' }],
-  },
-
-  ignorePatterns,
+  ]
 }

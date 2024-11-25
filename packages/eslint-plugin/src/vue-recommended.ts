@@ -1,80 +1,62 @@
+import type { FlatConfig } from '@typescript-eslint/utils/ts-eslint'
 import {
-  env,
   parserOptions,
   esRules,
-  ignorePatterns,
   settings,
   assetExtends,
+  jsFileExtensions,
+  ignores,
+  VueVersion,
 } from './common'
 import path from 'node:path'
 import process from 'node:process'
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
+import eslintPluginUnicorn from 'eslint-plugin-unicorn'
+import pluginImport from 'eslint-plugin-import-x'
+import * as vueParser from 'vue-eslint-parser'
+import eslintPluginVue from 'eslint-plugin-vue'
 
-export enum VueVersion {
-  v2 = 2,
-  v3,
-}
-
-export const getVueEsLint = (ver: VueVersion) => ({
-  parser: 'vue-eslint-parser',
-
-  env,
-
-  parserOptions: {
-    ...parserOptions,
-    parser: 'espree',
-    ecmaFeatures: {
-      jsx: true,
-    },
-  },
-
-  extends: [
+export const getVueEsLint = (ver: VueVersion): FlatConfig.ConfigArray => {
+  const eslintPluginVueRecommended =
     ver === VueVersion.v2
-      ? 'eslint:recommended'
-      : 'plugin:vue/vue3-recommended',
-
+      ? eslintPluginVue.configs['flat/vue2-recommended']
+      : eslintPluginVue.configs['flat/recommended']
+  const eslintPluginVueEssential =
     ver === VueVersion.v2
-      ? 'plugin:vue/essential'
-      : 'plugin:vue/vue3-essential',
-
-    'plugin:import-x/recommended',
-    'plugin:unicorn/recommended',
-    'plugin:prettier/recommended',
-  ],
-
-  settings: {
-    ...settings,
-
-    'import-x/resolver': {
-      // 如果 monorepo 则需要在用户配置覆盖此项
-      alias: {
-        map: [['@', path.join(process.cwd(), 'src')]],
-        extensions: ['.js', '.jsx', ...assetExtends],
-      },
-    },
-  },
-
-  overrides: [
+      ? eslintPluginVue.configs['flat/vue2-essential']
+      : eslintPluginVue.configs['flat/essential']
+  return [
+    eslintPluginPrettierRecommended,
+    ...eslintPluginVueRecommended,
+    ...eslintPluginVueEssential,
     {
-      files: ['*.cjs', '*.mjs'],
+      name: 'ikaros/vue-recommended',
+      files: jsFileExtensions,
+      languageOptions: {
+        parser: vueParser,
+        parserOptions,
+      },
+      plugins: {
+        import: pluginImport,
+        unicorn: eslintPluginUnicorn,
+      },
       settings: {
+        ...settings,
+
         'import-x/resolver': {
-          node: {},
+          // 如果 monorepo 则需要在用户配置覆盖此项
+          alias: {
+            map: [['@', path.join(process.cwd(), 'src')]],
+            extensions: ['.js', '.jsx', ...assetExtends],
+          },
         },
       },
+      rules: {
+        ...esRules,
+
+        'vue/component-definition-name-casing': ['error', 'kebab-case'],
+      },
+      ignores,
     },
-  ],
-
-  rules: {
-    ...esRules,
-
-    'vue/component-definition-name-casing': ['error', 'kebab-case'],
-
-    'import-x/extensions': [
-      'error',
-      'ignorePackages',
-      { js: 'never', jsx: 'never' },
-    ],
-  },
-
-  ignorePatterns,
-})
+  ]
+}

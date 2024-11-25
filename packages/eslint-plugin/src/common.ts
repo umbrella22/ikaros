@@ -1,10 +1,11 @@
-export const env = {
-  node: true,
-  browser: true,
-  es2022: true,
+import type { FlatConfig } from '@typescript-eslint/utils/ts-eslint'
+
+export enum VueVersion {
+  v2 = 2,
+  v3,
 }
 
-export const parserOptions = {
+export const parserOptions: FlatConfig.ParserOptions = {
   ecmaVersion: 'latest',
   sourceType: 'module',
 }
@@ -13,7 +14,10 @@ export const settings = {
   'import-x/ignore': ['node_modules'],
 }
 
-export const ignorePatterns = ['!.*', '**/dist', '**/node_modules']
+export const ignores = ['!.*', '**/dist', '**/node_modules']
+
+export const tsFileExtensions = ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts']
+export const jsFileExtensions = ['**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs']
 
 export const assetExtends = [
   '.svg',
@@ -32,7 +36,7 @@ export const assetExtends = [
   '.woff2',
 ]
 
-export const esRules = {
+export const esRules: FlatConfig.Config['rules'] = {
   'no-console': 'warn',
 
   'import/no-extraneous-dependencies': 'off',
@@ -48,7 +52,7 @@ export const esRules = {
   'unicorn/import-style': 'off',
 }
 
-export const tsRules = {
+export const tsRules: FlatConfig.Config['rules'] = {
   'import/named': 'off',
   'import/namespace': 'off',
   'import/default': 'off',
@@ -57,7 +61,7 @@ export const tsRules = {
   '@typescript-eslint/explicit-function-return-type': 'off',
 }
 
-export const dtsRules = {
+export const dtsRules: FlatConfig.Config['rules'] = {
   'no-var': 'off',
   '@typescript-eslint/no-empty-interface': 'off',
 }
