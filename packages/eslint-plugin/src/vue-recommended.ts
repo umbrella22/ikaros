@@ -55,12 +55,6 @@ export const getVueEsLint = (ver: VueVersion): FlatConfig.ConfigArray => {
         ...esRules,
 
         'vue/component-definition-name-casing': ['error', 'kebab-case'],
-
-        'import-x/extensions': [
-          'error',
-          'ignorePackages',
-          { js: 'never', jsx: 'never' },
-        ],
       },
       ignores,
     },

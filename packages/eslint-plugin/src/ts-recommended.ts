@@ -53,7 +53,6 @@ export const tsRecommended = (): FlatConfig.ConfigArray => {
       rules: {
         ...esRules,
         ...tsRules,
-        'import-x/extensions': ['error', 'ignorePackages', { ts: 'never' }],
       },
       ignores,
     },

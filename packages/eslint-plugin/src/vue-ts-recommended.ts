@@ -2,7 +2,6 @@ import {
   parserOptions,
   esRules,
   tsRules,
-  dtsRules,
   settings,
   assetExtends,
   VueVersion,
@@ -78,12 +77,6 @@ export const getVueTsEslint = (ver: VueVersion): FlatConfig.ConfigArray => {
         ...tsRules,
 
         'vue/component-definition-name-casing': ['error', 'kebab-case'],
-
-        'import-x/extensions': [
-          'error',
-          'ignorePackages',
-          { ts: 'never', tsx: 'never' },
-        ],
       },
       ignores,
     },

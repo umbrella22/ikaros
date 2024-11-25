@@ -3,12 +3,9 @@ import { recommended } from './recommended'
 import { tsRecommended } from './ts-recommended'
 import { getVueEsLint } from './vue-recommended'
 import { getVueTsEslint } from './vue-ts-recommended'
+import { name, version } from '../package.json'
 
-const { name, version } = require('../package.json') as {
-  name: string
-  version: string
-}
-export default {
+export const ikarosEslintRule = {
   meta: {
     name,
     version,

@@ -24,8 +24,6 @@ export const recommended = (): FlatConfig.ConfigArray => {
       },
       rules: {
         ...esRules,
-
-        'import-x/extensions': ['error', 'ignorePackages', { js: 'never' }],
       },
       ignores,
     },
