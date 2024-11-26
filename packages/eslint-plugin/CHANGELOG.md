@@ -1,5 +1,9 @@
 # @ikaros-cli/prettier-config
 
+## 0.1.0-alpha.0
+
+- chore: 更新eslint9
+
 ## 0.0.6
 
 ### Patch Changes

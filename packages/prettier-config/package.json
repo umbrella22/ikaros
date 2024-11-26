@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/prettier-config",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "./dist/index.js",
   "license": "MIT",
   "author": "sky <https://github.com/umbrella22>",

@@ -9,4 +9,5 @@ export default defineConfig(({ watch }) => ({
   outDir: 'dist',
   skipNodeModulesBundle: true,
   minify: !watch,
+  dts: true,
 }))
