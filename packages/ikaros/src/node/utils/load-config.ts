@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import fse from 'fs-extra'
 import { build } from 'esbuild'
-import type { IkarosUserConfig } from '../user-config'
+import type { UserConfig } from '../user-config'
 
 async function transformConfig(input: string, isESM = false) {
   const result = await build({
@@ -35,7 +35,6 @@ async function transformConfig(input: string, isESM = false) {
           })
         },
       },
-      // 省略其他插件
     ],
   })
 
@@ -83,7 +82,7 @@ async function requireConfig(fileName: string, code: string, isESM = false) {
     }
   }
   // 清除缓存
-  // eslint-disable-next-line unicorn/prefer-module
+
   delete require.cache[require.resolve(fileName)]
   const raw = _require(fileName)
   // 恢复原生require行为
@@ -101,7 +100,7 @@ type FileType = '.mjs' | '.ts' | '.json' | '.yaml'
 
 const fileType = new Map<
   FileType,
-  (filePath: string) => Promise<IkarosUserConfig | undefined>
+  (filePath: string) => Promise<UserConfig | undefined>
 >()
 
 // fileType.set('.js', async (filePath) => {
@@ -143,13 +142,13 @@ fileType.set('.yaml', async (filePath) => {
  * @description 解析配置文件
  * @date 2024-05-22
  * @param {string} configFile 文件路径，可选，若不传入则会在项目根目录寻找配置文件
- * @returns {Promise<IkarosUserConfig | undefined>}
+ * @returns {Promise<UserConfig | undefined>}
  */
 export async function resolveConfig({
   configFile,
 }: {
   configFile?: string
-}): Promise<IkarosUserConfig | undefined> {
+}): Promise<UserConfig | undefined> {
   let suffix: FileType | undefined
   let configPath = process.cwd()
   const configName = 'ikaros.config'
@@ -173,7 +172,6 @@ export async function resolveConfig({
     configPath = dirname(configFile)
     suffix = extname(configFile) as FileType
   }
-
   if (!fileType.has(suffix)) throw new Error('No configuration file ! ')
   return fileType.get(suffix)!(configPath)
 }

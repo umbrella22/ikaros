@@ -21,9 +21,8 @@
     "build": "tsup"
   },
   "keywords": [
-    "electron",
     "vue",
-    "vite"
+    "rspack"
   ],
   "author": "sky <https://github.com/umbrella22>",
   "license": "MIT",
@@ -31,45 +30,44 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "ikaros": "dist/cli.js"
+    "ikaros": "dist/index.js"
   },
   "files": [
     "dist"
   ],
-  "optionalDependencies": {
-    "electron": "^32.2.5",
-    "electron-builder": "^24.13.3"
-  },
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=20.0.0",
     "npm": ">=9.5.0"
   },
   "dependencies": {
-    "@rollup/plugin-alias": "^5.1.1",
-    "@rollup/plugin-commonjs": "^26.0.3",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^15.3.0",
-    "@rollup/plugin-replace": "^5.0.7",
-    "cac": "^6.7.14",
-    "chalk": "^5.3.0",
-    "dotenv": "^16.4.5",
+    "@rsdoctor/rspack-plugin": "^0.4.13",
+    "@rspack/core": "^1.2.2",
+    "@rspack/dev-server": "^1.0.10",
+    "chalk": "^5.4.1",
+    "cli-cursor": "^5.0.0",
+    "commander": "^13.1.0",
+    "compression-webpack-plugin": "^11.1.0",
+    "css-loader": "^7.1.2",
+    "detect-port": "^2.1.0",
+    "dotenv": "^16.4.7",
+    "easy-table": "^1.2.0",
     "esbuild": "^0.21.5",
-    "fs-extra": "^11.2.0",
+    "fs-extra": "^11.3.0",
     "glob": "^10.4.5",
     "inquirer": "^9.3.7",
-    "javascript-obfuscator": "^4.1.1",
+    "less-loader": "^12.2.0",
+    "minimist": "^1.2.8",
+    "ora": "^8.2.0",
     "picocolors": "^1.1.1",
-    "portfinder": "^1.0.32",
-    "postcss": "^8.4.49",
-    "postcss-px-to-viewport-8-plugin": "^1.2.5",
+    "pretty-bytes": "^6.1.1",
     "radash": "^12.1.0",
-    "rollup": "^4.27.3",
-    "rollup-plugin-esbuild": "^6.1.1",
-    "rollup-plugin-obfuscator": "^1.1.0",
-    "vite": "^5.4.11",
-    "yaml": "^2.6.1"
+    "sass-loader": "^16.0.4",
+    "stylus-loader": "^8.1.1",
+    "vue-style-loader": "^4.1.3",
+    "yaml": "^2.7.0"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4"
+    "@types/fs-extra": "^11.0.4",
+    "@types/minimist": "^1.2.5"
   }
 }

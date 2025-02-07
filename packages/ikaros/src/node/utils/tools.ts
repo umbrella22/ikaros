@@ -1,112 +1,206 @@
-import { version, name } from '../../../package.json'
-import chalk from 'chalk'
-import { config, type DotenvParseOutput } from 'dotenv'
-import { join } from 'node:path'
-import fse from 'fs-extra'
-import { isObject } from 'radash'
+import {
+  type RuleSetRule,
+  type DefinePluginOptions,
+  type Plugin,
+  rspack,
+  type Entry,
+} from '@rspack/core'
 
-/**
- * cli package.json
- */
-export const cliPackageJson = { version, name }
+import {
+  createEnvPlugin,
+  buildCssLoaders,
+  type CssLoaderOptions,
+} from './utils'
+import { workPath } from './const'
+import { join } from 'path'
+import { isArray } from 'radash'
 
-export const rootDir = process.cwd()
+type ListItemType = RuleSetRule | Plugin
 
-export const logStats = (proc: string, data: string) => {
-  let log = ''
-
-  log += chalk.yellow.bold(
-    `┏ ${proc}  "Process" ${Array.from({ length: 19 - proc.length + 1 }).join('-')}`,
-  )
-  log += '\n\n'
-
-  log += `  ${data}\n`
-
-  log +=
-    '\n' +
-    chalk.yellow.bold(`┗ ${Array.from({ length: 28 + 1 }).join('-')}`) +
-    '\n'
-  console.log(log)
+export type RspackExperiments = {
+  import: Record<string, unknown>[]
 }
 
-export const removeJunk = (chunk: string) => {
-  // Example: 2018-08-10 22:48:42.866 Electron[90311:4883863] *** WARNING: Textured window <AtomNSWindow: 0x7fb75f68a770>
-  if (
-    /\d+-\d+-\d+ \d+:\d+:\d+\.\d+ Electron(?: Helper)?\[\d+:\d+] /.test(chunk)
-  ) {
-    return false
+export class BaseCreate<T extends ListItemType> {
+  protected list: T[] = []
+  protected env: 'development' | 'none' | 'production' = 'development'
+  protected mode: string = ''
+  protected isDev = true
+  constructor({
+    env = 'development',
+    mode = '',
+  }: {
+    env: 'development' | 'none' | 'production'
+    mode?: string
+  }) {
+    this.env = env
+    this.mode = mode
+    this.isDev = env === 'development'
   }
 
-  // Example: [90789:0810/225804.894349:ERROR:CONSOLE(105)] "Uncaught (in promise) Error: Could not instantiate: ProductRegistryImpl.Registry", source: chrome-devtools://devtools/bundled/inspector.js (105)
-  if (/\[\d+:\d+\/|\d+\.\d+:ERROR:CONSOLE\(\d+\)]/.test(chunk)) {
-    return false
-  }
-
-  // Example: ALSA lib confmisc.c:767:(parse_card) cannot find card '0'
-  if (/ALSA lib [a-z]+\.c:\d+:\([_a-z]+\)/.test(chunk)) {
-    return false
-  }
-  return chunk
-}
-
-const getEnvPath = (mode?: string) => {
-  if (!mode) {
-    return join(rootDir, 'env', '.env')
-  }
-  return join(rootDir, 'env', `.${mode}.env`)
-}
-
-const checkEnv = async (mode?: string) => {
-  const hasEnvFolder = await fse.pathExists(join(rootDir, 'env'))
-  if (!hasEnvFolder) {
-    console.log(chalk.yellow.bold('env folder not found'))
-    return false
-  }
-  if (mode) {
-    const hasEnv = await fse.pathExists(getEnvPath(mode))
-    if (!hasEnv) {
-      console.log(chalk.yellow.bold(`.env.${mode} file not found`))
-      return false
+  add(item: T | T[] | undefined): this {
+    if (isArray(item)) {
+      this.list = this.list.concat(item)
+    } else {
+      if (item) {
+        this.list.push(item)
+      }
     }
-  } else {
-    const hasEnv = await fse.pathExists(getEnvPath())
-    if (!hasEnv) {
-      console.log(chalk.yellow.bold('.env file not found'))
-      return false
+    return this
+  }
+
+  end(): T[] {
+    return this.list
+  }
+}
+
+export class CreateLoader extends BaseCreate<RuleSetRule> {
+  constructor({
+    env = 'development',
+    mode = '',
+  }: {
+    env: 'development' | 'none' | 'production'
+    mode?: string
+  }) {
+    super({ env, mode })
+  }
+  private defaultScriptLoader = (rspackExperiments?: RspackExperiments) => {
+    return {
+      test: /\.m?[jt]s$/,
+      loader: 'builtin:swc-loader',
+      options: {
+        sourceMap: this.isDev,
+        jsc: {
+          parser: {
+            syntax: 'typescript',
+          },
+        },
+        rspackExperiments,
+      },
+      type: 'javascript/auto',
     }
-    return true
   }
-  return true
+  private defaultResourceLoader: RuleSetRule[] = [
+    {
+      test: /\.(png|jpe?g|gif|svg|ico)(\?.*)?$/,
+      type: 'asset/resource',
+      generator: {
+        filename: this.isDev ? '[id][ext]' : 'assets/img/[contenthash][ext]',
+      },
+    },
+    {
+      test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,
+      type: 'asset/resource',
+      generator: {
+        filename: this.isDev ? '[id][ext]' : 'assets/media/[contenthash][ext]',
+      },
+    },
+    {
+      test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/,
+      type: 'asset/resource',
+      generator: {
+        filename: this.isDev ? '[id][ext]' : 'assets/fonts/[contenthash][ext]',
+      },
+    },
+  ]
+
+  useDefaultCssLoader(options?: CssLoaderOptions): this {
+    const defaultCssLoader = buildCssLoaders(this.env, options)
+    defaultCssLoader.forEach((item) => this.add(item as RuleSetRule))
+    return this
+  }
+
+  useDefaultScriptLoader(options?: RspackExperiments): this {
+    this.add(this.defaultScriptLoader(options))
+    return this
+  }
+  useDefaultResourceLoader(): this {
+    this.defaultResourceLoader.forEach((item) => this.add(item))
+    return this
+  }
 }
 
-export const getEnv = async (mode?: string) => {
-  const hasEnv = await checkEnv(mode)
-  if (!hasEnv) {
-    return {}
+export class CreatePlugins extends BaseCreate<Plugin> {
+  constructor({
+    env = 'development',
+    mode = '',
+  }: {
+    env: 'development' | 'none' | 'production'
+    mode?: string
+  }) {
+    super({ env, mode })
   }
-  if (!mode) {
-    return config({ path: getEnvPath() }).parsed ?? {}
+  useDefaultEnvPlugin(otherEnv?: DefinePluginOptions): this {
+    this.add(
+      createEnvPlugin({
+        otherEnv,
+        mode: this.mode,
+      }),
+    )
+    return this
   }
-  return config({ path: getEnvPath(mode) }).parsed ?? {}
+  useCopyPlugin(): this {
+    if (this.env === 'production') {
+      this.add(
+        new rspack.CopyRspackPlugin({
+          patterns: [
+            {
+              context: join(workPath, 'public'),
+              from: './',
+              noErrorOnMissing: true,
+              globOptions: {
+                ignore: ['.*'],
+              },
+            },
+          ],
+        }),
+      )
+    }
+    return this
+  }
+  useHtmlPlugin(templatePath?: string): this {
+    this.add(
+      new rspack.HtmlRspackPlugin({
+        template: templatePath ?? join(workPath, 'index.html'),
+      }),
+    )
+    return this
+  }
 }
 
-export const adapterEnv = (env: DotenvParseOutput) => {
-  return Object.fromEntries(
-    Object.entries(env).map(([key, val]) => {
-      return [`import.meta.env.${key}`, `"${val}"`]
-    }),
-  )
-}
-
-export const mergeUserConfig = <T extends Record<string, any>>(
-  target: T,
-  source: T,
-): T => {
-  for (const key in source) {
-    target[key] =
-      isObject(source[key]) && key in target
-        ? mergeUserConfig(target[key], source[key])
-        : source[key]
+export type Pages = {
+  [key: string]: {
+    html: string
+    entry: string
+    library?: import('@rspack/core').LibraryOptions
   }
-  return target
+}
+export class CreateMpaAssets {
+  protected pages: Pages
+  constructor(pages: Pages) {
+    this.pages = pages
+  }
+  create() {
+    const entries: Entry = {}
+    const plugins: Plugin[] = []
+    Object.keys(this.pages).forEach((page) => {
+      entries[page] = {
+        import: this.pages[page].entry,
+        library: this.pages[page].library,
+      }
+      plugins.push(
+        new rspack.HtmlRspackPlugin({
+          template: this.pages[page].html,
+          filename: `${page}.html`,
+          chunks: [page],
+          scriptLoading: 'blocking',
+        }),
+      )
+    })
+
+    return {
+      entry: entries,
+      plugins,
+    }
+  }
 }

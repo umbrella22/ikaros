@@ -5,7 +5,7 @@ const commonOptions: Options = {
   format: ['esm'],
   outDir: 'dist',
   clean: true,
-  target: 'node18',
+  target: 'node20',
   splitting: false,
 }
 
@@ -14,18 +14,11 @@ export default defineConfig(({ watch }) => {
   return [
     {
       ...commonOptions,
-      entry: ['src/node/cli.ts', 'src/node/index.ts'],
+      entry: ['src/node/index.ts'],
       outDir: 'dist',
       sourcemap: isWatch,
       minify: !isWatch,
-    },
-    {
-      ...commonOptions,
-      entry: {
-        index: 'src/node/index.ts',
-      },
-      outDir: 'dist',
-      dts: { only: true },
+      dts: true,
     },
   ]
 })

@@ -1,4 +1,4 @@
-import type { FlatConfig } from '@typescript-eslint/utils/ts-eslint'
+import type { FlatConfig } from '@typescript-eslint/utils/dist/ts-eslint'
 
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
