@@ -16,6 +16,7 @@
 
 - 类型: `Pages`
 - 默认值:
+
   ```json
   {
     "index": {
@@ -56,6 +57,146 @@ RspackExperiments。
 - 默认值: `undefined`
 - 参考: [Rspack Experiments](https://rspack.dev/zh/guide/features/builtin-swc-loader#rspackexperimentsimport)
 - 参考: [Babel Plugin Import](https://www.npmjs.com/package/babel-plugin-import)
+
+### cdnOptions
+
+- 类型：`CdnPluginOptions`
+- 默认值：`undefined`
+- 说明：用于在构建过程中将外部依赖注入到 HTML 中，支持开发和生产环境使用不同的 CDN 源。
+- 参考：
+  - 基础配置:
+
+```typescript
+// filepath: ikaros.config.ts
+import { defineConfig } from "@ikaros-cli/ikaros";
+
+export default defineConfig({
+  cdnOptions: {
+    modules: [
+      {
+        name: "vue", // 模块名称
+        var: "Vue", // 全局变量名
+        path: "dist/vue.runtime.min.js", // JS 文件路径
+      },
+      {
+        name: "element-plus",
+        var: "ElementPlus",
+        path: "dist/index.full.min.js",
+        style: "dist/index.css", // CSS 文件路径
+      },
+    ],
+    // 可选：自定义 CDN URL 模板
+    prodUrl: "https://unpkg.com/:name@:version/:path",
+    devUrl: ":name/:path",
+    // 可选：启用跨域配置
+    crossOrigin: "anonymous",
+  },
+});
+```
+
+#### CDN 配置项说明
+
+#### CdnModule 配置
+
+| 参数    | 类型     | 必填 | 说明                                         |
+| ------- | -------- | ---- | -------------------------------------------- |
+| name    | string   | 是   | 模块名称，需与 package.json 中的名称一致     |
+| var     | string   | 否   | 模块导出的全局变量名                         |
+| version | string   | 否   | 指定版本号，未指定时自动从 node_modules 获取 |
+| path    | string   | 否   | 主 JS 文件路径                               |
+| paths   | string[] | 否   | 额外的 JS 文件路径列表                       |
+| style   | string   | 否   | 主 CSS 文件路径                              |
+| styles  | string[] | 否   | 额外的 CSS 文件路径列表                      |
+| cssOnly | boolean  | 否   | 是否仅加载 CSS 文件                          |
+| prodUrl | string   | 否   | 指定该模块的生产环境 CDN URL 模板            |
+| devUrl  | string   | 否   | 指定该模块的开发环境 CDN URL 模板            |
+
+#### 插件选项
+
+| 参数        | 类型              | 默认值                                   | 说明                     |
+| ----------- | ----------------- | ---------------------------------------- | ------------------------ |
+| modules     | CdnModule[]       | -                                        | CDN 模块配置列表         |
+| prodUrl     | string            | <https://unpkg.com/:name@:version/:path> | 生产环境 CDN URL 模板    |
+| devUrl      | string            | :name/:path                              | 开发环境 CDN URL 模板    |
+| crossOrigin | boolean \| string | false                                    | 跨域资源配置             |
+
+#### URL 模板
+
+支持以下占位符：
+
+- `:name` - 模块名称
+- `:version` - 模块版本号
+- `:path` - 资源路径
+
+#### 使用示例
+
+##### 基础用法
+
+```typescript
+cdnOptions: {
+  modules: [
+    {
+      name: "vue",
+      var: "Vue",
+      path: "dist/vue.runtime.min.js",
+    },
+  ];
+}
+```
+
+##### 使用自定义 CDN
+
+```typescript
+cdnOptions: {
+  modules: [
+    {
+      name: "vue",
+      var: "Vue",
+      path: "dist/vue.runtime.min.js",
+    },
+  ];
+  // 仅在生产环境时生效
+  prodUrl: "https://cdn.jsdelivr.net/npm/:name@:version/:path",
+}
+```
+
+##### 加载多个资源
+
+```typescript
+cdnOptions: {
+  modules: [
+    {
+      name: "element-plus",
+      var: "ElementPlus",
+      path: "dist/index.full.min.js",
+      paths: ["dist/locale/zh-cn.min.js"],
+      style: "dist/index.css",
+      styles: ["dist/theme-chalk/dark.css"],
+    },
+  ];
+}
+```
+
+##### 仅加载样式
+
+```typescript
+cdnOptions: {
+  modules: [
+    {
+      name: "normalize.css",
+      style: "normalize.css",
+      cssOnly: true,
+    },
+  ];
+}
+```
+
+#### 注意事项
+
+1. 确保模块名称与 package.json 中的名称一致
+2. 建议在生产环境中明确指定版本号
+3. 使用自定义 CDN 时注意资源路径的正确性
+4. 开发环境默认使用本地 node_modules 中的文件
 
 ## server
 

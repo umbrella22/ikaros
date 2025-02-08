@@ -8,7 +8,7 @@ import {
 } from '@rspack/core'
 import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
 import CompressionPlugin from 'compression-webpack-plugin'
-import { isString } from 'radash'
+import { isEmpty, isString } from 'radash'
 import { RspackDevServer } from '@rspack/dev-server'
 import { join } from 'node:path'
 import { detect } from 'detect-port'
@@ -19,6 +19,7 @@ import { errorHeader, extensions } from '../utils/const'
 import { CreateLoader, CreateMpaAssets, CreatePlugins } from '../utils/tools'
 import StatsPlugin from '../plugins/stats-plugin'
 import { checkDependency, resolveCLI } from '../utils/utils'
+import CdnPlugin from '../plugins/cdn-plugin'
 
 export class WebCompileService extends BaseCompileService {
   private userConfig?: UserConfig
@@ -170,6 +171,7 @@ export class WebCompileService extends BaseCompileService {
       .add(this.createCssExtractPlugin())
       .add(this.createDoctorPlugin())
       .add(this.createGzipPlugin())
+      .add(this.createCdnPlugin())
       .add(userConfig?.plugins)
       .end()
 
@@ -401,6 +403,14 @@ export class WebCompileService extends BaseCompileService {
       env: undefined,
       noParse: undefined,
     }
+  }
+  /** 创建cdn配置 */
+  private createCdnPlugin(): Plugin | undefined {
+    const { cdnOptions } = this.userConfig ?? {}
+    if (!cdnOptions || isEmpty(cdnOptions.modules)) {
+      return
+    }
+    return new CdnPlugin(cdnOptions)
   }
 
   /** 创建插件 --end */

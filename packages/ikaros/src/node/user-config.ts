@@ -3,6 +3,7 @@ import type { Command } from './compile/base-compile-service'
 import type { Pages, RspackExperiments } from './utils/tools'
 import type { CssLoaderOptions } from './utils/utils'
 import type { ImportMeta } from '../types/env'
+import { CdnPluginOptions } from './plugins/cdn-plugin'
 
 type ModuleFederationOptions = ConstructorParameters<
   typeof import('@rspack/core').container.ModuleFederationPlugin
@@ -50,6 +51,12 @@ export interface UserConfig {
    * @see {@link rules https://www.npmjs.com/package/babel-plugin-import}
    */
   experiments?: RspackExperiments
+  /**
+   * cdn配置
+   * @default undefined
+   * @see {@link https://www.npmjs.com/package/webpack-cdn-plugin}
+   */
+  cdnOptions?: CdnPluginOptions
   /**
    * dev 服务相关 该对象下的值不影响 生产环境
    */
