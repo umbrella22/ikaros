@@ -173,6 +173,11 @@ export type Pages = {
     html: string
     entry: string
     library?: import('@rspack/core').LibraryOptions
+    options?: {
+      title: string
+      inject: boolean
+      meta: Record<string, any>
+    }
   }
 }
 export class CreateMpaAssets {
@@ -194,6 +199,7 @@ export class CreateMpaAssets {
           filename: `${page}.html`,
           chunks: [page],
           scriptLoading: 'blocking',
+          ...this.pages[page].options,
         }),
       )
     })
