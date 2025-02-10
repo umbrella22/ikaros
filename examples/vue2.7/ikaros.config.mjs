@@ -10,6 +10,9 @@ export default defineConfig(() => {
         options: {
           prettify: false,
           experimentalInlineMatchResource: true,
+          compilerOptions: {
+            preserveWhitespace: false,
+          },
         },
       },
     ],
