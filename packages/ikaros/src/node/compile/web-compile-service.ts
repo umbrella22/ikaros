@@ -2,9 +2,9 @@ import chalk from 'chalk'
 import {
   type DevServer,
   type Configuration,
-  rspack,
   type Plugin,
-  Experiments,
+  type Experiments,
+  rspack,
 } from '@rspack/core'
 import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
 import CompressionPlugin from 'compression-webpack-plugin'
