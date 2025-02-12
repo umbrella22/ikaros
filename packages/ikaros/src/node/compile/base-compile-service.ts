@@ -4,7 +4,7 @@ import { join } from 'path'
 import type { ImportMetaBaseEnv } from '../../types/env'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import { getEnv } from '../utils/utils'
+import { configSchema, getEnv } from '../utils/utils'
 import { resolveConfig } from '../utils/load-config'
 import { isFunction, isObject } from 'radash'
 
@@ -148,7 +148,8 @@ export abstract class BaseCompileService {
       if (isObject(tempConfig)) {
         fileConfig = tempConfig
       }
-      return fileConfig
+
+      return configSchema.parse(fileConfig)
     }
   }
 

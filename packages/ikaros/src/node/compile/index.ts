@@ -1,5 +1,5 @@
 import { Command, Option } from 'commander'
-import { WebCompileService } from './rspack-compile-service'
+import { WebCompileService } from './web-compile-service'
 import { Command as BuildCommand } from './base-compile-service'
 import type { CompileOptions, CompileServeParame } from './base-compile-service'
 import type { ImportMetaBaseEnv } from '../../types/env'

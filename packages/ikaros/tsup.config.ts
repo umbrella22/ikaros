@@ -7,6 +7,9 @@ const commonOptions: Options = {
   clean: true,
   target: 'node20',
   splitting: false,
+  // 新增优化参数
+  minifyWhitespace: true,
+  keepNames: true,
 }
 
 export default defineConfig(({ watch }) => {

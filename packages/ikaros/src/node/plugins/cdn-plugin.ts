@@ -24,7 +24,7 @@ export interface CdnPluginOptions {
   sri?: boolean
 }
 
-const PLUGIN_NAME = 'ikaros-cdn-plugin'
+const PLUGIN_NAME = '@rspack/ikaros-cdn-plugin'
 const DEFAULT_PROD_URL = 'https://unpkg.com/:name@:version/:path'
 const DEFAULT_DEV_URL = ':name/:path'
 const PARAM_REGEX = /:([a-z]+)/gi
@@ -181,6 +181,7 @@ export default class CdnPlugin implements RspackPluginInstance {
         path.join(name, 'package.json'),
       ).version
     } catch (error) {
+      
       console.warn(
         chalk.yellow(`[${PLUGIN_NAME}] 无法获取模块 "${name}" 的版本信息`),
       )

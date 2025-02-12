@@ -19,7 +19,7 @@ import type { UserConfig } from '../user-config'
 import { name, version } from '../../../package.json'
 
 const cliPackageJson = { name, version }
-const PLUGIN_NAME = 'ikaros-stats-plugin'
+const PLUGIN_NAME = '@rspack/ikaros-stats-plugin'
 const black = chalk.hex('#222222')
 
 /** 进度插件 */

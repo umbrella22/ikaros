@@ -5,7 +5,7 @@ import type { CssLoaderOptions } from './utils/utils'
 import type { ImportMeta } from '../types/env'
 import { CdnPluginOptions } from './plugins/cdn-plugin'
 
-type ModuleFederationOptions = ConstructorParameters<
+export type ModuleFederationOptions = ConstructorParameters<
   typeof import('@rspack/core').container.ModuleFederationPlugin
 >[0]
 
