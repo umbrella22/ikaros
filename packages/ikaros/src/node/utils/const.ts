@@ -7,6 +7,8 @@ export const extensions = [
   '.mjs',
   '.ts',
   '.js',
+  '.jsx',
+  '.tsx',
   '.json',
   '.node',
   '.vue',
