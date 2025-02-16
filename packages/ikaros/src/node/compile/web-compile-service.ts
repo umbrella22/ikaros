@@ -8,18 +8,24 @@ import {
 } from '@rspack/core'
 import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
 import CompressionPlugin from 'compression-webpack-plugin'
-import { isEmpty, isString } from 'radash'
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack'
+import { isEmpty, isString, isArray } from 'radash'
 import { RspackDevServer } from '@rspack/dev-server'
 import { join } from 'node:path'
 import { detect } from 'detect-port'
 
 import type { UserConfig } from '../user-config'
 import { BaseCompileService, Command } from './base-compile-service'
-import { errorHeader, extensions } from '../utils/const'
-import { CreateLoader, CreateMpaAssets, CreatePlugins } from '../utils/tools'
+import { extensions, resolveCLI } from '../utils/const'
+import {
+  CreateLoader,
+  CreateMpaAssets,
+  CreatePlugins,
+} from '../utils/loader-plugin-helper'
 import StatsPlugin from '../plugins/stats-plugin'
-import { checkDependency, resolveCLI } from '../utils/utils'
 import CdnPlugin from '../plugins/cdn-plugin'
+import { errorLog } from '../utils/logger'
+import { checkDependency } from '../utils/common-tools'
 
 export class WebCompileService extends BaseCompileService {
   private userConfig?: UserConfig
@@ -69,7 +75,7 @@ export class WebCompileService extends BaseCompileService {
 
     if (isDev && isString(this.base) && /^https?:/.test(this.base)) {
       const optsText = chalk.cyan('build.base')
-      console.error(`${errorHeader} 本地开发时 ${optsText} 不应该为外部 Host!`)
+      errorLog(`本地开发时 ${optsText} 不应该为外部 Host!`)
       process.exit(0)
     }
 
@@ -172,6 +178,7 @@ export class WebCompileService extends BaseCompileService {
       .add(this.createDoctorPlugin())
       .add(this.createGzipPlugin())
       .add(this.createCdnPlugin())
+      .add(this.createModuleFederationPlugin())
       .add(userConfig?.plugins)
       .end()
 
@@ -411,6 +418,15 @@ export class WebCompileService extends BaseCompileService {
       return
     }
     return new CdnPlugin(cdnOptions)
+  }
+  /** 创建模块联邦插件 */
+  private createModuleFederationPlugin(): Plugin | Plugin[] | undefined {
+    const moduleFederation = this.userConfig?.moduleFederation
+    if (!moduleFederation) return
+    if (isArray(moduleFederation)) {
+      return moduleFederation.map((item) => new ModuleFederationPlugin(item))
+    }
+    return new ModuleFederationPlugin(moduleFederation)
   }
 
   /** 创建插件 --end */

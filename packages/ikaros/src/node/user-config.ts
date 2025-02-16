@@ -1,14 +1,43 @@
-import type { Plugin, Loader } from '@rspack/core'
+import type {
+  Plugin,
+  Loader,
+  ModuleFederationPluginOptions,
+} from '@rspack/core'
 import type { Command } from './compile/base-compile-service'
-import type { Pages, RspackExperiments } from './utils/tools'
-import type { CssLoaderOptions } from './utils/utils'
+import type { Pages, RspackExperiments } from './utils/loader-plugin-helper'
+import type { CssLoaderOptions } from './utils/css-loader-helper'
 import type { ImportMeta } from '../types/env'
-import { CdnPluginOptions } from './plugins/cdn-plugin'
+import type { CdnPluginOptions } from './plugins/cdn-plugin'
 
-export type ModuleFederationOptions = ConstructorParameters<
-  typeof import('@rspack/core').container.ModuleFederationPlugin
->[0]
-
+/**
+ * 这里复写了 ModuleFederationPluginOptions，因为 ModuleFederationPluginOptions 是从 module-federation/sdk 导入的，remoteType和rspack的remoteType不一样
+ */
+export interface ModuleFederationOptions
+  extends Omit<ModuleFederationPluginOptions, 'remoteType'> {
+  remoteType?:
+    | 'var'
+    | 'module'
+    | 'assign'
+    | 'this'
+    | 'window'
+    | 'self'
+    | 'global'
+    | 'commonjs'
+    | 'commonjs2'
+    | 'commonjs-module'
+    | 'commonjs-static'
+    | 'amd'
+    | 'amd-require'
+    | 'umd'
+    | 'umd2'
+    | 'jsonp'
+    | 'system'
+    | 'promise'
+    | 'import'
+    | 'script'
+    | 'module-import'
+    | 'node-commonjs'
+}
 export interface UserConfig {
   /**
    * 编译的平台，该值影响底层优化逻辑
@@ -31,7 +60,6 @@ export interface UserConfig {
    * 模块联邦
    * @see {@link https://module-federation.io/zh/blog/announcement.html}
    * @default undefined
-   * @future 该功能尚未实现
    */
   moduleFederation?: ModuleFederationOptions | ModuleFederationOptions[]
   /**

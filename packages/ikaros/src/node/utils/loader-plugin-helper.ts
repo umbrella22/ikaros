@@ -4,16 +4,14 @@ import {
   type Plugin,
   rspack,
   type Entry,
+  RspackPluginInstance,
 } from '@rspack/core'
 
-import {
-  createEnvPlugin,
-  buildCssLoaders,
-  type CssLoaderOptions,
-} from './utils'
+import { buildCssLoaders, type CssLoaderOptions } from './css-loader-helper'
 import { workPath } from './const'
 import { join } from 'path'
 import { isArray } from 'radash'
+import { getEnv } from './env-tools'
 
 type ListItemType = RuleSetRule | Plugin
 
@@ -209,4 +207,25 @@ export class CreateMpaAssets {
       plugins,
     }
   }
+}
+
+const createEnvPlugin = ({
+  mode,
+  otherEnv = {},
+}: {
+  mode?: string
+  otherEnv?: DefinePluginOptions
+}): RspackPluginInstance => {
+  const baseEnv = Object.assign({}, getEnv(mode))
+  const clientEnvs = Object.fromEntries(
+    Object.entries(baseEnv).map(([key, val]) => {
+      return [`import.meta.env.${key}`, JSON.stringify(val)]
+    }),
+  )
+  const envs = Object.fromEntries(
+    Object.entries({ ...clientEnvs, ...otherEnv }).map(([key, val]) => {
+      return [key, val]
+    }),
+  )
+  return new rspack.DefinePlugin(envs)
 }

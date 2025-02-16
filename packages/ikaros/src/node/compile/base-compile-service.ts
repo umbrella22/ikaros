@@ -4,9 +4,10 @@ import { join } from 'path'
 import type { ImportMetaBaseEnv } from '../../types/env'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import { configSchema, getEnv } from '../utils/utils'
+import { configSchema } from '../utils/common-tools'
 import { resolveConfig } from '../utils/load-config'
 import { isFunction, isObject } from 'radash'
+import { getEnv } from '../utils/env-tools'
 
 export type PackageJson = {
   name: string
