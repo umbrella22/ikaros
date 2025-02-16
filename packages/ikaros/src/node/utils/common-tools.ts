@@ -58,7 +58,7 @@ export const configSchema: ZodSchema = z.object({
   cdnOptions: z.custom<CdnPluginOptions>().optional(),
   server: z
     .object({
-      port: z.number().optional(),
+      port: z.number().int().min(1024).max(65535).optional(),
       proxy: z.custom<Configuration['proxy']>().optional(),
       https: z
         .union([z.boolean(), z.record(z.any())])
