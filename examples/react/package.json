@@ -17,6 +17,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-refresh": "0.16.0",
-    "sass-embedded": "^1.83.4"
+    "sass-embedded": "^1.85.0"
   }
 }

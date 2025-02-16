@@ -13,7 +13,7 @@
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
     "axios": "^1.7.9",
-    "sass-embedded": "^1.83.4",
+    "sass-embedded": "^1.85.0",
     "vue": "^2.7.16",
     "vue-loader": "^15.11.1",
     "vue-router": "^3.6.5"
