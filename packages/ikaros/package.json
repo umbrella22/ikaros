@@ -40,9 +40,9 @@
     "npm": ">=9.5.0"
   },
   "dependencies": {
-    "@module-federation/enhanced": "^0.8.11",
+    "@module-federation/enhanced": "^0.8.12",
     "@rsdoctor/rspack-plugin": "^0.4.13",
-    "@rspack/core": "^1.2.3",
+    "@rspack/core": "^1.2.5",
     "@rspack/dev-server": "^1.0.10",
     "chalk": "^5.4.1",
     "cli-cursor": "^5.0.0",
@@ -71,6 +71,6 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/minimist": "^1.2.5",
-    "vitest": "^3.0.5"
+    "vitest": "^3.0.6"
   }
 }

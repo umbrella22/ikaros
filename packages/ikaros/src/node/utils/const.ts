@@ -5,11 +5,14 @@ import url from 'node:url'
 export const workPath = join(process.cwd(), './')
 export const extensions = [
   '...',
+  '.json',
+  '.css',
+  '.less',
+  '.sass',
+  '.scss',
   '.mjs',
   '.ts',
   '.js',
-  '.jsx',
-  '.tsx',
   '.json',
   '.node',
   '.vue',
@@ -21,7 +24,7 @@ export const tsConfig = join(workPath, 'tsconfig.json')
  */
 export const CLI_PATH = url.fileURLToPath(new url.URL('../', import.meta.url))
 
-export const resolveCliPath: NodeRequire = createRequire(CLI_PATH)
+export const resolveCliPath: NodeJS.Require = createRequire(CLI_PATH)
 
 /**
  * 基于cli的绝对定位

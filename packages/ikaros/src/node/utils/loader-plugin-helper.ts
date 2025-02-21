@@ -4,10 +4,10 @@ import {
   type Plugin,
   rspack,
   type Entry,
-  RspackPluginInstance,
+  type RspackPluginInstance,
 } from '@rspack/core'
 
-import { buildCssLoaders, type CssLoaderOptions } from './css-loader-helper'
+import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
 import { isArray } from 'radash'
@@ -16,7 +16,12 @@ import { getEnv } from './env-tools'
 type ListItemType = RuleSetRule | Plugin
 
 export type RspackExperiments = {
-  import: Record<string, unknown>[]
+  import: Record<string, any>[]
+}
+
+type OtherEnv = {
+  frameworkEnv?: DefinePluginOptions
+  extEnv?: DefinePluginOptions
 }
 
 export class BaseCreate<T extends ListItemType> {
@@ -40,9 +45,7 @@ export class BaseCreate<T extends ListItemType> {
     if (isArray(item)) {
       this.list = this.list.concat(item)
     } else {
-      if (item) {
-        this.list.push(item)
-      }
+      item && this.list.push(item)
     }
     return this
   }
@@ -64,15 +67,11 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
   }
   private defaultScriptLoader = (rspackExperiments?: RspackExperiments) => {
     return {
-      test: /\.m?[jt]s$/,
+      test: /\.m?[j]s$/,
       loader: 'builtin:swc-loader',
       options: {
         sourceMap: this.isDev,
-        jsc: {
-          parser: {
-            syntax: 'typescript',
-          },
-        },
+        isModule: 'unknown',
         rspackExperiments,
       },
       type: 'javascript/auto',
@@ -128,10 +127,13 @@ export class CreatePlugins extends BaseCreate<Plugin> {
   }) {
     super({ env, mode })
   }
-  useDefaultEnvPlugin(otherEnv?: DefinePluginOptions): this {
+  useDefaultEnvPlugin(otherEnv?: OtherEnv): this {
+    const { frameworkEnv = {}, extEnv = {} } = otherEnv ?? {}
+
     this.add(
       createEnvPlugin({
-        otherEnv,
+        frameworkEnv,
+        extEnv,
         mode: this.mode,
       }),
     )
@@ -147,7 +149,7 @@ export class CreatePlugins extends BaseCreate<Plugin> {
               from: './',
               noErrorOnMissing: true,
               globOptions: {
-                ignore: ['.*'],
+                ignore: ['**/index.html', '.*'],
               },
             },
           ],
@@ -184,10 +186,10 @@ export class CreateMpaAssets {
     this.pages = pages
   }
   create() {
-    const entries: Entry = {}
+    const entry: Entry = {}
     const plugins: Plugin[] = []
     Object.keys(this.pages).forEach((page) => {
-      entries[page] = {
+      entry[page] = {
         import: this.pages[page].entry,
         library: this.pages[page].library,
       }
@@ -203,7 +205,7 @@ export class CreateMpaAssets {
     })
 
     return {
-      entry: entries,
+      entry,
       plugins,
     }
   }
@@ -211,19 +213,21 @@ export class CreateMpaAssets {
 
 const createEnvPlugin = ({
   mode,
-  otherEnv = {},
+  frameworkEnv = {},
+  extEnv = {}, // 扩展的环境变量
 }: {
   mode?: string
-  otherEnv?: DefinePluginOptions
+  frameworkEnv?: DefinePluginOptions
+  extEnv?: DefinePluginOptions
 }): RspackPluginInstance => {
-  const baseEnv = Object.assign({}, getEnv(mode))
+  const baseEnv = Object.assign({}, extEnv, getEnv(mode))
   const clientEnvs = Object.fromEntries(
     Object.entries(baseEnv).map(([key, val]) => {
       return [`import.meta.env.${key}`, JSON.stringify(val)]
     }),
   )
   const envs = Object.fromEntries(
-    Object.entries({ ...clientEnvs, ...otherEnv }).map(([key, val]) => {
+    Object.entries({ ...clientEnvs, ...frameworkEnv }).map(([key, val]) => {
       return [key, val]
     }),
   )

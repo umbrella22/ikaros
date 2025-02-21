@@ -169,7 +169,12 @@ export class WebCompileService extends BaseCompileService {
 
     // 生成plugins
     const plugins = pluginHelper
-      .useDefaultEnvPlugin(envConfig)
+      .useDefaultEnvPlugin({
+        extEnv: {
+          ...userConfig?.define,
+        },
+        frameworkEnv: envConfig,
+      })
       .useCopyPlugin()
       .add(mpaPlugins)
       .add(new StatsPlugin())

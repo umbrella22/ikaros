@@ -2,10 +2,11 @@ import type {
   Plugin,
   Loader,
   ModuleFederationPluginOptions,
+  DefinePluginOptions,
 } from '@rspack/core'
 import type { Command } from './compile/base-compile-service'
 import type { Pages, RspackExperiments } from './utils/loader-plugin-helper'
-import type { CssLoaderOptions } from './utils/css-loader-helper'
+import type { CssLoaderOptions } from './utils/css-loaders-helper'
 import type { ImportMeta } from '../types/env'
 import type { CdnPluginOptions } from './plugins/cdn-plugin'
 
@@ -56,6 +57,11 @@ export interface UserConfig {
    * }
    */
   pages?: Pages
+  /**
+   * 全局变量
+   * @default {}
+   */
+  define?: DefinePluginOptions
   /**
    * 模块联邦
    * @see {@link https://module-federation.io/zh/blog/announcement.html}
