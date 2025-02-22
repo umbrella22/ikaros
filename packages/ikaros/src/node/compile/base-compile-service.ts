@@ -53,6 +53,8 @@ export abstract class BaseCompileService {
     return this._env
   }
   private _contextPkg?: PackageJson
+  /** 用户配置 */
+  public userConfig?: UserConfig
 
   /** 工作目录的 package.json */
   private set contextPkg(val: PackageJson | undefined) {
@@ -75,6 +77,7 @@ export abstract class BaseCompileService {
   private async initialize() {
     await this.initContextPkg()
     await this.initEnv()
+    await this.getUserConfig()
     this.startCompile()
   }
 
@@ -130,7 +133,7 @@ export abstract class BaseCompileService {
    * @param configFile 配置文件路径
    * @returns
    */
-  protected async getUserConfig(): Promise<UserConfig | undefined> {
+  protected async getUserConfig(): Promise<undefined> {
     const { configFile } = this
     const tempConfig = await resolveConfig({ configFile })
     let fileConfig: UserConfig | undefined = undefined
@@ -149,8 +152,7 @@ export abstract class BaseCompileService {
       if (isObject(tempConfig)) {
         fileConfig = tempConfig
       }
-
-      return configSchema.parse(fileConfig)
+      this.userConfig = configSchema.parse(fileConfig)
     }
   }
 

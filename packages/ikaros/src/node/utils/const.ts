@@ -3,20 +3,7 @@ import { createRequire } from 'node:module'
 import url from 'node:url'
 
 export const workPath = join(process.cwd(), './')
-export const extensions = [
-  '...',
-  '.json',
-  '.css',
-  '.less',
-  '.sass',
-  '.scss',
-  '.mjs',
-  '.ts',
-  '.js',
-  '.json',
-  '.node',
-  '.vue',
-]
+export const extensions = ['...', '.mjs', '.jsx', '.ts', '.tsx']
 export const tsConfig = join(workPath, 'tsconfig.json')
 
 /**

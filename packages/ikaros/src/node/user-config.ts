@@ -183,7 +183,7 @@ export interface UserConfig {
     /**
      * 默认后缀
      * @see {@link https://webpack.js.org/configuration/resolve/#resolveextensions}
-     * @default ['.js', '.mjs', '.ts', '.tsx', '.vue']
+     * @default [".js", ".json", ".wasm",'.mjs', '.jsx', '.ts', '.tsx']
      */
     extensions?: string[]
   }

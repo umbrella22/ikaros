@@ -32,7 +32,6 @@
 
 - 类型: `ModuleFederationOptions | ModuleFederationOptions[]`
 - 默认值: `undefined`
-- 未来支持: 该功能尚未实现
 - 参考: [Module Federation](https://module-federation.io/zh/blog/announcement.html)
 
 ## plugins
@@ -68,30 +67,30 @@ RspackExperiments。
 
 ```typescript
 // filepath: ikaros.config.ts
-import { defineConfig } from "@ikaros-cli/ikaros";
+import { defineConfig } from '@ikaros-cli/ikaros'
 
 export default defineConfig({
   cdnOptions: {
     modules: [
       {
-        name: "vue", // 模块名称
-        var: "Vue", // 全局变量名
-        path: "dist/vue.runtime.min.js", // JS 文件路径
+        name: 'vue', // 模块名称
+        var: 'Vue', // 全局变量名
+        path: 'dist/vue.runtime.min.js', // JS 文件路径
       },
       {
-        name: "element-plus",
-        var: "ElementPlus",
-        path: "dist/index.full.min.js",
-        style: "dist/index.css", // CSS 文件路径
+        name: 'element-plus',
+        var: 'ElementPlus',
+        path: 'dist/index.full.min.js',
+        style: 'dist/index.css', // CSS 文件路径
       },
     ],
     // 可选：自定义 CDN URL 模板
-    prodUrl: "https://unpkg.com/:name@:version/:path",
-    devUrl: ":name/:path",
+    prodUrl: 'https://unpkg.com/:name@:version/:path',
+    devUrl: ':name/:path',
     // 可选：启用跨域配置
-    crossOrigin: "anonymous",
+    crossOrigin: 'anonymous',
   },
-});
+})
 ```
 
 #### CDN 配置项说明
@@ -113,12 +112,12 @@ export default defineConfig({
 
 #### 插件选项
 
-| 参数        | 类型              | 默认值                                   | 说明                     |
-| ----------- | ----------------- | ---------------------------------------- | ------------------------ |
-| modules     | CdnModule[]       | -                                        | CDN 模块配置列表         |
-| prodUrl     | string            | <https://unpkg.com/:name@:version/:path> | 生产环境 CDN URL 模板    |
-| devUrl      | string            | :name/:path                              | 开发环境 CDN URL 模板    |
-| crossOrigin | boolean \| string | false                                    | 跨域资源配置             |
+| 参数        | 类型              | 默认值                                   | 说明                  |
+| ----------- | ----------------- | ---------------------------------------- | --------------------- |
+| modules     | CdnModule[]       | -                                        | CDN 模块配置列表      |
+| prodUrl     | string            | <https://unpkg.com/:name@:version/:path> | 生产环境 CDN URL 模板 |
+| devUrl      | string            | :name/:path                              | 开发环境 CDN URL 模板 |
+| crossOrigin | boolean \| string | false                                    | 跨域资源配置          |
 
 #### URL 模板
 
@@ -136,11 +135,11 @@ export default defineConfig({
 cdnOptions: {
   modules: [
     {
-      name: "vue",
-      var: "Vue",
-      path: "dist/vue.runtime.min.js",
+      name: 'vue',
+      var: 'Vue',
+      path: 'dist/vue.runtime.min.js',
     },
-  ];
+  ]
 }
 ```
 
@@ -166,14 +165,14 @@ cdnOptions: {
 cdnOptions: {
   modules: [
     {
-      name: "element-plus",
-      var: "ElementPlus",
-      path: "dist/index.full.min.js",
-      paths: ["dist/locale/zh-cn.min.js"],
-      style: "dist/index.css",
-      styles: ["dist/theme-chalk/dark.css"],
+      name: 'element-plus',
+      var: 'ElementPlus',
+      path: 'dist/index.full.min.js',
+      paths: ['dist/locale/zh-cn.min.js'],
+      style: 'dist/index.css',
+      styles: ['dist/theme-chalk/dark.css'],
     },
-  ];
+  ]
 }
 ```
 
@@ -183,11 +182,11 @@ cdnOptions: {
 cdnOptions: {
   modules: [
     {
-      name: "normalize.css",
-      style: "normalize.css",
+      name: 'normalize.css',
+      style: 'normalize.css',
       cssOnly: true,
     },
-  ];
+  ]
 }
 ```
 
@@ -263,7 +262,7 @@ resolve 配置。
     - 参考: [Resolve Alias](https://webpack.js.org/configuration/resolve/#resolvealias)
   - `extensions`: 默认后缀。
     - 类型: `string[]`
-    - 默认值: `['.js', '.mjs', '.ts', '.tsx', '.vue']`
+    - 默认值: [".js", ".json", ".wasm",'.mjs', '.jsx', '.ts', '.tsx']
     - 参考: [Resolve Extensions](https://webpack.js.org/configuration/resolve/#resolveextensions)
 
 ## 辅助工具函数

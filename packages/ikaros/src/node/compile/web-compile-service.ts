@@ -28,8 +28,6 @@ import { errorLog } from '../utils/logger'
 import { checkDependency } from '../utils/common-tools'
 
 export class WebCompileService extends BaseCompileService {
-  private userConfig?: UserConfig
-
   private browserslist!: string
 
   private rspackConfig!: Configuration
@@ -67,9 +65,7 @@ export class WebCompileService extends BaseCompileService {
   /** 初始化配置相关 */
   private async initUserConfig() {
     const isDev = this.command === Command.SERVER
-
-    const config = await this.getUserConfig()
-    this.userConfig = config
+    const config = this.userConfig
 
     this.base = config?.build?.base ?? '/'
 
@@ -273,6 +269,9 @@ export class WebCompileService extends BaseCompileService {
           },
           webSocketURL: `auto://0.0.0.0:${port}/ws`,
         },
+      },
+      experiments: {
+        css: true,
       },
       ...this.createCacheConfig(),
     }
