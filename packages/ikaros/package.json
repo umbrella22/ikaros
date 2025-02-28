@@ -2,7 +2,6 @@
   "name": "@ikaros-cli/ikaros",
   "version": "1.0.0",
   "description": "",
-  "type": "module",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
@@ -33,7 +32,9 @@
     "ikaros": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin.mjs",
+    "readme.md"
   ],
   "engines": {
     "node": ">=20.0.0",
