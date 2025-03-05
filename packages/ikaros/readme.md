@@ -1,6 +1,4 @@
-# UserConfig 使用文档
-
-`UserConfig` 接口定义了项目的配置选项，以下是各个配置项的详细说明：
+# ikaros-web 使用文档
 
 ## target
 
