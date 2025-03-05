@@ -1,5 +1,9 @@
 # @ikaros-cli/stylelint-config
 
+## 0.0.2
+
+- 更新规则依赖
+
 ## 0.0.1
 
 ### Patch Changes
