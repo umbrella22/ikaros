@@ -58,6 +58,11 @@ export interface UserConfig {
    */
   pages?: Pages
   /**
+   * 可选页面启动，当pages为多个对象时，可选择启动哪些页面，当设置为false或者不设置时，启动所有页面
+   * @default false
+   */
+  enablePages?: string[] | false
+  /**
    * 全局变量
    * @default {}
    */

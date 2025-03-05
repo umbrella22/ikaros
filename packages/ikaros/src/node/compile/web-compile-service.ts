@@ -151,7 +151,10 @@ export class WebCompileService extends BaseCompileService {
       env,
       mode: this.options.mode,
     })
-    const mpaAssetsHelper = new CreateMpaAssets(pages)
+    const mpaAssetsHelper = new CreateMpaAssets({
+      pages,
+      enablePages: userConfig?.enablePages,
+    })
     const { entry, plugins: mpaPlugins } = mpaAssetsHelper.create()
     const { env: envConfig, noParse } = this.createVueOrReactConfig()
 

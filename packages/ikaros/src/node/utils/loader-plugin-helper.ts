@@ -10,8 +10,9 @@ import {
 import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
-import { isArray } from 'radash'
+import { isArray, isEmpty } from 'radash'
 import { getEnv } from './env-tools'
+import { warningLog } from './logger'
 
 type ListItemType = RuleSetRule | Plugin
 
@@ -182,8 +183,17 @@ export type Pages = {
 }
 export class CreateMpaAssets {
   protected pages: Pages
-  constructor(pages: Pages) {
+  protected enablePages: string[] | false | undefined
+  constructor({
+    pages,
+    enablePages,
+  }: {
+    pages: Pages
+    enablePages?: string[] | false
+  }) {
     this.pages = pages
+    this.enablePages = enablePages
+    this.getEnablePages()
   }
   create() {
     const entry: Entry = {}
@@ -207,6 +217,28 @@ export class CreateMpaAssets {
     return {
       entry,
       plugins,
+    }
+  }
+  protected getEnablePages() {
+    if (!isEmpty(this.pages) && isArray(this.enablePages)) {
+      const reMakePage: Pages = {}
+      // 预留未找到的数组，以便后续给出错误提示
+      const notFoundPageName: string[] = []
+      this.enablePages.forEach((item) => {
+        if (this.pages[item]) {
+          reMakePage[item] = this.pages[item]
+        } else {
+          notFoundPageName.push(item)
+        }
+      })
+      notFoundPageName.length &&
+        warningLog(`当前设置页面${notFoundPageName.join()}不存在`)
+
+      // 当出现错误的页面导致没有任何选中时，将使用userConfig中的pages，不做任何处理
+      if (isEmpty(reMakePage)) {
+        return
+      }
+      this.pages = reMakePage
     }
   }
 }

@@ -44,6 +44,10 @@ export async function checkDependency(packageName: string): Promise<boolean> {
 export const configSchema: ZodSchema = z.object({
   target: z.enum(['pc', 'mobile']).optional().default('pc'),
   pages: z.custom<Pages>().optional(),
+  enablePages: z
+    .union([z.array(z.string()), z.boolean()])
+    .optional()
+    .default(false),
   moduleFederation: z
     .union([
       z.custom<ModuleFederationOptions>(),
