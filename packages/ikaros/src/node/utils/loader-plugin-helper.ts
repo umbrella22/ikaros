@@ -11,8 +11,8 @@ import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
 import { isArray, isEmpty } from 'radash'
-import { getEnv } from './env-tools'
 import { warningLog } from './logger'
+import { mergeUserConfig } from './common-tools'
 
 type ListItemType = RuleSetRule | Plugin
 
@@ -23,6 +23,7 @@ export type RspackExperiments = {
 type OtherEnv = {
   frameworkEnv?: DefinePluginOptions
   extEnv?: DefinePluginOptions
+  env?: DefinePluginOptions
 }
 
 export class BaseCreate<T extends ListItemType> {
@@ -129,13 +130,13 @@ export class CreatePlugins extends BaseCreate<Plugin> {
     super({ env, mode })
   }
   useDefaultEnvPlugin(otherEnv?: OtherEnv): this {
-    const { frameworkEnv = {}, extEnv = {} } = otherEnv ?? {}
+    const { frameworkEnv = {}, extEnv = {}, env = {} } = otherEnv ?? {}
 
     this.add(
       createEnvPlugin({
         frameworkEnv,
         extEnv,
-        mode: this.mode,
+        env,
       }),
     )
     return this
@@ -244,15 +245,15 @@ export class CreateMpaAssets {
 }
 
 const createEnvPlugin = ({
-  mode,
   frameworkEnv = {},
   extEnv = {}, // 扩展的环境变量
+  env = {}, // 环境变量
 }: {
-  mode?: string
   frameworkEnv?: DefinePluginOptions
   extEnv?: DefinePluginOptions
+  env?: DefinePluginOptions
 }): RspackPluginInstance => {
-  const baseEnv = Object.assign({}, extEnv, getEnv(mode))
+  const baseEnv = Object.assign({}, mergeUserConfig(extEnv, env))
   const clientEnvs = Object.fromEntries(
     Object.entries(baseEnv).map(([key, val]) => {
       return [`import.meta.env.${key}`, JSON.stringify(val)]

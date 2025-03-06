@@ -173,6 +173,7 @@ export class WebCompileService extends BaseCompileService {
           ...userConfig?.define,
         },
         frameworkEnv: envConfig,
+        env: this.env,
       })
       .useCopyPlugin()
       .add(mpaPlugins)
