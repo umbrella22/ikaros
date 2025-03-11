@@ -11,7 +11,7 @@ import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
 import { isArray, isEmpty } from 'radash'
-import { warningLog } from './logger'
+import { LoggerSystem } from './logger'
 import { mergeUserConfig } from './common-tools'
 
 type ListItemType = RuleSetRule | Plugin
@@ -221,6 +221,7 @@ export class CreateMpaAssets {
     }
   }
   protected getEnablePages() {
+    const { warning, emitEvent } = LoggerSystem()
     if (!isEmpty(this.pages) && isArray(this.enablePages)) {
       const reMakePage: Pages = {}
       // 预留未找到的数组，以便后续给出错误提示
@@ -233,7 +234,12 @@ export class CreateMpaAssets {
         }
       })
       notFoundPageName.length &&
-        warningLog(`当前设置页面${notFoundPageName.join()}不存在`)
+        emitEvent(
+          warning({
+            text: `当前设置页面${notFoundPageName.join()}不存在`,
+            onlyText: true,
+          })!,
+        )
 
       // 当出现错误的页面导致没有任何选中时，将使用userConfig中的pages，不做任何处理
       if (isEmpty(reMakePage)) {

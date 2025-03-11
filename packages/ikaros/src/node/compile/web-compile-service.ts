@@ -24,8 +24,10 @@ import {
 } from '../utils/loader-plugin-helper'
 import StatsPlugin from '../plugins/stats-plugin'
 import CdnPlugin from '../plugins/cdn-plugin'
-import { errorLog } from '../utils/logger'
+import { LoggerSystem } from '../utils/logger'
 import { checkDependency } from '../utils/common-tools'
+
+const { error } = LoggerSystem()
 
 export class WebCompileService extends BaseCompileService {
   private browserslist!: string
@@ -71,7 +73,7 @@ export class WebCompileService extends BaseCompileService {
 
     if (isDev && isString(this.base) && /^https?:/.test(this.base)) {
       const optsText = chalk.cyan('build.base')
-      errorLog(`本地开发时 ${optsText} 不应该为外部 Host!`)
+      error({ text: `本地开发时 ${optsText} 不应该为外部 Host!` })
       process.exit(0)
     }
 

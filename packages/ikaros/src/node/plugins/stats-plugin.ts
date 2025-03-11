@@ -17,6 +17,7 @@ import process from 'node:process'
 import { isArray } from 'radash'
 import type { UserConfig } from '../user-config'
 import { name, version } from '../../../package.json'
+import { LoggerSystem } from '../utils/logger'
 
 const cliPackageJson = { name, version }
 const PLUGIN_NAME = '@rspack/ikaros-stats-plugin'
@@ -308,6 +309,7 @@ export default class StatsPlugin implements RspackPluginInstance {
           preset: 'errors-warnings',
           colors: true,
         })
+        const { eventArray } = LoggerSystem()
 
         const { errorsCount = 0, warningsCount = 0 } = stastJson
 
@@ -317,6 +319,10 @@ export default class StatsPlugin implements RspackPluginInstance {
         } else {
           if (warningsCount > 0) {
             console.log(this.getWarn(stastJson))
+            console.log()
+          }
+          if (eventArray.length > 0) {
+            console.log(eventArray.map((item) => item).join('\n'))
             console.log()
           }
 
