@@ -13,7 +13,7 @@
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
     "@rspack/plugin-react-refresh": "^1.0.1",
-    "axios": "^1.8.1",
+    "axios": "^1.8.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-refresh": "0.16.0",
