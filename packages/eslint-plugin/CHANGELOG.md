@@ -1,5 +1,11 @@
 # @ikaros-cli/prettier-config
 
+## 0.1.2
+
+### Patch Changes
+
+- chore: 更新依赖
+
 ## 0.1.0
 
 - 更新eslint规则依赖

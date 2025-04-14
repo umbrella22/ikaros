@@ -88,6 +88,7 @@ export const configSchema: ZodSchema = z.object({
       outDirName: z.string().optional().default('dist'),
       outReport: z.boolean().optional().default(false),
       cache: z.boolean().optional().default(false),
+      dependencyCycleCheck: z.boolean().optional().default(false),
     })
     .optional(),
   resolve: z

@@ -48,21 +48,20 @@ export class WebCompileService extends BaseCompileService {
 
   protected async dev() {
     await this.initPreConfig()
-    await this.createRspackBuilder({ isLive: true, config: this.rspackConfig })
+    await this.createRspackBuilder({ isLive: true })
   }
   protected async build() {
     await this.initPreConfig()
-    await this.createRspackBuilder({
-      isLive: false,
-      config: this.rspackConfig,
-    })
+    await this.createRspackBuilder()
   }
   /** 初始化 */
   private async initPreConfig() {
-    await this.initUserConfig()
-    await this.initBrowserslist()
-    await this.initOtherConfig()
-    this.rspackConfig = await this.createRspackConfig()
+    await Promise.all([
+      this.initUserConfig(),
+      this.initBrowserslist(),
+      this.initOtherConfig(),
+    ])
+    await this.createRspackConfig()
   }
   /** 初始化配置相关 */
   private async initUserConfig() {
@@ -140,7 +139,7 @@ export class WebCompileService extends BaseCompileService {
     return this.resolveContext('dist')
   }
   /** 创建rspack配置 */
-  private async createRspackConfig(): Promise<Configuration> {
+  private async createRspackConfig(): Promise<void> {
     const isDev = this.command === Command.SERVER
     const env = isDev ? 'development' : 'production'
     const { userConfig, context, browserslist, pages, contextPkg, port, base } =
@@ -186,10 +185,11 @@ export class WebCompileService extends BaseCompileService {
       .add(this.createGzipPlugin())
       .add(this.createCdnPlugin())
       .add(this.createModuleFederationPlugin())
+      .add(this.createDependencyCyclePlugin())
       .add(userConfig?.plugins)
       .end()
 
-    return {
+    this.rspackConfig = {
       mode: env,
       target: ['web', 'es5', `browserslist:${browserslist}`],
       context,
@@ -439,21 +439,30 @@ export class WebCompileService extends BaseCompileService {
     return new ModuleFederationPlugin(moduleFederation)
   }
 
+  /** 创建依赖循环检查插件 */
+  private createDependencyCyclePlugin(): Plugin | undefined {
+    if (this.command === Command.SERVER) {
+      return
+    }
+    if (!this.userConfig?.build?.dependencyCycleCheck) {
+      return
+    }
+    return new rspack.CircularDependencyRspackPlugin({
+      exclude: /node_modules/,
+      failOnError: false,
+    })
+  }
+
   /** 创建插件 --end */
 
   /** 创建rspack构建器 */
-  private createRspackBuilder({
-    isLive,
-    config,
-  }: {
-    isLive: boolean
-    config: Configuration
-  }) {
+  private createRspackBuilder(options?: { isLive?: boolean }) {
+    const { isLive = false } = options || {}
     return new Promise<string | undefined>((resolve, reject) => {
-      const compiler = rspack(config)
+      const compiler = rspack(this.rspackConfig)
       if (isLive) {
         const server = new RspackDevServer(
-          config.devServer as DevServer,
+          this.rspackConfig.devServer as DevServer,
           compiler,
         )
         server.startCallback((err) => {

@@ -173,6 +173,10 @@ export interface UserConfig {
      * @default false
      */
     cache?: boolean
+    /**
+     * 是否开启循环依赖检查
+     */
+    dependencyCycleCheck?: boolean
   }
   /**
    * resolve

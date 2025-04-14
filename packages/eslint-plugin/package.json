@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/eslint-plugin",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "author": "sky <https://github.com/umbrella22>",
@@ -25,19 +25,19 @@
     "build": "tsup"
   },
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.26.1",
-    "@typescript-eslint/parser": "^8.26.1",
-    "@typescript-eslint/utils": "^8.26.1",
+    "@typescript-eslint/eslint-plugin": "^8.29.1",
+    "@typescript-eslint/parser": "^8.29.1",
+    "@typescript-eslint/utils": "^8.29.1",
     "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import-x": "^4.6.1",
-    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-import-x": "^4.10.3",
+    "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-unicorn": "^56.0.1",
     "eslint-plugin-vue": "^9.33.0",
-    "typescript-eslint": "^8.26.1",
+    "typescript-eslint": "^8.29.1",
     "vue-eslint-parser": "^9.4.3"
   },
   "devDependencies": {
-    "eslint": "^9.22.0",
+    "eslint": "^9.24.0",
     "prettier": "^3.5.3"
   },
   "peerDependenciesMeta": {
