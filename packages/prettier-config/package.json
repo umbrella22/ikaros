@@ -1,7 +1,9 @@
 {
   "name": "@ikaros-cli/prettier-config",
-  "version": "0.0.2",
-  "main": "./dist/index.js",
+  "version": "0.1.0",
+  "main": "./dist/index.mjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
   "license": "MIT",
   "author": "sky <https://github.com/umbrella22>",
   "publishConfig": {
@@ -20,8 +22,8 @@
     "dist"
   ],
   "scripts": {
-    "dev": "tsup --watch",
-    "build": "tsup"
+    "dev": "tsdown --watch",
+    "build": "tsdown"
   },
   "peerDependencies": {
     "prettier": ">= 3"

@@ -1,4 +1,4 @@
-import { defineConfig, type Options } from 'tsup'
+import { defineConfig, type Options } from 'tsdown'
 
 const commonOptions: Options = {
   sourcemap: true,
@@ -6,7 +6,6 @@ const commonOptions: Options = {
   outDir: 'dist',
   clean: true,
   target: 'node20',
-  splitting: false,
 }
 
 export default defineConfig(({ watch }) => {

@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/stylelint-config",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "author": "sky <https://github.com/umbrella22>",
@@ -24,8 +24,8 @@
     "dist"
   ],
   "scripts": {
-    "dev": "tsup --watch",
-    "build": "tsup"
+    "dev": "tsdown --watch",
+    "build": "tsdown"
   },
   "dependencies": {
     "postcss-html": "^1.8.0",
@@ -38,6 +38,6 @@
   },
   "devDependencies": {
     "postcss": "^8.5.3",
-    "stylelint": "^16.18.0"
+    "stylelint": "^16.19.1"
   }
 }

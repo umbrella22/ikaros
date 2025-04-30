@@ -1,4 +1,4 @@
-import type { FlatConfig } from '@typescript-eslint/utils/dist/ts-eslint'
+import type { FlatConfig } from '@typescript-eslint/utils/ts-eslint'
 
 export function getFiles(
   config: FlatConfig.Config,

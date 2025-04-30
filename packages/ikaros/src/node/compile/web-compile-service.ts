@@ -9,7 +9,7 @@ import {
 import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
 import CompressionPlugin from 'compression-webpack-plugin'
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack'
-import { isEmpty, isString, isArray } from 'radash'
+import { isEmpty, isString, isArray } from 'radashi'
 import { RspackDevServer } from '@rspack/dev-server'
 import { join } from 'node:path'
 import { detect } from 'detect-port'

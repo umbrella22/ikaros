@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/ikaros",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "description": "",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -15,9 +15,9 @@
     "url": "https://github.com/umbrella22/ikaros/issues"
   },
   "scripts": {
-    "dev": "tsup --watch",
-    "dts": "tsup --dts",
-    "build": "tsup"
+    "dev": "tsdown --watch",
+    "dts": "tsdown --dts",
+    "build": "tsdown"
   },
   "keywords": [
     "vue",
@@ -43,8 +43,9 @@
   "dependencies": {
     "@module-federation/enhanced": "^0.8.12",
     "@rsdoctor/rspack-plugin": "^0.4.13",
-    "@rspack/core": "^1.3.4",
+    "@rspack/core": "^1.3.8",
     "@rspack/dev-server": "^1.1.1",
+    "@swc/core": "^1.11.24",
     "chalk": "^5.4.1",
     "cli-cursor": "^5.0.0",
     "commander": "^13.1.0",
@@ -62,16 +63,16 @@
     "ora": "^8.2.0",
     "picocolors": "^1.1.1",
     "pretty-bytes": "^6.1.1",
-    "radash": "^12.1.0",
+    "radashi": "^12.4.0",
     "sass-loader": "^16.0.5",
     "stylus-loader": "^8.1.1",
     "vue-style-loader": "^4.1.3",
     "yaml": "^2.7.1",
-    "zod": "^3.24.2"
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/minimist": "^1.2.5",
-    "vitest": "^3.1.1"
+    "vitest": "^3.1.2"
   }
 }

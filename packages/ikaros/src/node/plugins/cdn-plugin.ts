@@ -21,7 +21,6 @@ export interface CdnPluginOptions {
   prodUrl?: string
   devUrl?: string
   crossOrigin?: boolean | string
-  sri?: boolean
 }
 
 const PLUGIN_NAME = '@rspack/ikaros-cdn-plugin'
@@ -39,7 +38,6 @@ export default class CdnPlugin implements RspackPluginInstance {
       prodUrl: DEFAULT_PROD_URL,
       devUrl: DEFAULT_DEV_URL,
       crossOrigin: false,
-      sri: false,
       ...options,
     }
   }
@@ -180,8 +178,7 @@ export default class CdnPlugin implements RspackPluginInstance {
       return createRequire(path.join(process.cwd(), 'node_modules'))(
         path.join(name, 'package.json'),
       ).version
-    } catch (error) {
-      
+    } catch {
       console.warn(
         chalk.yellow(`[${PLUGIN_NAME}] 无法获取模块 "${name}" 的版本信息`),
       )

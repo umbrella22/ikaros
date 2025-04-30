@@ -16,19 +16,14 @@ const createLoader = (loader: string, options?: any) => ({
 
 const cssLoaders = (env: string, options?: CssLoaderOptions) => {
   const { lightningcss, sourceMap } = options ?? {}
-  // const cssLoader = createLoader("css-loader", { sourceMap, esModule: false });
   const lightningcssLoader = createLoader('builtin:lightningcss-loader', {
     ...lightningcss,
   })
 
   const generateLoaders = (loader: string, loaderOptions?: any) => {
     const loaders = [lightningcssLoader]
-    // 这里的默认可以分离css，但是无法分配css文件夹，疑似rspackbug，暂时保留，等待后续讨论后开启
-    // if (env === "production" && loader === "cssHack") {
-    //   const miniCssLoader = createLoader(rspack.CssExtractRspackPlugin.loader);
-    //   loaders.unshift(miniCssLoader, cssLoader);
-    // }
-    const rawOptions = options && (options as Record<string, any>)[`${loader}`]
+    const rawOptions =
+      options && (options as Record<string, never>)[`${loader}`]
     if (loader && loader !== 'css') {
       loaders.push(
         createLoader(
@@ -58,7 +53,6 @@ const cssLoaders = (env: string, options?: CssLoaderOptions) => {
     }),
     stylus: generateLoaders('stylus'),
     styl: generateLoaders('stylus'),
-    // cssHack: generateLoaders("cssHack"),
     css: generateLoaders('css'),
   }
 }
@@ -67,13 +61,6 @@ export const buildCssLoaders = (env: string, options?: CssLoaderOptions) => {
   const loaders = cssLoaders(env, options)
 
   return Object.entries(loaders).map(([extension, loader]) => {
-    // if (extension === "cssHack" && env === "production") {
-    //   return {
-    //     test: new RegExp(`\\.css$`),
-    //     use: loader,
-    //     type: "javascript/auto",
-    //   };
-    // }
     return {
       test: new RegExp(`\\.${extension}$`),
       use: loader,

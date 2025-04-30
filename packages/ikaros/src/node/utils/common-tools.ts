@@ -1,4 +1,4 @@
-import { isObject } from 'radash'
+import { isObject } from 'radashi'
 import type { Configuration } from '@rspack/dev-server'
 import type { ZodSchema } from 'zod'
 import type { Loader, Plugin } from '@rspack/core'

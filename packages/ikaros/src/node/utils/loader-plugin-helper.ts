@@ -10,14 +10,14 @@ import {
 import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
-import { isArray, isEmpty } from 'radash'
+import { isArray, isEmpty } from 'radashi'
 import { LoggerSystem } from './logger'
 import { mergeUserConfig } from './common-tools'
 
 type ListItemType = RuleSetRule | Plugin
 
 export type RspackExperiments = {
-  import: Record<string, any>[]
+  import: Record<string, unknown>[]
 }
 
 type OtherEnv = {
@@ -44,10 +44,13 @@ export class BaseCreate<T extends ListItemType> {
   }
 
   add(item: T | T[] | undefined): this {
+    if (!item) {
+      return this
+    }
     if (isArray(item)) {
       this.list = this.list.concat(item)
     } else {
-      item && this.list.push(item)
+      this.list.push(item)
     }
     return this
   }
@@ -72,7 +75,6 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
       test: /\.m?[j]s$/,
       loader: 'builtin:swc-loader',
       options: {
-        sourceMap: this.isDev,
         isModule: 'unknown',
         rspackExperiments,
       },
@@ -178,7 +180,7 @@ export type Pages = {
     options?: {
       title: string
       inject: boolean
-      meta: Record<string, any>
+      meta: Record<string, string>
     }
   }
 }
@@ -233,13 +235,15 @@ export class CreateMpaAssets {
           notFoundPageName.push(item)
         }
       })
-      notFoundPageName.length &&
+
+      if (isEmpty(notFoundPageName)) {
         emitEvent(
           warning({
             text: `当前设置页面${notFoundPageName.join()}不存在`,
             onlyText: true,
           })!,
         )
+      }
 
       // 当出现错误的页面导致没有任何选中时，将使用userConfig中的pages，不做任何处理
       if (isEmpty(reMakePage)) {

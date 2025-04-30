@@ -1,5 +1,11 @@
 # @ikaros-cli/ikaros
 
+## 1.2.0
+
+### Minor Changes
+
+- 更新依赖，现在所有包仅支持esm模式
+
 ## 1.1.3
 
 ### Patch Changes

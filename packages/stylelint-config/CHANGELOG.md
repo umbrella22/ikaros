@@ -1,5 +1,11 @@
 # @ikaros-cli/stylelint-config
 
+## 0.1.0
+
+### Minor Changes
+
+- 更新依赖，现在所有包仅支持esm模式
+
 ## 0.0.3
 
 ### Patch Changes
