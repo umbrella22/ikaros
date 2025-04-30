@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "name": "vue2-example",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "ikaros -m dev",
+    "sit": "ikaros -m sit",
+    "build:dev": "ikaros build -m dev",
+    "build:sit": "ikaros build -m sit",
+    "build:release": "ikaros build -m release",
+    "build:master": "ikaros build -m master"
+  },
+  "devDependencies": {
+    "@ikaros-cli/ikaros": "workspace:*",
+    "@rspack/plugin-react-refresh": "^1.4.1",
+    "axios": "^1.9.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-refresh": "0.16.0",
+    "sass-embedded": "^1.87.0"
+  }
+}

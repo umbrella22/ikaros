@@ -1,20 +1,18 @@
-/// <reference types="vite/client" />
-import type { GlobalCLIOptions } from '../node/cli'
-interface ImportMetaBaseEnv {
+export interface ImportMetaBaseEnv {
   /** 命令行所指定的 mode (-m, --mode) */
   MODE?: string
-
   /** 路径前缀 */
   BASE?: string
+  /** 平台 */
+  PLATFORM: 'web'
 }
 
-interface ImportMetaEnv {}
+export type ImportMetaEnv = Record<string, any>
 
-interface ImportMeta {
+export interface ImportMeta {
   readonly env: Readonly<ImportMetaEnv & ImportMetaBaseEnv>
 }
 
-interface CLIOptions {
+export interface CLIOptions {
   configFile?: string
-  options?: GlobalCLIOptions
 }

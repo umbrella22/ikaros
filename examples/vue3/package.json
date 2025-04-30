@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "name": "ikaros-vue3-example",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "ikaros -m dev",
+    "sit": "ikaros -m sit",
+    "build:dev": "ikaros build -m dev",
+    "build:sit": "ikaros build -m sit",
+    "build:release": "ikaros build -m release",
+    "build:master": "ikaros build -m master"
+  },
+  "devDependencies": {
+    "@ikaros-cli/ikaros": "workspace:*",
+    "axios": "^1.9.0",
+    "sass-embedded": "^1.87.0",
+    "vue": "^3.5.13",
+    "vue-loader": "^17.4.2",
+    "vue-router": "^4.5.1"
+  }
+}

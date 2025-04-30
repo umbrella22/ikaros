@@ -1,9 +1,22 @@
-// 所有配置类型
+import { program } from 'commander'
+import { version } from '../../package.json'
+
+import * as compile from './compile/index'
 export * from './user-config'
 
-// 虽然 ./utils.ts 也有导出，但为了节省标记树摇，这里做独立导出
-import { version as _version } from '../../package.json'
+import chalk from 'chalk'
 
-// 重命名导出
-/** 版本号 */
-export const version = _version
+/** 识别版本 */
+const majorVersion = Number(process.versions.node.split('.')[0])
+if (majorVersion < 18) {
+  const errorTip = chalk.bgRed.white(' ERROR ')
+  console.error(errorTip + ' The Node.js version is greater than v18!')
+  console.log()
+  process.exit(1)
+}
+
+program.version(version, '-v, --version')
+
+compile.commander(program)
+
+program.parse()

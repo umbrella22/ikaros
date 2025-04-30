@@ -1,8 +1,10 @@
 {
   "name": "@ikaros-cli/eslint-plugin",
-  "version": "0.1.0-alpha.0",
+  "version": "0.2.0",
   "license": "MIT",
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
   "author": "sky <https://github.com/umbrella22>",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -20,25 +22,25 @@
     "dist"
   ],
   "scripts": {
-    "dev": "tsup --watch",
-    "dts": "tsup --dts",
-    "build": "tsup"
+    "dev": "tsdown --watch",
+    "dts": "tsdown --dts",
+    "build": "tsdown"
   },
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.15.0",
-    "@typescript-eslint/parser": "^8.15.0",
-    "@typescript-eslint/utils": "^8.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "@typescript-eslint/utils": "^8.31.1",
     "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import-x": "^4.4.3",
-    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-import-x": "^4.11.0",
+    "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-unicorn": "^56.0.1",
-    "eslint-plugin-vue": "^9.31.0",
-    "typescript-eslint": "^8.15.0",
+    "eslint-plugin-vue": "^9.33.0",
+    "typescript-eslint": "^8.31.1",
     "vue-eslint-parser": "^9.4.3"
   },
   "devDependencies": {
-    "eslint": "^9.15.0",
-    "prettier": "^3.3.3"
+    "eslint": "^9.25.1",
+    "prettier": "^3.5.3"
   },
   "peerDependenciesMeta": {
     "typescript": {
