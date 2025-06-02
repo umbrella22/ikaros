@@ -4,9 +4,9 @@ import App from './App.vue'
 
 new Vue({
   router,
-  render: h => h(App),
+  render: (h) => h(App),
   created() {
     console.log(router, routes)
     console.log('Vue2 app created')
-  }
+  },
 }).$mount('#app')
