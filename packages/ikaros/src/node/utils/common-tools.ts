@@ -1,9 +1,8 @@
 import { isObject } from 'radashi'
 import type { Configuration } from '@rspack/dev-server'
-import type { ZodSchema } from 'zod'
 import type { Loader, Plugin } from '@rspack/core'
 import fsp from 'fs/promises'
-import { z } from 'zod'
+import { z } from 'zod/v4'
 import { join } from 'path'
 
 import type { Pages, RspackExperiments } from './loader-plugin-helper'
@@ -41,13 +40,10 @@ export async function checkDependency(packageName: string): Promise<boolean> {
   }
 }
 
-export const configSchema: ZodSchema = z.object({
+export const configSchema = z.object({
   target: z.enum(['pc', 'mobile']).optional().default('pc'),
   pages: z.custom<Pages>().optional(),
-  enablePages: z
-    .union([z.array(z.string()), z.boolean()])
-    .optional()
-    .default(false),
+  enablePages: z.union([z.array(z.string())]).optional(),
   moduleFederation: z
     .union([
       z.custom<ModuleFederationOptions>(),
@@ -65,18 +61,18 @@ export const configSchema: ZodSchema = z.object({
       port: z.number().int().min(1024).max(65535).optional(),
       proxy: z.custom<Configuration['proxy']>().optional(),
       https: z
-        .union([z.boolean(), z.record(z.any())])
+        .union([z.boolean(), z.record(z.string(), z.any())])
         .optional()
         .default(false),
     })
     .optional(),
   css: z
     .object({
-      lightningcssOptions: z.record(z.any()).optional(),
+      lightningcssOptions: z.record(z.string(), z.any()).optional(),
       sourceMap: z.boolean().optional(),
-      lessOptions: z.record(z.unknown()).optional(),
-      sassOptions: z.record(z.unknown()).optional(),
-      stylusOptions: z.record(z.unknown()).optional(),
+      lessOptions: z.record(z.string(), z.any()).optional(),
+      sassOptions: z.record(z.string(), z.any()).optional(),
+      stylusOptions: z.record(z.string(), z.any()).optional(),
     })
     .optional(),
   build: z
@@ -93,7 +89,7 @@ export const configSchema: ZodSchema = z.object({
     .optional(),
   resolve: z
     .object({
-      alias: z.record(z.string()).optional(),
+      alias: z.record(z.string(), z.string()).optional(),
       extensions: z.array(z.string()).optional(),
     })
     .optional(),

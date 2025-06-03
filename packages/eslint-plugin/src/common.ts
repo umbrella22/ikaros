@@ -57,6 +57,7 @@ export const tsRules: FlatConfig.Config['rules'] = {
   'import/namespace': 'off',
   'import/default': 'off',
   'import/no-named-as-default-member': 'off',
+  '@typescript-eslint/no-explicit-any': 'warn',
 
   '@typescript-eslint/explicit-function-return-type': 'off',
 }

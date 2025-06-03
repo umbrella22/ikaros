@@ -2,7 +2,7 @@
   <div class="app">
     <img class="img" :src="avatar" />
     <div class="title">{{ present }}</div>
-    <button class=" button" @click="runing = !runing">
+    <button class="button" @click="runing = !runing">
       {{ runing ? 'stop' : 'start' }}
     </button>
   </div>
@@ -18,7 +18,6 @@ defineComponent({
 })
 
 const { present, runing } = useScroll('Hi, welcome to Vue2 Template')
-console.log("present", "runing")
 </script>
 
 <style lang="scss" scoped>

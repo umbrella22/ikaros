@@ -1,5 +1,11 @@
 # @ikaros-cli/stylelint-config
 
+## 0.2.0
+
+### Minor Changes
+
+- 更新依赖
+
 ## 0.1.0
 
 ### Minor Changes
