@@ -11,13 +11,14 @@ import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
 import { isArray, isEmpty } from 'radashi'
-import { LoggerSystem } from './logger'
+import { LoggerQueue } from './logger'
 import { mergeUserConfig } from './common-tools'
+import { LoggerSystem } from '@ikaros-cli/infra-contrlibs'
 
 type ListItemType = RuleSetRule | Plugin
 
 export type RspackExperiments = {
-  import: Record<string, unknown>[]
+  import: Record<string, any>[]
 }
 
 type OtherEnv = {
@@ -44,13 +45,12 @@ export class BaseCreate<T extends ListItemType> {
   }
 
   add(item: T | T[] | undefined): this {
-    if (!item) {
-      return this
-    }
     if (isArray(item)) {
       this.list = this.list.concat(item)
     } else {
-      this.list.push(item)
+      if (item) {
+        this.list.push(item)
+      }
     }
     return this
   }
@@ -180,13 +180,16 @@ export type Pages = {
     options?: {
       title: string
       inject: boolean
-      meta: Record<string, string>
+      meta: Record<string, any>
     }
   }
 }
 export class CreateMpaAssets {
   protected pages: Pages
   protected enablePages: string[] | false | undefined
+  protected logger = LoggerQueue()
+  protected loggerSystem = new LoggerSystem()
+
   constructor({
     pages,
     enablePages,
@@ -223,7 +226,6 @@ export class CreateMpaAssets {
     }
   }
   protected getEnablePages() {
-    const { warning, emitEvent } = LoggerSystem()
     if (!isEmpty(this.pages) && isArray(this.enablePages)) {
       const reMakePage: Pages = {}
       // 预留未找到的数组，以便后续给出错误提示
@@ -235,10 +237,9 @@ export class CreateMpaAssets {
           notFoundPageName.push(item)
         }
       })
-
-      if (isEmpty(notFoundPageName)) {
-        emitEvent(
-          warning({
+      if (notFoundPageName.length) {
+        this.logger.emitEvent(
+          this.loggerSystem.warning({
             text: `当前设置页面${notFoundPageName.join()}不存在`,
             onlyText: true,
           })!,
@@ -270,7 +271,11 @@ const createEnvPlugin = ({
     }),
   )
   const envs = Object.fromEntries(
-    Object.entries({ ...clientEnvs, ...frameworkEnv }).map(([key, val]) => {
+    Object.entries({
+      ...clientEnvs,
+      ...frameworkEnv,
+      ...{ 'import.meta.env': JSON.stringify({}) },
+    }).map(([key, val]) => {
       return [key, val]
     }),
   )

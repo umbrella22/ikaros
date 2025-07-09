@@ -15,9 +15,20 @@ import cliCursor from 'cli-cursor'
 import path from 'node:path'
 import process from 'node:process'
 import { isArray } from 'radashi'
-import type { UserConfig } from '../user-config'
 import { name, version } from '../../../package.json'
-import { LoggerSystem } from '../utils/logger'
+import { LoggerQueue } from '../utils/logger'
+import type { Pages } from '../utils/loaders-plugins-helper'
+
+// 定义插件自己的配置接口
+export interface StatsPluginOptions {
+  // 只包含插件真正需要的配置项
+  gzip?: boolean
+  base?: string
+  pages?: Pages
+  // 添加插件特有的配置选项
+  showTable?: boolean
+  maxTableEntries?: number
+}
 
 const cliPackageJson = { name, version }
 const PLUGIN_NAME = '@rspack/ikaros-stats-plugin'
@@ -29,7 +40,7 @@ export default class StatsPlugin implements RspackPluginInstance {
 
   private ora: ReturnType<typeof ora>
 
-  private userConfig?: UserConfig
+  private config?: StatsPluginOptions
 
   private startCompileHrtime: ReturnType<typeof process.hrtime> | undefined =
     undefined
@@ -38,8 +49,8 @@ export default class StatsPlugin implements RspackPluginInstance {
 
   private lastProgressText?: string
 
-  constructor(config?: UserConfig) {
-    this.userConfig = config
+  constructor(config?: StatsPluginOptions) {
+    this.config = config
 
     this.ora = ora({
       color: 'cyan',
@@ -154,31 +165,35 @@ export default class StatsPlugin implements RspackPluginInstance {
     if (!assets || assets.length === 0) return
 
     const table = new EasyTable()
-    const isGzip = this.userConfig?.build?.gzip ?? false
+    const isGzip = this.config?.gzip ?? false
 
     let sizeTotal = 0
     let gzipTotal = 0
     let ignored = false
+    let gzip = 0
+    let gzipItem: StatsCompilation['StatsAsset'] | undefined
 
     for (let i = 0; i < assets.length; i++) {
       const { name, size, related, info } = assets[i]
 
       if (info.development) continue
 
-      const gzip =
-        isGzip && isArray(related)
-          ? related!.find((item) => item.type === 'gzipped')!.size
-          : 0
+      if (isGzip && isArray(related)) {
+        gzipItem = related.find((item) => item.type === 'gzipped')
+        if (gzipItem) {
+          gzip = gzipItem.size
+          gzipTotal += gzip
+        }
+      }
 
       sizeTotal += size
-      gzipTotal += gzip
 
       if (assets.length > 20 && i >= 4 && i < assets.length - 1 - 4) {
         if (!ignored) {
           ignored = true
           table.cell('name', '....')
           table.cell('size', '....')
-          if (isGzip) table.cell('gzip', '....')
+          isGzip && gzipItem && table.cell('gizp', '....')
           table.newRow()
         }
         continue
@@ -186,7 +201,7 @@ export default class StatsPlugin implements RspackPluginInstance {
 
       table.cell('name', name)
       table.cell('size', prettyBytes(size))
-      if (isGzip) table.cell('gzip', prettyBytes(gzip))
+      isGzip && gzipItem && table.cell('gzip', prettyBytes(gzip))
 
       table.newRow()
     }
@@ -195,7 +210,7 @@ export default class StatsPlugin implements RspackPluginInstance {
 
     table.cell('name', `There are ${assets.length} files`)
     table.cell('size', prettyBytes(sizeTotal))
-    if (isGzip) table.cell('gzip', prettyBytes(gzipTotal))
+    isGzip && gzipItem && table.cell('gzip', prettyBytes(gzipTotal))
 
     table.newRow()
 
@@ -206,7 +221,7 @@ export default class StatsPlugin implements RspackPluginInstance {
    * 获取ip
    */
   private getHostList() {
-    const { userConfig, compiler } = this
+    const { config, compiler } = this
     const { devServer } = compiler.options
 
     const userHttps =
@@ -217,13 +232,13 @@ export default class StatsPlugin implements RspackPluginInstance {
     let urlPaht = ''
     const networks = Object.values(os.networkInterfaces())
 
-    if (userConfig) {
-      urlPaht = userConfig.build?.base ?? ''
+    if (config) {
+      urlPaht = config.base ?? ''
       if (!urlPaht || urlPaht === 'auto') {
         urlPaht = '/'
       }
 
-      const firstPage = Object.keys(userConfig?.pages || {})[0]
+      const firstPage = Object.keys(config?.pages || {})[0]
       if (firstPage && firstPage !== 'index') {
         urlPaht = path.join(urlPaht, `${firstPage}.html`)
       } else if (!urlPaht.endsWith('/')) {
@@ -305,13 +320,20 @@ export default class StatsPlugin implements RspackPluginInstance {
         ora.stop()
         console.clear()
 
+        const { eventArray } = LoggerQueue()
+
         const stastJson = stast.toJson({
           preset: 'errors-warnings',
           colors: true,
+          timings: true,
         })
-        const { eventArray } = LoggerSystem()
 
         const { errorsCount = 0, warningsCount = 0 } = stastJson
+
+        if (eventArray.length > 0) {
+          console.log(eventArray.map((item) => item).join('\n'))
+          console.log()
+        }
 
         if (errorsCount > 0) {
           console.log(this.getError(stastJson))
@@ -319,10 +341,6 @@ export default class StatsPlugin implements RspackPluginInstance {
         } else {
           if (warningsCount > 0) {
             console.log(this.getWarn(stastJson))
-            console.log()
-          }
-          if (eventArray.length > 0) {
-            console.log(eventArray.map((item) => item).join('\n'))
             console.log()
           }
 
@@ -347,12 +365,22 @@ export default class StatsPlugin implements RspackPluginInstance {
     const { compiler } = this
 
     let stastJson: StatsCompilation
+    let isError = false
 
     compiler.hooks.environment.intercept({
       name: PLUGIN_NAME,
       call: () => {
         console.log(chalk.gray('start build...'))
         this.updateStartCompileTime()
+      },
+    })
+
+    compiler.hooks.failed.intercept({
+      name: PLUGIN_NAME,
+      call: () => {
+        isError = true
+        console.log(chalk.red('build failed'))
+        console.clear()
       },
     })
 
@@ -364,31 +392,37 @@ export default class StatsPlugin implements RspackPluginInstance {
           colors: true,
           assetsSort: 'size',
         })
+        this.handleProOutput(stastJson, isError)
       },
     })
+  }
+  /**
+   * 处理生产环境的输出
+   * @param stastJson 编译结果
+   * @param isError 是否有错误
+   */
+  private handleProOutput(stastJson: StatsCompilation, isError: boolean) {
+    if (isError) {
+      return
+    }
+    console.clear()
+    const { errorsCount = 0, warningsCount = 0 } = stastJson
 
-    compiler.cache.hooks.shutdown.intercept({
-      name: PLUGIN_NAME,
-      done: () => {
-        const { errorsCount = 0, warningsCount = 0 } = stastJson
+    console.log()
 
+    if (errorsCount > 0) {
+      console.log(this.getError(stastJson))
+      console.log()
+    } else {
+      if (warningsCount > 0) {
+        console.log(this.getWarn(stastJson))
         console.log()
+      }
 
-        if (errorsCount > 0) {
-          console.log(this.getError(stastJson))
-          console.log()
-        } else {
-          if (warningsCount > 0) {
-            console.log(this.getWarn(stastJson))
-            console.log()
-          }
+      stastJson && console.log(this.getTableInfo(stastJson))
+      console.log()
+    }
 
-          console.log(this.getTableInfo(stastJson))
-          console.log()
-        }
-
-        console.log(this.getEndTips(stastJson, this.getCurrentEndCompileTime()))
-      },
-    })
+    console.log(this.getEndTips(stastJson, this.getCurrentEndCompileTime()))
   }
 }

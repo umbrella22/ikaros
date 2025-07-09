@@ -5,7 +5,7 @@ import fsp from 'fs/promises'
 import { z } from 'zod/v4'
 import { join } from 'path'
 
-import type { Pages, RspackExperiments } from './loader-plugin-helper'
+import type { Pages, RspackExperiments } from './loaders-plugins-helper'
 import { ModuleFederationOptions } from '../user-config'
 import { CdnPluginOptions } from '../plugins/cdn-plugin'
 

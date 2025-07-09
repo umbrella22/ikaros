@@ -3,25 +3,12 @@ import { pathToFileURL } from 'node:url'
 import { parse } from 'yaml'
 import fsp from 'node:fs/promises'
 import fse from 'fs-extra'
-import { transform } from '@swc/core'
+import { transformCode } from '@ikaros-cli/infra-contrlibs'
 import type { UserConfig } from '../user-config'
 
 async function transformConfig(input: string, isTs: boolean) {
-  const { code } = await transform(input, {
-    filename: input,
-    sourceMaps: 'inline',
-    jsc: {
-      parser: {
-        syntax: isTs ? 'typescript' : 'ecmascript',
-        decorators: true,
-        dynamicImport: true,
-      },
-      target: 'es2022',
-      loose: true,
-      keepClassNames: true,
-      externalHelpers: true,
-    },
-    minify: false,
+  const { code } = await transformCode(input, {
+    lang: isTs ? 'ts' : 'js',
   })
   return {
     code,
@@ -39,11 +26,11 @@ async function requireConfig(fileName: string, code: string) {
     const module = await import(fileUrl)
     return module.default
   } finally {
-    await fsp.unlink(fileNameTmp) // Ignore errors
+    await fsp.unlink(fileNameTmp)
   }
 }
 
-async function resultConfig(filePath: string, isTs = false) {
+async function resultConfig(filePath: string, isTs: boolean) {
   const { code } = await transformConfig(filePath, isTs)
   return requireConfig(filePath, code)
 }
@@ -78,13 +65,13 @@ fileType.set('.yaml', async (filePath) => {
  * @description 解析配置文件
  * @date 2024-05-22
  * @param {string} configFile 文件路径，可选，若不传入则会在项目根目录寻找配置文件
- * @returns {Promise<UserConfig | undefined>}
+ * @returns {Promise<{ filePath: string; config: UserConfig | undefined }|undefined>} 返回配置文件路径和配置对象
  */
 export async function resolveConfig({
   configFile,
 }: {
   configFile?: string
-}): Promise<UserConfig | undefined> {
+}): Promise<{ filePath: string; config: UserConfig | undefined } | undefined> {
   let suffix: FileType | undefined
   let configPath = process.cwd()
   const configName = 'ikaros.config'
@@ -109,5 +96,8 @@ export async function resolveConfig({
     suffix = extname(configFile) as FileType
   }
   if (!fileType.has(suffix)) throw new Error('No configuration file ! ')
-  return fileType.get(suffix)!(configPath)
+  return {
+    filePath: configPath,
+    config: await fileType.get(suffix)!(configPath),
+  }
 }

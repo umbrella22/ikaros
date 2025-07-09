@@ -1,0 +1,39 @@
+{
+  "name": "@ikaros-cli/infra-contrlibs",
+  "version": "1.3.2",
+  "description": "前端脚手架共享库",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "homepage": "https://github.com/umbrella22/ikaros#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/umbrella22/ikaros.git"
+  },
+  "bugs": {
+    "url": "https://github.com/umbrella22/ikaros/issues"
+  },
+  "scripts": {
+    "dev": "tsdown --watch",
+    "dts": "tsdown --dts",
+    "build": "tsdown"
+  },
+  "author": "sky <https://github.com/umbrella22>",
+  "license": "MIT",
+  "main": "dist/index.mjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "files": [
+    "dist",
+    "readme.md"
+  ],
+  "keywords": [
+    "infra",
+    "contrlibs"
+  ],
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "oxc-transform": "^0.76.0"
+  }
+}

@@ -1,7 +1,16 @@
-import { type RspackPluginInstance, type Compiler, rspack } from '@rspack/core'
-import { createRequire } from 'node:module'
-import chalk from 'chalk'
+import {
+  type RspackPluginInstance,
+  type Compiler,
+  rspack,
+  type HtmlRspackPluginOptions,
+} from '@rspack/core'
+import module from 'node:module'
 import path from 'path'
+import fs from 'node:fs'
+import { isEmpty } from 'radashi'
+
+import { LoggerSystem } from '@ikaros-cli/infra-contrlibs'
+import { LoggerQueue } from '../utils/logger'
 
 interface CdnModule {
   name: string
@@ -16,11 +25,41 @@ interface CdnModule {
   devUrl?: string
 }
 
+type ExtraPluginHookData = {
+  plugin: {
+    options: HtmlRspackPluginOptions
+  }
+}
+interface JsBeforeAssetTagGenerationData {
+  assets?: {
+    publicPath: string
+    js: Array<string>
+    css: Array<string>
+    favicon?: string
+    jsIntegrity?: Array<string | undefined | null>
+    cssIntegrity?: Array<string | undefined | null>
+  }
+  outputName: string
+  compilationId: number
+}
+
+interface JsBeforeEmitData {
+  html: string
+  outputName: string
+  compilationId: number
+}
+
+type TagsAssetsData = JsBeforeAssetTagGenerationData & ExtraPluginHookData
+
+type HtmlData = JsBeforeEmitData & ExtraPluginHookData
+
 export interface CdnPluginOptions {
   modules: CdnModule[]
   prodUrl?: string
   devUrl?: string
   crossOrigin?: boolean | string
+  sri?: boolean
+  useLocal?: boolean
 }
 
 const PLUGIN_NAME = '@rspack/ikaros-cdn-plugin'
@@ -32,12 +71,16 @@ export default class CdnPlugin implements RspackPluginInstance {
   private compiler!: Compiler
   private options: CdnPluginOptions
   private isDev: boolean = false
+  private logger = LoggerQueue()
+  private loggerSystem = new LoggerSystem()
 
   constructor(options: CdnPluginOptions) {
     this.options = {
       prodUrl: DEFAULT_PROD_URL,
       devUrl: DEFAULT_DEV_URL,
       crossOrigin: false,
+      sri: false,
+      useLocal: false,
       ...options,
     }
   }
@@ -47,20 +90,44 @@ export default class CdnPlugin implements RspackPluginInstance {
     this.isDev = compiler.options.mode === 'development'
 
     // 处理外部模块
-    this.handleExternals()
+    !this.options.useLocal && this.handleExternals()
 
     // 注册 HTML 标签注入
     compiler.hooks.compilation.tap(PLUGIN_NAME, (compilation) => {
       const hooks = rspack.HtmlRspackPlugin.getCompilationHooks(compilation)
-
+      hooks.beforeAssetTagGeneration.tapAsync(PLUGIN_NAME, (data, cb) => {
+        if (
+          data.plugin.options.meta &&
+          !isEmpty(data.plugin.options.meta.assetsLoadFilePath) &&
+          !this.isDev
+        ) {
+          data.assets.js = this.removeChunkJs(data)
+          return cb(null, data)
+        }
+        cb(null, data)
+      })
       // 注入脚本和样式
       hooks.alterAssetTags.tapAsync(PLUGIN_NAME, (data, cb) => {
         try {
-          this.injectResources(data)
+          !this.options.useLocal && this.injectResources(data)
           cb(null, data)
         } catch (error) {
           cb(error as Error)
         }
+      })
+
+      hooks.beforeEmit.tapAsync(PLUGIN_NAME, async (data, cb) => {
+        if (
+          data.plugin.options.meta &&
+          !isEmpty(data.plugin.options.meta.assetsLoadFilePath) &&
+          !this.isDev
+        ) {
+          const loadPath = data.plugin.options.meta.assetsLoadFilePath ?? ''
+          data.html = this.removeLink(data)
+          data.html = await this.inlineJs(loadPath as string, data)
+          return cb(null, data)
+        }
+        cb(null, data)
       })
     })
   }
@@ -175,14 +242,54 @@ export default class CdnPlugin implements RspackPluginInstance {
 
   private getModuleVersion(name: string): string {
     try {
-      return createRequire(path.join(process.cwd(), 'node_modules'))(
+      return module.createRequire(path.join(process.cwd(), 'node_modules'))(
         path.join(name, 'package.json'),
       ).version
     } catch {
-      console.warn(
-        chalk.yellow(`[${PLUGIN_NAME}] 无法获取模块 "${name}" 的版本信息`),
+      this.logger.emitEvent(
+        this.loggerSystem.warning({
+          text: `[${PLUGIN_NAME}] 无法获取模块 "${name}" 的版本信息，回退到 "latest"`,
+          onlyText: true,
+        })!,
       )
       return 'latest'
     }
+  }
+
+  removeChunkJs(htmlData: TagsAssetsData) {
+    const modules = this.options.modules
+    const resourcesUrlArray = modules
+      .filter((m) => !m.cssOnly)
+      .flatMap((module) => this.getScripts(module))
+
+    if (!htmlData?.assets || !htmlData.assets.js) return []
+    return htmlData.assets.js.filter((item) => {
+      return resourcesUrlArray.includes(item)
+    })
+  }
+
+  removeLink(htmlData: HtmlData) {
+    return htmlData.html.replace(/<link(.*?)>/g, '')
+  }
+
+  async inlineJs(optionPath: string, htmlData: HtmlData) {
+    // 如果文件不存在，直接返回原始 HTML
+    if (!fs.existsSync(optionPath)) {
+      return htmlData.html.toString()
+    }
+    // esbuild将代码压缩以后内链进对应html
+    const { code } = await this.compiler.rspack.experiments.swc.minify(
+      fs.readFileSync(optionPath, 'utf-8') || '',
+      {
+        ecma: 5,
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+        },
+      },
+    )
+    const scriptCode = `<script>${code}</script>`
+    const htmlStr = htmlData.html.toString()
+    return htmlStr.replace(new RegExp('</body>', 'g'), '</body>' + scriptCode) // 内联至html的body后面
   }
 }

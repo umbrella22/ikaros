@@ -1,11 +1,11 @@
 import type {
   Plugin,
   Loader,
-  ModuleFederationPluginOptions,
   DefinePluginOptions,
+  ModuleFederationPluginOptions,
 } from '@rspack/core'
 import type { Command } from './compile/base-compile-service'
-import type { Pages, RspackExperiments } from './utils/loader-plugin-helper'
+import type { Pages, RspackExperiments } from './utils/loaders-plugins-helper'
 import type { CssLoaderOptions } from './utils/css-loaders-helper'
 import type { ImportMeta } from '../types/env'
 import type { CdnPluginOptions } from './plugins/cdn-plugin'
@@ -39,6 +39,7 @@ export interface ModuleFederationOptions
     | 'module-import'
     | 'node-commonjs'
 }
+
 export interface UserConfig {
   /**
    * 编译的平台，该值影响底层优化逻辑
@@ -46,6 +47,15 @@ export interface UserConfig {
    * @future 该功能受限，目前仅支持 'pc'
    */
   target?: 'pc' | 'mobile'
+  /**
+   * 编译的引擎
+   * @default 'rspack'
+   * @see {@link https://rspack.dev/zh/guide/introduction}
+   * @see {@link https://webpack.js.org/}
+   * @see {@link https://vitejs.dev/}
+   * @warning 该值会影响编译的速度和兼容性，建议使用 rspack
+   */
+  engine?: 'rspack' | 'webpack' | 'vite'
   /**
    * 页面配置
    * @default
@@ -58,10 +68,20 @@ export interface UserConfig {
    */
   pages?: Pages
   /**
-   * 可选页面启动，当pages为多个对象时，可选择启动哪些页面，当设置为false或者不设置时，启动所有页面
+   * 可选页面启动，当pages为多个对象时，可选择启动哪些页面
    * @default false
    */
   enablePages?: string[] | false
+  /**
+   * 编译时规范检查，一般建议让IDE去做这个工作，关闭该选项以节省构建时间
+   * true:检查错误 false:关闭检查 fix:检查且修复 error:检查错误当出现错误时退出构建
+   * @default false
+   */
+  eslint?: boolean | 'fix' | 'error'
+  /**
+   *
+   */
+  stylelint?: boolean | 'fix' | 'error'
   /**
    * 全局变量
    * @default {}
@@ -123,9 +143,9 @@ export interface UserConfig {
   /**
    * css loader 配置
    * @see {@link lightningcssOptions https://rspack.dev/zh/guide/features/builtin-lightningcss-loader#%E9%80%89%E9%A1%B9}
-   * @see {@link stylusOptions https://webpack.js.org/loaders/stylus-loader/#options}
-   * @see {@link lessOptions https://webpack.js.org/loaders/less-loader/#options}
-   * @see {@link sassOptions https://webpack.js.org/loaders/sass-loader/#options}
+   * @see {@link https://webpack.js.org/loaders/stylus-loader/#options}
+   * @see {@link https://webpack.js.org/loaders/less-loader/#options}
+   * @see {@link https://webpack.js.org/loaders/sass-loader/#options}
    */
   css?: CssLoaderOptions
   /**
@@ -174,6 +194,12 @@ export interface UserConfig {
      */
     cache?: boolean
     /**
+     * 默认最大chunk数量
+     * @see {@link https://rspack.dev/zh/plugins/webpack/limit-chunk-count-plugin}
+     * @default false
+     */
+    maxChunks?: false | number
+    /**
      * 是否开启循环依赖检查
      */
     dependencyCycleCheck?: boolean
@@ -192,15 +218,15 @@ export interface UserConfig {
     /**
      * 默认后缀
      * @see {@link https://webpack.js.org/configuration/resolve/#resolveextensions}
-     * @default [".js", ".json", ".wasm",'.mjs', '.jsx', '.ts', '.tsx']
+     * @default ['.js', '.mjs', '.ts', '.tsx', '.vue']
+     * @warning 此处将会覆盖默认配置，如果你想保留默认配置添加默认配置即可
      */
     extensions?: string[]
   }
 }
-
 export type ConfigEnvPre = Readonly<{
   mode: string
-  env: Omit<ImportMeta['env'], 'BASE'>
+  env: ImportMeta['env']
   command: Command
 }>
 export type UserConfigFn<C> = (envPre: ConfigEnvPre) => C | Promise<C>

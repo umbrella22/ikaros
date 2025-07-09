@@ -1,18 +1,18 @@
 export interface ImportMetaBaseEnv {
   /** 命令行所指定的 mode (-m, --mode) */
-  MODE?: string
+  MODE?: string;
   /** 路径前缀 */
-  BASE?: string
+  BASE?: string;
   /** 平台 */
-  PLATFORM: 'web'
+  PLATFORM: "web";
 }
 
-export type ImportMetaEnv = Record<string, any>
+export interface ImportMetaEnv {}
 
 export interface ImportMeta {
-  readonly env: Readonly<ImportMetaEnv & ImportMetaBaseEnv>
+  readonly env: Readonly<ImportMetaEnv & ImportMetaBaseEnv>;
 }
 
 export interface CLIOptions {
-  configFile?: string
+  configFile?: string;
 }

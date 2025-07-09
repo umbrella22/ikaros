@@ -1,13 +1,14 @@
-import { createRequire } from 'node:module'
+import module from 'node:module'
 import type { ConfigEnvPre, UserConfig } from '../user-config'
 import { join } from 'path'
 import type { ImportMetaBaseEnv } from '../../types/env'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import { configSchema } from '../utils/common-tools'
+import { getEnv } from '../utils/env-tools'
 import { resolveConfig } from '../utils/load-config'
 import { isFunction, isObject } from 'radashi'
-import { getEnv } from '../utils/env-tools'
+import { version } from '../../../package.json'
+import { LoggerSystem } from '@ikaros-cli/infra-contrlibs'
 
 export type PackageJson = {
   name: string
@@ -27,7 +28,7 @@ export type CompileOptions = {
   /** 平台 */
   readonly platform: ImportMetaBaseEnv['PLATFORM']
 }
-export type CompileServeParame = {
+export type CompileServeParams = {
   command: Command
   options: CompileOptions
   configFile?: string
@@ -41,10 +42,15 @@ export abstract class BaseCompileService {
   /** 选项 */
   readonly options: CompileOptions
   /** 基于工作目录的Require */
-  readonly contextRequire: NodeRequire
+  readonly contextRequire: NodeJS.Require
   private _env!: ConfigEnvPre['env']
   /** 配置文件 */
   readonly configFile?: string
+  /** 日志 */
+  protected logger = new LoggerSystem()
+  /** cli版本 */
+  readonly version = version
+  /**  */
   /** env */
   private set env(val: ConfigEnvPre['env']) {
     this._env = val
@@ -53,8 +59,6 @@ export abstract class BaseCompileService {
     return this._env
   }
   private _contextPkg?: PackageJson
-  /** 用户配置 */
-  public userConfig?: UserConfig
 
   /** 工作目录的 package.json */
   private set contextPkg(val: PackageJson | undefined) {
@@ -64,21 +68,19 @@ export abstract class BaseCompileService {
     return this._contextPkg
   }
 
-  constructor(parame: CompileServeParame) {
+  constructor(parame: CompileServeParams) {
     const { command, options, configFile } = parame
     this.command = command
     this.options = options
     this.configFile = configFile
     this.context = join(process.cwd(), './')
-    this.contextRequire = createRequire(this.context)
-    this.initialize()
+    this.contextRequire = module.createRequire(this.context)
   }
 
-  private async initialize() {
+  // 初始化方法但是此处不应该执行耗时的任务
+  protected async initialize() {
     await this.initContextPkg()
     await this.initEnv()
-    await this.getUserConfig()
-    this.startCompile()
   }
 
   /** 基于工作目录的定位 */
@@ -95,10 +97,12 @@ export abstract class BaseCompileService {
       return
     }
 
+    const contextPkgPath = await fsp.readFile(filePath, {
+      encoding: 'utf8',
+    })
+
     this.contextPkg = JSON.parse(
-      await fsp.readFile(filePath, {
-        encoding: 'utf8',
-      }),
+      contextPkgPath as unknown as string,
     ) as PackageJson
   }
 
@@ -110,9 +114,11 @@ export abstract class BaseCompileService {
       MODE: mode,
     }
     const envData = await getEnv(mode)
+    const localEnv = await getEnv('local')
     this.env = {
       ...retain,
       ...envData,
+      ...localEnv,
     }
   }
   /** 检索工作目录的模块路径 */
@@ -130,15 +136,14 @@ export abstract class BaseCompileService {
   }
   /**
    * 获取配置文件
-   * @param configFile 配置文件路径
    * @returns
    */
-  protected async getUserConfig(): Promise<undefined> {
+  protected async getUserConfig(): Promise<UserConfig | undefined> {
     const { configFile } = this
     const tempConfig = await resolveConfig({ configFile })
     let fileConfig: UserConfig | undefined = undefined
     if (tempConfig) {
-      if (isFunction(tempConfig)) {
+      if (isFunction(tempConfig.config)) {
         const retain: ConfigEnvPre['env'] = {
           PLATFORM: this.options.platform,
         }
@@ -147,30 +152,21 @@ export abstract class BaseCompileService {
           env: Object.assign(retain, this.env),
           command: this.command,
         }
-        fileConfig = await tempConfig(opts)
+        fileConfig = await tempConfig.config(opts)
       }
-      if (isObject(tempConfig)) {
-        fileConfig = tempConfig
+      if (isObject(tempConfig.config)) {
+        fileConfig = tempConfig.config
       }
-      this.userConfig = configSchema.parse(fileConfig)
+      return fileConfig
     }
   }
+  /**
+   * 文件变动看门狗
+   * 目前仅监听配置文件
+   * @returns
+   */
+  protected watchDogServer() {}
 
-  protected startCompile() {
-    switch (this.command) {
-      case Command.SERVER: {
-        this.dev?.()
-        break
-      }
-      case Command.BUILD: {
-        this.build?.()
-        break
-      }
-      default: {
-        break
-      }
-    }
-  }
   /**
    * 生命周期抽象方法
    * dev 启动
@@ -182,4 +178,9 @@ export abstract class BaseCompileService {
    * build 启动
    */
   protected build?(): void
+  /**
+   * 生命周期抽象方法
+   * restartServer 启动
+   */
+  protected restartServer?(): void
 }
