@@ -46,18 +46,6 @@ export class RspackService extends IEngineService {
     }
   }
 
-  /** 创建css分离插件 */
-  private createCssExtractPlugin(): Plugin | undefined {
-    if (this.resolvedContext.command === Command.SERVER) {
-      return
-    }
-
-    return new rspack.CssExtractRspackPlugin({
-      filename: this.joinAssetsDir('assets/css/[contenthash].css'),
-      ignoreOrder: true,
-    })
-  }
-
   /** 创建eslint插件 */
   private createEslintPlugin(): Plugin[] | undefined {
     const eslint = this.userConfig?.eslint || false
@@ -185,6 +173,35 @@ export class RspackService extends IEngineService {
     }
     return new CdnPlugin(cdnOptions)
   }
+  /** 创建vue或react专属配置 */
+  private createVueOrReactConfig() {
+    if (this.isVue) {
+      return {
+        noParse: /^(vue|vue-router|vuex|vuex-router-sync)$/,
+        env: {
+          __VUE_OPTIONS_API__: true,
+          __VUE_PROD_DEVTOOLS__: false,
+          __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+        },
+      }
+    }
+    if (this.isReact) {
+      return {
+        noParse: (content: string) => {
+          return /(react|react-dom|react-is)\.production\.min\.js$/.test(
+            content,
+          )
+        },
+        env: {
+          REACT_APP_ENABLE_DEVTOOLS: false,
+        },
+      }
+    }
+    return {
+      env: undefined,
+      noParse: undefined,
+    }
+  }
 
   /** 创建模块联邦插件 */
   private createModuleFederationPlugin(): Plugin | Plugin[] | undefined {
@@ -245,6 +262,7 @@ export class RspackService extends IEngineService {
       enablePages: this.userConfig?.enablePages,
     })
     const { entry, plugins: mpaPlugins } = mpaAssetsHelper.create()
+    const { env: envConfig, noParse } = this.createVueOrReactConfig()
 
     // 生成rules
     const rules = loaderHelper
@@ -259,6 +277,7 @@ export class RspackService extends IEngineService {
       .useDefaultEnvPlugin({
         extEnv: {
           CLI_VER: this.resolvedContext.version,
+          frameworkEnv: envConfig,
           ...this.userConfig?.define,
         },
         frameworkEnv: {
@@ -295,7 +314,6 @@ export class RspackService extends IEngineService {
       entry,
       resolve: {
         alias: {
-          vue$: this.vueMajor === 3 ? 'vue' : 'vue/dist/vue.runtime.esm.js',
           '@': this.resolvedContext.resolveContext('src'),
           ...this.userConfig?.resolve?.alias,
         },
@@ -328,7 +346,7 @@ export class RspackService extends IEngineService {
       },
       module: {
         rules,
-        noParse: /^(vue|vue-router|vuex|vuex-router-sync)$/,
+        noParse,
       },
       plugins,
       devServer: {

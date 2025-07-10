@@ -193,7 +193,9 @@ export default class StatsPlugin implements RspackPluginInstance {
           ignored = true
           table.cell('name', '....')
           table.cell('size', '....')
-          isGzip && gzipItem && table.cell('gizp', '....')
+          if (isGzip && gzipItem) {
+            table.cell('gzip', '....')
+          }
           table.newRow()
         }
         continue
@@ -201,7 +203,9 @@ export default class StatsPlugin implements RspackPluginInstance {
 
       table.cell('name', name)
       table.cell('size', prettyBytes(size))
-      isGzip && gzipItem && table.cell('gzip', prettyBytes(gzip))
+      if (isGzip && gzipItem) {
+        table.cell('gzip', prettyBytes(gzip))
+      }
 
       table.newRow()
     }
@@ -210,7 +214,9 @@ export default class StatsPlugin implements RspackPluginInstance {
 
     table.cell('name', `There are ${assets.length} files`)
     table.cell('size', prettyBytes(sizeTotal))
-    isGzip && gzipItem && table.cell('gzip', prettyBytes(gzipTotal))
+    if (isGzip && gzipItem) {
+      table.cell('gzip', prettyBytes(gzipTotal))
+    }
 
     table.newRow()
 
@@ -419,7 +425,10 @@ export default class StatsPlugin implements RspackPluginInstance {
         console.log()
       }
 
-      stastJson && console.log(this.getTableInfo(stastJson))
+      if (stastJson) {
+        // eslint-disable-next-line no-console
+        console.log(this.getTableInfo(stastJson))
+      }
       console.log()
     }
 

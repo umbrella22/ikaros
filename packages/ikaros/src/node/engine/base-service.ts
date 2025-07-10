@@ -5,6 +5,7 @@ import type { RspackDevServer } from '@rspack/dev-server'
 import { join } from 'node:path'
 import { isString } from 'radashi'
 import { LoggerSystem } from '@ikaros-cli/infra-contrlibs'
+import { checkDependency } from '../utils/common-tools'
 
 // 配置上下文接口
 export interface ResolvedContext {
@@ -16,7 +17,6 @@ export interface ResolvedContext {
   version: string
   env: DefinePluginOptions
   base: string
-  vueMajor?: 2 | 3
   port: DevServer['port']
   pages: Exclude<UserConfig['pages'], undefined>
   browserslist: string
@@ -35,6 +35,8 @@ export abstract class IEngineService {
   public pages: Exclude<UserConfig['pages'], undefined>
   public port: DevServer['port']
   public logger: LoggerSystem = new LoggerSystem()
+  public isVue = false
+  public isReact = false
 
   constructor(resolvedContext: ResolvedContext) {
     this.resolvedContext = resolvedContext
@@ -61,6 +63,20 @@ export abstract class IEngineService {
       return this.resolvedContext.resolveContext(outDirName)
     }
     return this.resolvedContext.resolveContext('dist')
+  }
+  /**
+   * 初始化部分前端框架专属配置
+   */
+  protected async initOtherConfig() {
+    try {
+      const [hasReact, hasVue] = await Promise.all([
+        checkDependency('react'),
+        checkDependency('vue'),
+      ])
+      this.isVue = hasVue
+      this.isReact = hasReact
+      // 吃掉报错，因为这里只是检查依赖
+    } catch {}
   }
 }
 

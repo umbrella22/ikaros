@@ -165,7 +165,7 @@ export abstract class BaseCompileService {
    * 目前仅监听配置文件
    * @returns
    */
-  protected watchDogServer() {}
+  protected watchDogServer?() {}
 
   /**
    * 生命周期抽象方法
