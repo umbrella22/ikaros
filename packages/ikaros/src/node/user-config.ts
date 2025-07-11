@@ -55,7 +55,13 @@ export interface UserConfig {
    * @see {@link https://vitejs.dev/}
    * @warning 该值会影响编译的速度和兼容性，建议使用 rspack
    */
-  engine?: 'rspack' | 'webpack' | 'vite'
+  engine?: 'rspack' | 'vite'
+  /**
+   * 编译的平台
+   * @default 'web'
+   * @description web: 浏览器端 desktop: 桌面端(基于electron)
+   */
+  platform?: 'web' | 'desktop'
   /**
    * 页面配置
    * @default
@@ -68,13 +74,12 @@ export interface UserConfig {
    */
   pages?: Pages
   /**
-   * 可选页面启动，当pages为多个对象时，可选择启动哪些页面
+   * @description 可选页面启动，当pages为多个对象时，可选择启动哪些页面
    * @default false
    */
   enablePages?: string[] | false
   /**
-   * 编译时规范检查，一般建议让IDE去做这个工作，关闭该选项以节省构建时间
-   * true:检查错误 false:关闭检查 fix:检查且修复 error:检查错误当出现错误时退出构建
+   * @description 编译时规范检查，一般建议让IDE去做这个工作，关闭该选项以节省构建时间 true:检查错误 false:关闭检查 fix:检查且修复 error:检查错误当出现错误时退出构建
    * @default false
    */
   eslint?: boolean | 'fix' | 'error'

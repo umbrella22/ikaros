@@ -26,8 +26,10 @@ export class CompileService extends BaseCompileService {
   isReact: boolean = false
   /** 编译目标 */
   target!: 'pc' | 'mobile'
+  /** 编译平台 */
+  platform!: 'web' | 'desktop'
   /** 编译引擎 */
-  engine: 'rspack' | 'webpack' | 'vite' = 'rspack'
+  engine: 'rspack' | 'vite' = 'rspack'
   /** 端口 */
   port!: number
   /** 页面配置 */
@@ -51,6 +53,7 @@ export class CompileService extends BaseCompileService {
     }
 
     this.target = config?.target ?? 'pc'
+    this.platform = config?.platform ?? 'web'
 
     this.pages = config?.pages ?? {
       index: {
