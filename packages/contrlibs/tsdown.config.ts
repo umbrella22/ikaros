@@ -1,19 +1,19 @@
-import { defineConfig, type Options } from "tsdown";
+import { defineConfig, type Options } from 'tsdown'
 
 const commonOptions: Options = {
-  format: ["esm"],
-  outDir: "dist",
+  format: ['esm'],
+  outDir: 'dist',
   clean: true,
-  target: "node20",
-};
+  target: 'node20',
+}
 
 export default defineConfig(({ watch }) => {
-  const isWatch = !!watch;
+  const isWatch = !!watch
   return [
     {
       ...commonOptions,
-      entry: ["src/index.ts"],
-      outDir: "dist",
+      entry: ['src/index.ts'],
+      outDir: 'dist',
       sourcemap: isWatch,
       treeshake: !isWatch,
       minify: !isWatch,
@@ -21,5 +21,5 @@ export default defineConfig(({ watch }) => {
       keepNames: !isWatch,
       dts: true,
     },
-  ];
-});
+  ]
+})

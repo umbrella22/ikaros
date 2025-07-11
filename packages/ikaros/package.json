@@ -68,7 +68,7 @@
     "stylus-loader": "^8.1.1",
     "vue-style-loader": "^4.1.3",
     "yaml": "^2.8.0",
-    "zod": "^3.25.76"
+    "zod": "^4.0.5"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",

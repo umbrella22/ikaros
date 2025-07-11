@@ -30,13 +30,13 @@
     "@typescript-eslint/eslint-plugin": "^8.36.0",
     "@typescript-eslint/parser": "^8.36.0",
     "@typescript-eslint/utils": "^8.36.0",
-    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-import-x": "^4.16.1",
     "eslint-plugin-prettier": "^5.5.1",
-    "eslint-plugin-unicorn": "^56.0.1",
-    "eslint-plugin-vue": "^9.33.0",
+    "eslint-plugin-unicorn": "^59.0.1",
+    "eslint-plugin-vue": "^10.3.0",
     "typescript-eslint": "^8.36.0",
-    "vue-eslint-parser": "^9.4.3"
+    "vue-eslint-parser": "^10.2.0"
   },
   "devDependencies": {
     "eslint": "^9.30.1",

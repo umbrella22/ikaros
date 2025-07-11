@@ -2,7 +2,7 @@ import { isObject } from 'radashi'
 import type { Configuration } from '@rspack/dev-server'
 import type { Loader, Plugin } from '@rspack/core'
 import fsp from 'fs/promises'
-import { z } from 'zod/v4'
+import { z } from 'zod'
 import { join } from 'path'
 
 import type { Pages, RspackExperiments } from './loaders-plugins-helper'
