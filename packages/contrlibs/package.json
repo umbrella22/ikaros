@@ -34,6 +34,6 @@
   ],
   "dependencies": {
     "chalk": "^5.4.1",
-    "oxc-transform": "^0.77.0"
+    "oxc-transform": "^0.77.3"
   }
 }
