@@ -19,7 +19,7 @@
     "@ikaros-cli/eslint-plugin": "workspace:*",
     "@ikaros-cli/prettier-config": "workspace:*",
     "@types/node": "^20.19.9",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "tsdown": "^0.13.0",
     "typescript": "^5.8.3"
   }

@@ -101,4 +101,28 @@ export class LoggerSystem {
     }
     console.info(LoggerSystem.generateLog(LogTypeEnum.INFO, text))
   }
+
+  // 从LoggerQueue迁移的事件队列功能
+  private static _eventQueue: string[] = []
+
+  public static emitEvent(event: string): void {
+    LoggerSystem._eventQueue.push(`[${event}]`)
+  }
+
+  public static clearEventArray(): void {
+    LoggerSystem._eventQueue.length = 0
+  }
+
+  public static get eventArray(): string[] {
+    return LoggerSystem._eventQueue
+  }
 }
+
+// 向后兼容的LoggerQueue函数
+export const LoggerQueue = () => ({
+  emitEvent: LoggerSystem.emitEvent,
+  clearEventArray: LoggerSystem.clearEventArray,
+  get eventArray() {
+    return LoggerSystem.eventArray
+  },
+})

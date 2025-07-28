@@ -9,8 +9,7 @@ import path from 'path'
 import fs from 'node:fs'
 import { isEmpty } from 'radashi'
 
-import { LoggerSystem } from '@ikaros-cli/infra-contrlibs'
-import { LoggerQueue } from '../utils/logger'
+import { LoggerSystem, LoggerQueue } from '@ikaros-cli/infra-contrlibs'
 
 interface CdnModule {
   name: string

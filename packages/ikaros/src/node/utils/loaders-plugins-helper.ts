@@ -11,9 +11,8 @@ import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
 import { isArray, isEmpty } from 'radashi'
-import { LoggerQueue } from './logger'
+import { LoggerQueue, LoggerSystem } from '@ikaros-cli/infra-contrlibs'
 import { mergeUserConfig } from './common-tools'
-import { LoggerSystem } from '@ikaros-cli/infra-contrlibs'
 
 type ListItemType = RuleSetRule | Plugin
 

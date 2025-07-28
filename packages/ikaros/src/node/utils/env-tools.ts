@@ -2,8 +2,7 @@ import fse from 'fs-extra'
 import { join } from 'path'
 import { config } from 'dotenv'
 
-import { LoggerQueue } from './logger'
-import { LoggerSystem } from '@ikaros-cli/infra-contrlibs'
+import { LoggerQueue, LoggerSystem } from '@ikaros-cli/infra-contrlibs'
 
 const getEnvPath = (mode?: string) => {
   if (!mode) {

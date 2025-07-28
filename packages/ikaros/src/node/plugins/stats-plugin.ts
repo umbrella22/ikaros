@@ -16,7 +16,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { isArray } from 'radashi'
 import { name, version } from '../../../package.json'
-import { LoggerQueue } from '../utils/logger'
+import { LoggerQueue } from '@ikaros-cli/infra-contrlibs'
 import type { Pages } from '../utils/loaders-plugins-helper'
 
 // 定义插件自己的配置接口

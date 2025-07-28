@@ -1,5 +1,11 @@
 # @ikaros-cli/infra-contrlibs
 
+## 1.4.0
+
+### Minor Changes
+
+- 更新依赖，移除logger到lib中
+
 ## 1.5.7
 
 ### Patch Changes
