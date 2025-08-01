@@ -4,7 +4,7 @@ import type { UserConfig } from '../user-config'
 import type { RspackDevServer } from '@rspack/dev-server'
 import { join } from 'node:path'
 import { isString } from 'radashi'
-import { LoggerSystem } from '@ikaros-cli/infra-contrlibs'
+import { logger } from '@ikaros-cli/infra-contrlibs'
 import { checkDependency } from '../utils/common-tools'
 
 // 配置上下文接口
@@ -34,7 +34,7 @@ export abstract class IEngineService {
   public userConfig: UserConfig
   public pages: Exclude<UserConfig['pages'], undefined>
   public port: DevServer['port']
-  public logger: LoggerSystem = new LoggerSystem()
+  public logger = logger
   public isVue = false
   public isReact = false
 

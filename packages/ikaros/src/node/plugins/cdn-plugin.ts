@@ -9,7 +9,7 @@ import path from 'path'
 import fs from 'node:fs'
 import { isEmpty } from 'radashi'
 
-import { LoggerSystem, LoggerQueue } from '@ikaros-cli/infra-contrlibs'
+import { logger } from '@ikaros-cli/infra-contrlibs'
 
 interface CdnModule {
   name: string
@@ -70,8 +70,7 @@ export default class CdnPlugin implements RspackPluginInstance {
   private compiler!: Compiler
   private options: CdnPluginOptions
   private isDev: boolean = false
-  private logger = LoggerQueue()
-  private loggerSystem = new LoggerSystem()
+  private logger = logger
 
   constructor(options: CdnPluginOptions) {
     this.options = {
@@ -246,7 +245,7 @@ export default class CdnPlugin implements RspackPluginInstance {
       ).version
     } catch {
       this.logger.emitEvent(
-        this.loggerSystem.warning({
+        this.logger.warning({
           text: `[${PLUGIN_NAME}] 无法获取模块 "${name}" 的版本信息，回退到 "latest"`,
           onlyText: true,
         })!,

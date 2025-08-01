@@ -11,7 +11,7 @@ import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
 import { isArray, isEmpty } from 'radashi'
-import { LoggerQueue, LoggerSystem } from '@ikaros-cli/infra-contrlibs'
+import { logger } from '@ikaros-cli/infra-contrlibs'
 import { mergeUserConfig } from './common-tools'
 
 type ListItemType = RuleSetRule | Plugin
@@ -186,8 +186,7 @@ export type Pages = {
 export class CreateMpaAssets {
   protected pages: Pages
   protected enablePages: string[] | false | undefined
-  protected logger = LoggerQueue()
-  protected loggerSystem = new LoggerSystem()
+  protected logger = logger
 
   constructor({
     pages,
@@ -238,7 +237,7 @@ export class CreateMpaAssets {
       })
       if (notFoundPageName.length) {
         this.logger.emitEvent(
-          this.loggerSystem.warning({
+          this.logger.warning({
             text: `当前设置页面${notFoundPageName.join()}不存在`,
             onlyText: true,
           })!,

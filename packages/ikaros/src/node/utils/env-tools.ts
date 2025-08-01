@@ -2,7 +2,7 @@ import fse from 'fs-extra'
 import { join } from 'path'
 import { config } from 'dotenv'
 
-import { LoggerQueue, LoggerSystem } from '@ikaros-cli/infra-contrlibs'
+import { logger } from '@ikaros-cli/infra-contrlibs'
 
 const getEnvPath = (mode?: string) => {
   if (!mode) {
@@ -12,8 +12,7 @@ const getEnvPath = (mode?: string) => {
 }
 
 const checkEnv = async (mode?: string) => {
-  const { emitEvent } = LoggerQueue()
-  const { warning } = new LoggerSystem()
+  const { emitEvent, warning } = logger
   const hasEnvFolder = await fse.pathExists(join(rootDir, 'env'))
   if (!hasEnvFolder) {
     emitEvent(warning({ text: 'env folder not found', onlyText: true })!)

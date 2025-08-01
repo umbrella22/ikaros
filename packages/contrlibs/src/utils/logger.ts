@@ -26,7 +26,18 @@ const textColorMap = {
 }
 
 export class LoggerSystem {
-  static generateLog(type: LogType, text: string): string {
+  private static instance: LoggerSystem
+
+  private constructor() {}
+
+  public static getInstance(): LoggerSystem {
+    if (!this.instance) {
+      this.instance = new LoggerSystem()
+    }
+    return this.instance
+  }
+
+  private static generateLog(type: LogType, text: string): string {
     const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false })
     return (
       chalk.gray(`[${timestamp}] `) +
@@ -82,7 +93,6 @@ export class LoggerSystem {
     text: string
     onlyText?: boolean
   }): string | void {
-    console.log(this)
     if (onlyText) {
       return LoggerSystem.generateLog(LogTypeEnum.WARNING, text)
     }
@@ -101,28 +111,20 @@ export class LoggerSystem {
     }
     console.info(LoggerSystem.generateLog(LogTypeEnum.INFO, text))
   }
-
   // 从LoggerQueue迁移的事件队列功能
   private static _eventQueue: string[] = []
 
-  public static emitEvent(event: string): void {
-    LoggerSystem._eventQueue.push(`[${event}]`)
+  public emitEvent(event: string): void {
+    LoggerSystem._eventQueue.push(event)
   }
 
-  public static clearEventArray(): void {
+  public clearEventArray(): void {
     LoggerSystem._eventQueue.length = 0
   }
 
-  public static get eventArray(): string[] {
+  public get eventArray(): string[] {
     return LoggerSystem._eventQueue
   }
 }
 
-// 向后兼容的LoggerQueue函数
-export const LoggerQueue = () => ({
-  emitEvent: LoggerSystem.emitEvent,
-  clearEventArray: LoggerSystem.clearEventArray,
-  get eventArray() {
-    return LoggerSystem.eventArray
-  },
-})
+export const logger = LoggerSystem.getInstance()

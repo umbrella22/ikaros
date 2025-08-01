@@ -25,6 +25,7 @@ import CdnPlugin from '../plugins/cdn-plugin'
 import { resolveCLI } from '../utils/const'
 import { IEngineService } from './base-service'
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack'
+import { CliError, errorHandler } from '../utils/error-handler'
 
 export class RspackService extends IEngineService {
   /** 创建映射源插件 */
@@ -435,13 +436,26 @@ export class RspackService extends IEngineService {
       compiler.run((err, stats) => {
         compiler.close((closeError) => {
           if (err || closeError) {
-            process.exit(2)
+            errorHandler.handle(
+              new CliError({
+                message: '[rspack-service] 编译过程中发生错误。',
+                code: 'COMPILATION_ERROR',
+                level: 'fatal',
+                cause: err || closeError,
+              }),
+            )
+            return reject(err || closeError)
           }
           if (stats?.hasErrors()) {
-            this.logger.error({
-              text: 'Build failed with errors.',
-            })
-            process.exit(2)
+            errorHandler.handle(
+              new CliError({
+                message: '[rspack-service] 编译失败，请检查控制台错误信息。',
+                code: 'BUILD_FAILED',
+                level: 'fatal',
+                cause: stats?.toJson().errors,
+              }),
+            )
+            return reject(new Error('Build failed'))
           }
           return resolve(
             stats?.toString({
