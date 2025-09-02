@@ -11,7 +11,7 @@ export const routes = [
     beforeEnter: (to, from, next) => {
       console.log('beforeEnter')
       next()
-    }
+    },
   },
 ]
 

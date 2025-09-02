@@ -8,9 +8,7 @@
       "type": "node",
       "request": "launch",
       "name": "调试模式",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}/packages/ikaros-cli/dist/cli.js"
     }
   ]
