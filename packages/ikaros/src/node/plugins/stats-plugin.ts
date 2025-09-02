@@ -14,7 +14,7 @@ import cliCursor from 'cli-cursor'
 
 import path from 'node:path'
 import process from 'node:process'
-import { isArray } from 'radashi'
+import { isArray } from 'es-toolkit/compat'
 import type { UserConfig } from '../user-config'
 import { name, version } from '../../../package.json'
 import { LoggerSystem } from '../utils/logger'

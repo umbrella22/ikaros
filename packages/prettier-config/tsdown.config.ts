@@ -2,7 +2,7 @@ import { defineConfig } from 'tsdown'
 
 export default defineConfig(({ watch }) => ({
   entry: ['src/index.ts'],
-  bundle: false,
+  unbundle: false,
   clean: true,
   target: 'esnext',
   format: ['esm'],

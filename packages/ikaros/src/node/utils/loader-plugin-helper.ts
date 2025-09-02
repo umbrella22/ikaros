@@ -10,7 +10,7 @@ import {
 import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { workPath } from './const'
 import { join } from 'path'
-import { isArray, isEmpty } from 'radashi'
+import { isArray, isEmpty } from 'es-toolkit/compat'
 import { LoggerSystem } from './logger'
 import { mergeUserConfig } from './common-tools'
 

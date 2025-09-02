@@ -6,7 +6,8 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import { configSchema } from '../utils/common-tools'
 import { resolveConfig } from '../utils/load-config'
-import { isFunction, isObject } from 'radashi'
+import { isFunction } from 'es-toolkit'
+import { isObject } from 'es-toolkit/compat'
 import { getEnv } from '../utils/env-tools'
 
 export type PackageJson = {

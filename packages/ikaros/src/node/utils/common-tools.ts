@@ -1,4 +1,4 @@
-import { isObject } from 'radashi'
+import { isObject } from 'es-toolkit/compat'
 import type { Configuration } from '@rspack/dev-server'
 import type { Loader, Plugin } from '@rspack/core'
 import fsp from 'fs/promises'
@@ -13,12 +13,52 @@ export const mergeUserConfig = <T extends Record<string, any>>(
   target: T,
   source: T,
 ): T => {
-  for (const key in source) {
-    target[key] =
-      isObject(source[key]) && key in target
-        ? mergeUserConfig(target[key], source[key])
-        : source[key]
+  if (target === source) return target
+
+  const isPlainObject = (val: unknown): val is Record<string, any> => {
+    if (!isObject(val)) return false
+    const proto = Object.getPrototypeOf(val as object)
+    return proto === Object.prototype || proto === null
   }
+
+  const seen = new WeakMap<object, object>()
+
+  const merge = (t: any, s: any) => {
+    for (const key of Object.keys(s)) {
+      const sv = s[key]
+      const tv = t[key]
+
+      // 非对象或 null：直接覆盖
+      if (!isObject(sv) || sv === null) {
+        t[key] = sv
+        continue
+      }
+
+      // 数组：配置语义上更适合替换（如 plugins/loaders/enablePages）
+      if (Array.isArray(sv)) {
+        t[key] = sv
+        continue
+      }
+
+      // 仅当两边皆为“纯对象”时才深合并，否则覆盖（避免合并类实例/插件实例/Proxy 等）
+      if (!isPlainObject(tv)) {
+        t[key] = sv
+        continue
+      }
+      if (!isPlainObject(sv)) {
+        t[key] = sv
+        continue
+      }
+
+      // 循环引用/同引用防护
+      if (sv === tv || seen.get(sv) === tv) continue
+      seen.set(sv, tv)
+
+      merge(tv, sv)
+    }
+  }
+
+  merge(target as any, source as any)
   return target
 }
 
