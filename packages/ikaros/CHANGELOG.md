@@ -1,5 +1,11 @@
 # @ikaros-cli/ikaros
 
+## 2.0.0
+
+### Major Changes
+
+- 完善cli配置文件初始化，更换已过期依赖。
+
 ## 1.3.0
 
 ### Minor Changes

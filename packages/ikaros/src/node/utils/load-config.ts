@@ -3,26 +3,22 @@ import { pathToFileURL } from 'node:url'
 import { parse } from 'yaml'
 import fsp from 'node:fs/promises'
 import fse from 'fs-extra'
-import { transform } from '@swc/core'
+import { OxcError, transform } from 'oxc-transform'
+import { readFile } from 'node:fs/promises'
 import type { UserConfig } from '../user-config'
 
-async function transformConfig(input: string, isTs: boolean) {
-  const { code } = await transform(input, {
-    filename: input,
-    sourceMaps: 'inline',
-    jsc: {
-      parser: {
-        syntax: isTs ? 'typescript' : 'ecmascript',
-        decorators: true,
-        dynamicImport: true,
-      },
-      target: 'es2022',
-      loose: true,
-      keepClassNames: true,
-      externalHelpers: true,
-    },
-    minify: false,
+async function transformConfig(path: string, isTs: boolean) {
+  const filename = path
+  const rawCode = await readFile(path, 'utf-8')
+  const { code, errors } = transform(filename, rawCode, {
+    lang: isTs ? 'ts' : 'js',
   })
+  if (errors.length > 0) {
+    throw new Error(
+      'Transformation failed: ' +
+        errors.map((e: OxcError) => e.message).join(', '),
+    )
+  }
   return {
     code,
   }
