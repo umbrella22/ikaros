@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "vue2-example",
+  "name": "react-example",
   "version": "0.0.0",
   "scripts": {
     "dev": "ikaros -m dev",
@@ -12,11 +12,11 @@
   },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
-    "@rspack/plugin-react-refresh": "^1.5.0",
+    "@rspack/plugin-react-refresh": "^1.5.1",
     "axios": "^1.11.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-refresh": "0.17.0",
-    "sass-embedded": "^1.91.0"
+    "sass-embedded": "^1.92.1"
   }
 }

@@ -1,5 +1,11 @@
 # @ikaros-cli/stylelint-config
 
+## 0.5.0
+
+### Minor Changes
+
+- 完善cli配置文件初始化，更换已过期依赖。
+
 ## 0.4.1
 
 ### Patch Changes

@@ -67,7 +67,8 @@ export class WebCompileService extends BaseCompileService {
   /** 初始化配置相关 */
   private async initUserConfig() {
     const isDev = this.command === Command.SERVER
-    const config = this.userConfig
+    const config = await this.getUserConfig()
+    this.userConfig = config
 
     this.base = config?.build?.base ?? '/'
 

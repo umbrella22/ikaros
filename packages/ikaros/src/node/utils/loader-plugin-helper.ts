@@ -71,15 +71,31 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
     super({ env, mode })
   }
   private defaultScriptLoader = (rspackExperiments?: RspackExperiments) => {
-    return {
-      test: /\.m?[j]s$/,
-      loader: 'builtin:swc-loader',
-      options: {
-        isModule: 'unknown',
-        rspackExperiments,
+    return [
+      {
+        test: /\.m?ts$/i,
+        loader: 'builtin:swc-loader',
+        options: {
+          jsc: {
+            parser: {
+              syntax: 'typescript',
+            },
+          },
+        },
+        type: 'javascript/auto',
+        exclude: [join(workPath, 'node_modules')],
       },
-      type: 'javascript/auto',
-    }
+      {
+        test: /\.m?js$/i,
+        loader: 'builtin:swc-loader',
+        options: {
+          isModule: 'unknown',
+          rspackExperiments,
+        },
+        type: 'javascript/auto',
+        exclude: [join(workPath, 'node_modules')],
+      },
+    ]
   }
   private defaultResourceLoader: RuleSetRule[] = [
     {

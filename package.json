@@ -10,16 +10,17 @@
     "postinstall": "pnpm --filter @ikaros-cli/eslint-plugin build && pnpm --filter @ikaros-cli/prettier-config build && pnpm --filter @ikaros-cli/stylelint-config build && pnpm --filter @ikaros-cli/ikaros build",
     "changeset:add": "changeset add",
     "changeset:version": "changeset version && pnpm postinstall",
+    "changeset:publish": "changeset publish",
     "upgrade": "pnpm up -r && pnpm up -r -w"
   },
   "license": "MIT",
   "devDependencies": {
-    "@changesets/cli": "^2.29.6",
+    "@changesets/cli": "^2.29.7",
     "@ikaros-cli/eslint-plugin": "workspace:*",
     "@ikaros-cli/prettier-config": "workspace:*",
-    "@types/node": "^20.19.11",
-    "dotenv": "^17.2.1",
-    "tsdown": "^0.12.9",
+    "@types/node": "^20.19.13",
+    "dotenv": "^17.2.2",
+    "tsdown": "^0.15.0",
     "typescript": "^5.9.2"
   }
 }

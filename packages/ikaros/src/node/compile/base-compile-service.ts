@@ -78,7 +78,6 @@ export abstract class BaseCompileService {
   private async initialize() {
     await this.initContextPkg()
     await this.initEnv()
-    await this.getUserConfig()
     this.startCompile()
   }
 
@@ -134,10 +133,10 @@ export abstract class BaseCompileService {
    * @param configFile 配置文件路径
    * @returns
    */
-  protected async getUserConfig(): Promise<undefined> {
+  protected async getUserConfig(): Promise<UserConfig | undefined> {
     const { configFile } = this
     const tempConfig = await resolveConfig({ configFile })
-    let fileConfig: UserConfig | undefined = undefined
+    const fileConfig: UserConfig | undefined = undefined
     if (tempConfig) {
       if (isFunction(tempConfig)) {
         const retain: ConfigEnvPre['env'] = {
@@ -148,12 +147,11 @@ export abstract class BaseCompileService {
           env: Object.assign(retain, this.env),
           command: this.command,
         }
-        fileConfig = await tempConfig(opts)
+        return configSchema.parse(await tempConfig(opts))
       }
       if (isObject(tempConfig)) {
-        fileConfig = tempConfig
+        return configSchema.parse(fileConfig)
       }
-      this.userConfig = configSchema.parse(fileConfig)
     }
   }
 
