@@ -1,5 +1,11 @@
 # @ikaros-cli/prettier-config
 
+## 0.5.1
+
+### Patch Changes
+
+- 修复vue规则无法正确识别到 script内的ts设置
+
 ## 0.5.0
 
 ### Minor Changes
