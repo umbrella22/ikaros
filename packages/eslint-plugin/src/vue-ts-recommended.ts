@@ -33,6 +33,19 @@ export const getVueTsEslint = (ver: VueVersion): FlatConfig.ConfigArray => {
     eslintPluginPrettierRecommended,
     ...eslintPluginVueRecommended,
     ...eslintPluginVueEssential,
+    {
+      name: `ikaros/vue${ver}-ts-vue-files`,
+      files: ['**/*.vue'],
+      languageOptions: {
+        parser: vueParser,
+        parserOptions: {
+          ...parserOptions,
+          parser: '@typescript-eslint/parser',
+          extraFileExtensions: ['.vue'],
+          ecmaFeatures: { jsx: true },
+        },
+      },
+    },
     ...tseslint.configs.recommended.map((config) => {
       return {
         ...config,
