@@ -30,7 +30,6 @@ export const getVueTsEslint = (ver: VueVersion): FlatConfig.ConfigArray => {
       ? eslintPluginVue.configs['flat/vue2-essential']
       : eslintPluginVue.configs['flat/essential']
   return [
-    eslintPluginPrettierRecommended,
     ...eslintPluginVueRecommended,
     ...eslintPluginVueEssential,
     {
@@ -93,5 +92,6 @@ export const getVueTsEslint = (ver: VueVersion): FlatConfig.ConfigArray => {
       },
       ignores,
     },
+    eslintPluginPrettierRecommended,
   ]
 }

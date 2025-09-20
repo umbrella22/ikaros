@@ -17,7 +17,6 @@ import { getFiles } from './utils'
 
 export const tsRecommended = (): FlatConfig.ConfigArray => {
   return [
-    eslintPluginPrettierRecommended,
     ...tseslint.configs.recommended.map((config) => {
       return {
         ...config,
@@ -87,5 +86,6 @@ export const tsRecommended = (): FlatConfig.ConfigArray => {
       },
       ignores,
     },
+    eslintPluginPrettierRecommended,
   ]
 }

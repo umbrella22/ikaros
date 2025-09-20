@@ -7,7 +7,6 @@ import { esRules, settings, jsFileExtensions, ignores } from './common'
 
 export const recommended = (): FlatConfig.ConfigArray => {
   return [
-    eslintPluginPrettierRecommended,
     {
       name: 'ikaros/recommended-imports',
       files: jsFileExtensions,
@@ -27,5 +26,6 @@ export const recommended = (): FlatConfig.ConfigArray => {
       },
       ignores,
     },
+    eslintPluginPrettierRecommended,
   ]
 }
