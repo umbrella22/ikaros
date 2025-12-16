@@ -1,4 +1,42 @@
-# ikaros-web 使用文档
+# @ikaros-cli/ikaros 使用文档
+
+## 平台
+
+ikaros 支持多个运行平台：
+
+- `web`：默认平台（本文件后续的大部分配置项均属于 web/Rspack 编译配置）
+- `desktopClient`：Electron 平台（可选依赖，启用时才会从项目依赖中按需加载）
+
+### desktopClient（Electron，可选依赖）
+
+desktopClient 平台的编译实现位于独立包 `@ikaros-cli/ikaros-platform-desktop-client`。
+
+当你使用 `--platform desktopClient` 运行时，请在你的业务项目中安装：
+
+```bash
+pnpm add -D @ikaros-cli/ikaros-platform-desktop-client electron
+```
+
+示例：
+
+```bash
+ikaros --platform desktopClient --mode development
+ikaros build --platform desktopClient --mode release
+```
+
+如果缺少该可选依赖，ikaros 会在运行时提示你安装它。
+
+### bundler=vite（可选依赖）
+
+如果你选择使用 Vite bundler，仍需要额外安装可选依赖（并遵循其 Node 版本要求）：
+
+```bash
+pnpm add -D @ikaros-cli/ikaros-bundler-vite
+```
+
+---
+
+## ikaros-web 配置项
 
 ## target
 

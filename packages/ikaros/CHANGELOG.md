@@ -1,20 +1,27 @@
 # @ikaros-cli/ikaros
 
+## 2.1.0
+
+### Minor Changes
+
+- vite编译从核心包剥离为可选依赖。
+
 ## 2.0.0
 
-### Major Changes
+### Major Changes (2.0.0)
 
 - 完善cli配置文件初始化，更换已过期依赖。
+- desktopClient（Electron）编译能力从核心包剥离为可选依赖：启用 `--platform desktopClient` 时需在项目中安装 `@ikaros-cli/ikaros-platform-desktop-client`。
 
 ## 1.3.0
 
-### Minor Changes
+### Minor Changes (1.3.0)
 
 - 更新依赖
 
 ## 1.2.0
 
-### Minor Changes
+### Minor Changes (1.2.0)
 
 - 更新依赖，现在所有包仅支持esm模式
 
@@ -31,6 +38,6 @@
 
 ## 1.0.0
 
-### Major Changes
+### Major Changes (1.0.0)
 
 - ikaros-cli正式发布

@@ -45,7 +45,7 @@ export const getEnv = async (mode?: string) => {
     return {}
   }
   if (!mode) {
-    return config({ path: getEnvPath() }).parsed ?? {}
+    return config({ path: getEnvPath(), quiet: true }).parsed ?? {}
   }
-  return config({ path: getEnvPath(mode) }).parsed ?? {}
+  return config({ path: getEnvPath(mode), quiet: true }).parsed ?? {}
 }

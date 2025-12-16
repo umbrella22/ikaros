@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   type RspackPluginInstance,
   type Compiler,
@@ -6,7 +7,6 @@ import {
   Stats,
 } from '@rspack/core'
 import chalk from 'chalk'
-import ora from 'ora'
 import os from 'node:os'
 import prettyBytes from 'pretty-bytes'
 import EasyTable from 'easy-table'
@@ -27,8 +27,6 @@ const black = chalk.hex('#222222')
 export default class StatsPlugin implements RspackPluginInstance {
   private compiler!: Compiler
 
-  private ora: ReturnType<typeof ora>
-
   private userConfig?: UserConfig
 
   private startCompileHrtime: ReturnType<typeof process.hrtime> | undefined =
@@ -36,16 +34,8 @@ export default class StatsPlugin implements RspackPluginInstance {
 
   private isDev?: boolean
 
-  private lastProgressText?: string
-
   constructor(config?: UserConfig) {
     this.userConfig = config
-
-    this.ora = ora({
-      color: 'cyan',
-      prefixText: '',
-      hideCursor: false,
-    })
   }
 
   public apply(compiler: Compiler): void {
@@ -53,7 +43,7 @@ export default class StatsPlugin implements RspackPluginInstance {
 
     this.isDev = compiler.options.mode === 'development'
 
-    new rspack.ProgressPlugin(this.progressHandler.bind(this)).apply(compiler)
+    new rspack.ProgressPlugin().apply(compiler)
 
     cliCursor.hide()
 
@@ -61,28 +51,6 @@ export default class StatsPlugin implements RspackPluginInstance {
       this.initDevHook()
     } else {
       this.initProdHook()
-    }
-  }
-
-  private progressHandler(
-    percentage: number,
-    message: string,
-    ...args: string[]
-  ) {
-    let text = `${(percentage * 100).toFixed(2)}%`
-    text += ` ${message} `
-    text += chalk.gray(args?.join(' '))
-
-    if (this.lastProgressText === text) {
-      return
-    }
-
-    this.lastProgressText = text
-
-    if (this.isDev) {
-      this.ora.text = `${text}\n`
-    } else {
-      console.log(text)
     }
   }
 
@@ -276,25 +244,18 @@ export default class StatsPlugin implements RspackPluginInstance {
    * 开发时
    */
   private initDevHook() {
-    const { compiler, ora } = this
+    const { compiler } = this
 
     const hosts = this.getHostList()
     const { blue, cyan, gray } = chalk
 
     compiler.hooks.environment.intercept({
       name: PLUGIN_NAME,
-      call() {
-        ora.start('Preparing resource files....')
-      },
     })
 
     compiler.hooks.watchRun.intercept({
       name: PLUGIN_NAME,
       call: () => {
-        if (!ora.isSpinning) {
-          console.clear()
-        }
-        ora.start()
         this.updateStartCompileTime()
       },
     })
@@ -302,7 +263,6 @@ export default class StatsPlugin implements RspackPluginInstance {
     compiler.hooks.done.intercept({
       name: PLUGIN_NAME,
       call: (stast: Stats) => {
-        ora.stop()
         console.clear()
 
         const stastJson = stast.toJson({

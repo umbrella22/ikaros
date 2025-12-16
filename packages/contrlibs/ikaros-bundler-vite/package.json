@@ -1,0 +1,38 @@
+{
+  "name": "@ikaros-cli/ikaros-bundler-vite",
+  "version": "2.1.0",
+  "description": "Optional Vite bundler adapter for @ikaros-cli/ikaros",
+  "type": "module",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "homepage": "https://github.com/umbrella22/ikaros#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/umbrella22/ikaros.git"
+  },
+  "bugs": {
+    "url": "https://github.com/umbrella22/ikaros/issues"
+  },
+  "license": "MIT",
+  "author": "sky <https://github.com/umbrella22>",
+  "main": "dist/index.mjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "files": [
+    "dist",
+    "readme.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "dev": "tsdown --watch",
+    "build": "tsdown"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "vite": "^7.2.7"
+  }
+}

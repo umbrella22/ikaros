@@ -1,0 +1,44 @@
+{
+  "name": "@ikaros-cli/ikaros-platform-desktop-client",
+  "version": "2.1.0",
+  "type": "module",
+  "description": "Optional desktopClient (Electron) platform runner for @ikaros-cli/ikaros",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "homepage": "https://github.com/umbrella22/ikaros#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/umbrella22/ikaros.git"
+  },
+  "bugs": {
+    "url": "https://github.com/umbrella22/ikaros/issues"
+  },
+  "license": "MIT",
+  "author": "sky <https://github.com/umbrella22>",
+  "main": "dist/index.mjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "dev": "tsdown --watch",
+    "build": "tsdown"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "peerDependencies": {
+    "@ikaros-cli/ikaros": "^2.1.0"
+  },
+  "devDependencies": {
+    "@ikaros-cli/ikaros": "workspace:*"
+  },
+  "dependencies": {
+    "@rspack/core": "^1.6.7"
+  }
+}

@@ -1,14 +1,16 @@
-import { createRequire } from 'node:module'
-import type { ConfigEnvPre, UserConfig } from '../user-config'
-import { join } from 'path'
-import type { ImportMetaBaseEnv } from '../../types/env'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import { configSchema } from '../utils/common-tools'
-import { resolveConfig } from '../utils/load-config'
+import { createRequire } from 'node:module'
+import { join } from 'node:path'
+
 import { isFunction } from 'es-toolkit'
 import { isObject } from 'es-toolkit/compat'
-import { getEnv } from '../utils/env-tools'
+
+import type { ImportMetaBaseEnv } from '../../../types/env'
+import type { ConfigEnvPre, UserConfig } from '../../user-config'
+import { configSchema } from '../../utils/common-tools'
+import { getEnv } from '../../utils/env-tools'
+import { resolveConfig } from '../../utils/load-config'
 
 export type PackageJson = {
   name: string
@@ -16,7 +18,7 @@ export type PackageJson = {
 }
 
 /** 命令 */
-export const enum Command {
+export enum Command {
   SERVER = 'server',
   BUILD = 'build',
 }
@@ -32,6 +34,11 @@ export type CompileServeParame = {
   command: Command
   options: CompileOptions
   configFile?: string
+  onBuildStatus?: (status: {
+    success: boolean
+    port?: number
+    message?: string
+  }) => void
 }
 
 export abstract class BaseCompileService {
@@ -64,25 +71,41 @@ export abstract class BaseCompileService {
   public get contextPkg() {
     return this._contextPkg
   }
+  /** 是否为electron环境 */
+  public get isElectron() {
+    return this.options.platform === 'desktopClient'
+  }
 
   constructor(parame: CompileServeParame) {
     const { command, options, configFile } = parame
     this.command = command
     this.options = options
     this.configFile = configFile
-    this.context = join(process.cwd(), './')
-    this.contextRequire = createRequire(this.context)
-    this.initialize()
+    this.context = process.cwd()
+    this.contextRequire = createRequire(join(this.context, './'))
+  }
+
+  static async create<
+    T extends BaseCompileService,
+    P extends CompileServeParame,
+  >(this: new (params: P) => T, params: P): Promise<T> {
+    const instance = new this(params)
+    await instance.initialize()
+    return instance
   }
 
   private async initialize() {
     await this.initContextPkg()
     await this.initEnv()
-    this.startCompile()
+    await this.loadUserConfig()
+    await this.onAfterConfigLoaded()
+    await this.startCompile()
   }
 
+  protected async onAfterConfigLoaded(): Promise<void> {}
+
   /** 基于工作目录的定位 */
-  protected resolveContext(...paths: string[]) {
+  protected resolveContext = (...paths: string[]) => {
     return join(this.context, ...paths)
   }
 
@@ -115,6 +138,10 @@ export abstract class BaseCompileService {
       ...envData,
     }
   }
+
+  private async loadUserConfig() {
+    this.userConfig = await this.getUserConfig()
+  }
   /** 检索工作目录的模块路径 */
   protected resolveContextModule(id: string): string | undefined {
     try {
@@ -128,41 +155,41 @@ export abstract class BaseCompileService {
   protected loadContextModule<T>(id: string): T {
     return this.contextRequire(id)
   }
+
   /**
    * 获取配置文件
    * @param configFile 配置文件路径
-   * @returns
    */
   protected async getUserConfig(): Promise<UserConfig | undefined> {
     const { configFile } = this
     const tempConfig = await resolveConfig({ configFile })
-    const fileConfig: UserConfig | undefined = undefined
     if (tempConfig) {
       if (isFunction(tempConfig)) {
-        const retain: ConfigEnvPre['env'] = {
-          PLATFORM: this.options.platform,
-        }
         const opts: ConfigEnvPre = {
           mode: this.options.mode ?? '',
-          env: Object.assign(retain, this.env),
+          env: {
+            ...this.env,
+            PLATFORM: this.options.platform,
+            MODE: this.options.mode ?? this.env?.MODE,
+          },
           command: this.command,
         }
         return configSchema.parse(await tempConfig(opts))
       }
       if (isObject(tempConfig)) {
-        return configSchema.parse(fileConfig)
+        return configSchema.parse(tempConfig as UserConfig)
       }
     }
   }
 
-  protected startCompile() {
+  protected async startCompile() {
     switch (this.command) {
       case Command.SERVER: {
-        this.dev?.()
+        await this.dev()
         break
       }
       case Command.BUILD: {
-        this.build?.()
+        await this.build()
         break
       }
       default: {
@@ -170,15 +197,10 @@ export abstract class BaseCompileService {
       }
     }
   }
-  /**
-   * 生命周期抽象方法
-   * dev 启动
-   */
-  protected dev?(): void
 
-  /**
-   * 生命周期抽象方法
-   * build 启动
-   */
-  protected build?(): void
+  /** 生命周期抽象方法：dev 启动 */
+  protected abstract dev(): unknown | Promise<unknown>
+
+  /** 生命周期抽象方法：build 启动 */
+  protected abstract build(): unknown | Promise<unknown>
 }

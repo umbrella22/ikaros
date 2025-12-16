@@ -1,5 +1,11 @@
 # @ikaros-cli/prettier-config
 
+## 0.6.0
+
+### Minor Changes
+
+- 替换过期依赖
+
 ## 0.5.2
 
 ### Patch Changes

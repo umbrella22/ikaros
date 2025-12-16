@@ -1,24 +1,42 @@
 import { isObject } from 'es-toolkit/compat'
 import type { Configuration } from '@rspack/dev-server'
-import type { Loader, Plugin } from '@rspack/core'
+import type {
+  DefinePluginOptions,
+  Loader,
+  ModuleFederationPluginOptions,
+  Plugin,
+} from '@rspack/core'
 import fsp from 'fs/promises'
 import { z } from 'zod/v4'
 import { join } from 'path'
 
 import type { Pages, RspackExperiments } from './loader-plugin-helper'
-import { ModuleFederationOptions } from '../user-config'
 import { CdnPluginOptions } from '../plugins/cdn-plugin'
+import type { UserConfig } from '../user-config'
 
-export const mergeUserConfig = <T extends Record<string, any>>(
+type Bundler = 'rspack' | 'vite'
+
+export const mergeUserConfig = <T extends Record<string, unknown>>(
   target: T,
   source: T,
 ): T => {
-  for (const key in source) {
-    target[key] =
-      isObject(source[key]) && key in target
-        ? mergeUserConfig(target[key], source[key])
-        : source[key]
+  const targetRecord = target as Record<string, unknown>
+  const sourceRecord = source as Record<string, unknown>
+
+  for (const key of Object.keys(sourceRecord)) {
+    const sourceValue = sourceRecord[key]
+    const targetValue = targetRecord[key]
+
+    if (isObject(sourceValue) && isObject(targetValue)) {
+      targetRecord[key] = mergeUserConfig(
+        targetValue as Record<string, unknown>,
+        sourceValue as Record<string, unknown>,
+      )
+    } else {
+      targetRecord[key] = sourceValue
+    }
   }
+
   return target
 }
 
@@ -40,14 +58,47 @@ export async function checkDependency(packageName: string): Promise<boolean> {
   }
 }
 
-export const configSchema = z.object({
+const commonSchema = {
   target: z.enum(['pc', 'mobile']).optional().default('pc'),
   pages: z.custom<Pages>().optional(),
-  enablePages: z.union([z.array(z.string())]).optional(),
+  enablePages: z.union([z.array(z.string()), z.literal(false)]).optional(),
+  define: z.custom<DefinePluginOptions>().optional(),
+  build: z
+    .object({
+      base: z.string().optional().default('/'),
+      assetsDir: z.string().optional(),
+      sourceMap: z.boolean().optional().default(false),
+      outDirName: z.string().optional().default('dist'),
+    })
+    .optional(),
+  resolve: z
+    .object({
+      alias: z.record(z.string(), z.string()).optional(),
+      extensions: z.array(z.string()).optional(),
+    })
+    .optional(),
+  server: z
+    .object({
+      port: z.number().int().min(1024).max(65535).optional(),
+    })
+    .optional(),
+  // electron 配置目前不做强校验，避免阻塞后续扩展
+  electron: z.unknown().optional(),
+}
+
+const rspackConfigSchema = z.object({
+  bundler: z
+    .custom<Bundler>()
+    .optional()
+    .default('rspack')
+    .refine((v) => v === 'rspack', {
+      message: "bundler must be 'rspack' for rspack config",
+    }),
+  ...commonSchema,
   moduleFederation: z
     .union([
-      z.custom<ModuleFederationOptions>(),
-      z.array(z.custom<ModuleFederationOptions>()),
+      z.custom<ModuleFederationPluginOptions>(),
+      z.array(z.custom<ModuleFederationPluginOptions>()),
     ])
     .optional(),
   plugins: z
@@ -61,18 +112,18 @@ export const configSchema = z.object({
       port: z.number().int().min(1024).max(65535).optional(),
       proxy: z.custom<Configuration['proxy']>().optional(),
       https: z
-        .union([z.boolean(), z.record(z.string(), z.any())])
+        .union([z.boolean(), z.record(z.string(), z.unknown())])
         .optional()
         .default(false),
     })
     .optional(),
   css: z
     .object({
-      lightningcssOptions: z.record(z.string(), z.any()).optional(),
+      lightningcssOptions: z.record(z.string(), z.unknown()).optional(),
       sourceMap: z.boolean().optional(),
-      lessOptions: z.record(z.string(), z.any()).optional(),
-      sassOptions: z.record(z.string(), z.any()).optional(),
-      stylusOptions: z.record(z.string(), z.any()).optional(),
+      lessOptions: z.record(z.string(), z.unknown()).optional(),
+      sassOptions: z.record(z.string(), z.unknown()).optional(),
+      stylusOptions: z.record(z.string(), z.unknown()).optional(),
     })
     .optional(),
   build: z
@@ -87,10 +138,53 @@ export const configSchema = z.object({
       dependencyCycleCheck: z.boolean().optional().default(false),
     })
     .optional(),
-  resolve: z
-    .object({
-      alias: z.record(z.string(), z.string()).optional(),
-      extensions: z.array(z.string()).optional(),
-    })
-    .optional(),
 })
+
+const viteConfigSchema = z
+  .object({
+    bundler: z.literal('vite'),
+    ...commonSchema,
+    server: z
+      .object({
+        port: z.number().int().min(1024).max(65535).optional(),
+        proxy: z.record(z.string(), z.unknown()).optional(),
+        https: z
+          .union([z.boolean(), z.record(z.string(), z.unknown())])
+          .optional(),
+      })
+      .optional(),
+    vite: z
+      .object({
+        plugins: z.unknown().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .passthrough()
+  // vite 模式下禁止使用 rspack-only 字段，避免“看起来配置了但其实不生效”的困扰
+  .superRefine((val, ctx) => {
+    const forbiddenKeys = [
+      'plugins',
+      'loaders',
+      'experiments',
+      'cdnOptions',
+      'moduleFederation',
+      'css',
+    ]
+
+    for (const key of forbiddenKeys) {
+      const record = val as unknown as Record<string, unknown>
+      if (key in record && record[key] !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key as string],
+          message: `bundler='vite' 时不支持 ${String(key)}，请使用 vite.plugins 或 Vite 原生配置能力`,
+        })
+      }
+    }
+  })
+
+export const configSchema: z.ZodType<UserConfig> = z.union([
+  viteConfigSchema,
+  rspackConfigSchema,
+]) as unknown as z.ZodType<UserConfig>

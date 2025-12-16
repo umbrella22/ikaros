@@ -4,7 +4,7 @@ export interface ImportMetaBaseEnv {
   /** 路径前缀 */
   BASE?: string
   /** 平台 */
-  PLATFORM: 'web'
+  PLATFORM: 'web' | 'desktopClient'
 }
 
 export type ImportMetaEnv = Record<string, any>

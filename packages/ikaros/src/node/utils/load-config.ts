@@ -10,7 +10,7 @@ import type { UserConfig } from '../user-config'
 async function transformConfig(path: string, isTs: boolean) {
   const filename = path
   const rawCode = await readFile(path, 'utf-8')
-  const { code, errors } = transform(filename, rawCode, {
+  const { code, errors } = await transform(filename, rawCode, {
     lang: isTs ? 'ts' : 'js',
   })
   if (errors.length > 0) {

@@ -1,6 +1,6 @@
-import { defineConfig, type Options } from 'tsdown'
+import { defineConfig, type UserConfig } from 'tsdown'
 
-const commonOptions: Options = {
+const commonOptions: UserConfig = {
   sourcemap: true,
   format: ['esm'],
   outDir: 'dist',

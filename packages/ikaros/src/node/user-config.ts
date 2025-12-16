@@ -4,17 +4,45 @@ import type {
   ModuleFederationPluginOptions,
   DefinePluginOptions,
 } from '@rspack/core'
-import type { Command } from './compile/base-compile-service'
+import type { Command } from './compile/core/base-compile-service'
 import type { Pages, RspackExperiments } from './utils/loader-plugin-helper'
 import type { CssLoaderOptions } from './utils/css-loaders-helper'
 import type { ImportMeta } from '../types/env'
 import type { CdnPluginOptions } from './plugins/cdn-plugin'
 
+export type Bundler = 'rspack' | 'vite'
+
+export interface ElectronConfig {
+  main?: {
+    entry?: string
+    output?: string
+    plugins?: Plugin | Plugin[]
+    loaders?: Loader[]
+  }
+  preload?: {
+    entries?: string[] | Record<string, string>
+    output?: string
+    plugins?: Plugin | Plugin[]
+    loaders?: Loader[]
+  }
+  renderer?: {
+    plugins?: Plugin | Plugin[]
+    loaders?: Loader[]
+  }
+  build?: {
+    hotReload?: boolean
+    debug?: boolean
+    outDir?: string
+  }
+}
+
 /**
  * 这里复写了 ModuleFederationPluginOptions，因为 ModuleFederationPluginOptions 是从 module-federation/sdk 导入的，remoteType和rspack的remoteType不一样
  */
-export interface ModuleFederationOptions
-  extends Omit<ModuleFederationPluginOptions, 'remoteType'> {
+export interface ModuleFederationOptions extends Omit<
+  ModuleFederationPluginOptions,
+  'remoteType'
+> {
   remoteType?:
     | 'var'
     | 'module'
@@ -41,6 +69,13 @@ export interface ModuleFederationOptions
 }
 export interface UserConfig {
   /**
+   * 底层打包器
+   * - 'rspack': 维持现有行为（默认）
+   * - 'vite': 启用 Vite（当前主要用于 Web）
+   * @default 'rspack'
+   */
+  bundler?: Bundler
+  /**
    * 编译的平台，该值影响底层优化逻辑
    * @default 'pc'
    * @future 该功能受限，目前仅支持 'pc'
@@ -58,8 +93,11 @@ export interface UserConfig {
    */
   pages?: Pages
   /**
-   * 可选页面启动，当pages为多个对象时，可选择启动哪些页面，当设置为false或者不设置时，启动所有页面
-   * @default false
+   * 可选页面启动配置
+   * - string[]: 只启动指定的页面
+   * - false: 禁用页面选择功能，启动所有页面
+   * - undefined: 默认行为，启动所有页面
+   * @default undefined
    */
   enablePages?: string[] | false
   /**
@@ -74,15 +112,28 @@ export interface UserConfig {
    */
   moduleFederation?: ModuleFederationOptions | ModuleFederationOptions[]
   /**
-   * 插件
+   * Rspack 插件（仅 bundler = 'rspack' 时生效）
    * @see {@link https://rspack.dev/zh/guide/features/plugin}
    */
   plugins?: Plugin | Plugin[]
   /**
-   * loader
+   * Rspack loader（仅 bundler = 'rspack' 时生效）
    * @see {@link https://rspack.dev/zh/guide/features/loader}
    */
   loaders?: Loader[]
+
+  /**
+   * Vite 配置（仅 bundler = 'vite' 时生效）
+   * - 注意：Vite 没有 loader 概念；请通过插件/原生配置实现
+   */
+  vite?: {
+    /**
+     * Vite 插件（仅 bundler = 'vite' 时生效）
+     * @see {@link https://vite.dev/guide/api-plugin}
+     */
+    // 方案A：core 不依赖 vite 类型，交给可选 bundler 包提供强类型
+    plugins?: unknown
+  }
   /**
    * RspackExperiments
    * @default undefined
@@ -107,11 +158,14 @@ export interface UserConfig {
     port?: number
 
     /**
-     * webpack-server 服务器代理
-     * @see {@link https://webpack.js.org/configuration/dev-server/#devserverproxy}
+     * 服务器代理
+     * - rspack 模式：同 @rspack/dev-server
+     * - vite 模式：同 Vite server.proxy
      * @default undefined
      */
-    proxy?: import('@rspack/dev-server').Configuration['proxy']
+    proxy?:
+      | import('@rspack/dev-server').Configuration['proxy']
+      | Record<string, string | Record<string, unknown>>
 
     /**
      * https
@@ -196,6 +250,11 @@ export interface UserConfig {
      */
     extensions?: string[]
   }
+  /**
+   * Electron应用配置
+   * @default undefined
+   */
+  electron?: ElectronConfig
 }
 
 export type ConfigEnvPre = Readonly<{
