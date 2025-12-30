@@ -102,7 +102,6 @@ export class WebCompileService extends BaseCompileService {
             })),
         }
       }
-      console.log('config', result.config)
 
       return {
         bundler: 'rspack',

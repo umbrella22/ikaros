@@ -232,7 +232,7 @@ export const createWebRspackConfig = (
     })
     .useCopyPlugin()
     .add(mpaPlugins)
-    // .add(new StatsPlugin())
+    .add(new StatsPlugin())
     .add(createPluginHelper.createSourceMapPlugin())
     .add(createPluginHelper.createCssExtractPlugin())
     .add(createPluginHelper.createDoctorPlugin())

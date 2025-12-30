@@ -1,9 +1,9 @@
 {
   "private": true,
-  "name": "vue2-example",
+  "name": "ikaros-vue3-vite-example",
   "version": "0.0.0",
   "scripts": {
-    "dev": "ikaros --platform desktopClient --mode development",
+    "dev": "ikaros -m dev",
     "sit": "ikaros -m sit",
     "build:dev": "ikaros build -m dev",
     "build:sit": "ikaros build -m sit",
@@ -12,10 +12,11 @@
   },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
+    "@ikaros-cli/ikaros-bundler-vite": "workspace:*",
+    "@vitejs/plugin-vue": "^6.0.3",
     "axios": "^1.13.2",
     "sass-embedded": "^1.96.0",
-    "vue": "^2.7.16",
-    "vue-loader": "^15.11.1",
-    "vue-router": "^3.6.5"
+    "vue": "^3.5.25",
+    "vue-router": "^4.6.4"
   }
 }
