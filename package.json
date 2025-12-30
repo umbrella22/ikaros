@@ -11,7 +11,8 @@
     "changeset:add": "changeset add",
     "changeset:version": "changeset version && node scripts/postinstall.mjs",
     "changeset:publish": "changeset publish",
-    "upgrade": "pnpm up -r && pnpm up -r -w"
+    "upgrade": "pnpm up -r && pnpm up -r -w",
+    "lint:fix": "eslint \"packages/**/*.{js,jsx,ts,tsx,vue}\" --fix"
   },
   "license": "MIT",
   "devDependencies": {
