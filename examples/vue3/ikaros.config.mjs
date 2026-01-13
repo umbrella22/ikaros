@@ -1,12 +1,12 @@
 import { defineConfig } from '@ikaros-cli/ikaros'
-import { VueLoaderPlugin } from 'vue-loader'
+import { VueLoaderPlugin } from 'rspack-vue-loader'
 
 export default defineConfig(() => {
   return {
     loaders: [
       {
         test: /\.vue$/,
-        loader: 'vue-loader',
+        loader: 'rspack-vue-loader',
         options: {
           prettify: false,
           experimentalInlineMatchResource: true,

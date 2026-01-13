@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/stylelint-config",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "type": "module",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "postcss-html": "^1.8.0",
+    "postcss-html": "^1.8.1",
     "postcss-less": "^6.0.0",
     "postcss-scss": "^4.0.9",
     "stylelint-config-recess-order": "^7.4.0",
