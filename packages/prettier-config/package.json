@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/prettier-config",
-  "version": "0.6.3",
+  "version": "0.7.0",
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "dist/index.mjs",
