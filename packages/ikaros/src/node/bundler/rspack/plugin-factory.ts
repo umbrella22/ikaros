@@ -3,9 +3,9 @@ import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
 import CompressionPlugin from 'compression-webpack-plugin'
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack'
 import { isEmpty, isArray } from 'es-toolkit/compat'
-import type { UserConfig } from '../user-config'
-import type { Command } from '../compile/core/base-compile-service'
-import CdnPlugin from '../plugins/cdn-plugin'
+import type { UserConfig } from '../../config/user-config'
+import type { Command } from '../../compile/compile-context'
+import CdnPlugin from '../../plugins/cdn-plugin'
 
 export interface PluginFactoryOptions {
   command: Command

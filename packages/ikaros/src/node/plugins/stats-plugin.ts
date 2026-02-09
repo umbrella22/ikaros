@@ -15,9 +15,9 @@ import cliCursor from 'cli-cursor'
 import path from 'node:path'
 import process from 'node:process'
 import { isArray } from 'es-toolkit/compat'
-import type { UserConfig } from '../user-config'
+import type { UserConfig } from '../config/user-config'
 import { name, version } from '../../../package.json'
-import { LoggerSystem } from '../utils/logger'
+import { LoggerSystem } from '../shared/logger'
 
 const cliPackageJson = { name, version }
 const PLUGIN_NAME = '@rspack/ikaros-stats-plugin'

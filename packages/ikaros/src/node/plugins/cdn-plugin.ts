@@ -1,4 +1,5 @@
 import { type RspackPluginInstance, type Compiler, rspack } from '@rspack/core'
+import type { JsAlterAssetTagsData, JsHtmlPluginTag } from '@rspack/binding'
 import { createRequire } from 'node:module'
 import chalk from 'chalk'
 import path from 'path'
@@ -71,15 +72,15 @@ export default class CdnPlugin implements RspackPluginInstance {
     this.options.modules
       .filter((m) => !m.cssOnly)
       .forEach((m) => {
-        ;(externals as { [key: string]: any })[m.name] = m.var || m.name
+        ;(externals as Record<string, string>)[m.name] = m.var || m.name
       })
 
     this.compiler.options.externals = externals
   }
 
-  private injectResources(data: any): void {
+  private injectResources(data: JsAlterAssetTagsData): void {
     const modules = this.options.modules
-    const tags: any[] = []
+    const tags: JsHtmlPluginTag[] = []
 
     // 注入 CSS
     modules.forEach((module) => {
@@ -179,6 +180,7 @@ export default class CdnPlugin implements RspackPluginInstance {
         path.join(name, 'package.json'),
       ).version
     } catch {
+      // eslint-disable-next-line no-console
       console.warn(
         chalk.yellow(`[${PLUGIN_NAME}] 无法获取模块 "${name}" 的版本信息`),
       )

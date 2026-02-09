@@ -7,7 +7,7 @@ export interface ImportMetaBaseEnv {
   PLATFORM: 'web' | 'desktopClient'
 }
 
-export type ImportMetaEnv = Record<string, any>
+export type ImportMetaEnv = Record<string, string | boolean | undefined>
 
 export interface ImportMeta {
   readonly env: Readonly<ImportMetaEnv & ImportMetaBaseEnv>

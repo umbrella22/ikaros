@@ -1,10 +1,17 @@
-import type { DevServer, Configuration, WatchOptions } from '@rspack/core'
+// bundler/rspack/rspack-runner.ts — Rspack 编译运行器
+
+import type {
+  DevServer,
+  Configuration,
+  WatchOptions,
+  StatsValue,
+} from '@rspack/core'
 import { rspack } from '@rspack/core'
 import { RspackDevServer } from '@rspack/dev-server'
 
 type StatsLike = {
   hasErrors: () => boolean
-  toString: (options: any) => string
+  toString: (options: StatsValue) => string
 }
 
 export type BuildStatus = {

@@ -1,9 +1,17 @@
+// shared/constants.ts — 常量
+
 import { join } from 'path'
 import { createRequire } from 'node:module'
 import url from 'node:url'
 
+/**
+ * @deprecated 使用显式 context 参数代替。保留以兼容外部引用。
+ */
 export const workPath = join(process.cwd(), './')
 export const extensions = ['...', '.mjs', '.jsx', '.ts', '.tsx']
+/**
+ * @deprecated 使用显式 context 参数代替
+ */
 export const tsConfig = join(workPath, 'tsconfig.json')
 
 /**

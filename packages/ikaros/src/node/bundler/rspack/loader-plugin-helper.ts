@@ -8,11 +8,11 @@ import {
 } from '@rspack/core'
 
 import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
-import { workPath } from './const'
+import { workPath } from '../../shared/constants'
 import { join } from 'path'
 import { isArray, isEmpty } from 'es-toolkit/compat'
-import { LoggerSystem } from './logger'
-import { mergeUserConfig } from './common-tools'
+import { LoggerSystem } from '../../shared/logger'
+import { mergeUserConfig } from '../../shared/common'
 
 type ListItemType = RuleSetRule | Plugin
 

@@ -1,61 +1,13 @@
 import { Command, Option } from 'commander'
-import { createRequire } from 'node:module'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 
-import { WebCompileService } from './web'
-import { Command as BuildCommand } from './core/base-compile-service'
-import type {
-  CompileOptions,
-  CompileServeParame,
-} from './core/base-compile-service'
+import { runCompile } from './compile-pipeline'
+import {
+  Command as BuildCommand,
+  type CompileOptions,
+  type CompileServeParams,
+} from './compile-context'
+
 import type { ImportMetaBaseEnv } from '../../types/env'
-
-type DesktopClientCompiler = {
-  startDesktopClientCompile: (parame: CompileServeParame) => Promise<void>
-}
-
-type DesktopClientCompilerModule =
-  | DesktopClientCompiler
-  | {
-      default?: DesktopClientCompiler
-    }
-
-const createMissingDesktopClientCompilerError = (): Error => {
-  const pkg = '@ikaros-cli/ikaros-platform-desktop-client'
-  const lines = [
-    `你启用了 platform='desktopClient'，但未安装可选依赖 ${pkg}。`,
-    '',
-    '请安装后重试：',
-    `  pnpm add -D ${pkg}`,
-  ]
-  return new Error(lines.join('\n'))
-}
-
-const loadDesktopClientCompilerFromContext =
-  async (): Promise<DesktopClientCompiler> => {
-    const pkg = '@ikaros-cli/ikaros-platform-desktop-client'
-    try {
-      const context = process.cwd()
-      const contextRequire = createRequire(join(context, './'))
-      const resolved = contextRequire.resolve(pkg)
-      const mod = (await import(
-        pathToFileURL(resolved).href
-      )) as DesktopClientCompilerModule
-
-      const api =
-        (mod as { default?: DesktopClientCompiler }).default ??
-        (mod as DesktopClientCompiler)
-
-      if (typeof api?.startDesktopClientCompile !== 'function') {
-        throw createMissingDesktopClientCompilerError()
-      }
-
-      return api
-    } catch {
-      throw createMissingDesktopClientCompilerError()
-    }
-  }
 
 const Platform: Record<string, ImportMetaBaseEnv['PLATFORM']> = {
   WEB: 'web',
@@ -71,28 +23,17 @@ const compileOptions = [
     .choices(Object.values(Platform)),
 ]
 
-/** 启动编译 */
+/**
+ * 启动编译
+ *
+ * P3 重构后统一委托给 runCompile() 管线处理，
+ * 不再在此处按 platform 手动分发到不同的 CompileService 类。
+ */
 export const startCompile = async (
-  parame: CompileServeParame,
+  params: CompileServeParams,
 ): Promise<void> => {
   try {
-    switch (parame.options.platform) {
-      case Platform.WEB: {
-        await WebCompileService.create(parame)
-        return
-      }
-      case Platform.DESKTOPCLIENT: {
-        const compiler = await loadDesktopClientCompilerFromContext()
-        await compiler.startDesktopClientCompile(parame)
-        return
-      }
-      default: {
-        const platforms = Object.values(Platform).join(',')
-        throw new Error(
-          `No corresponding compilation service was found, platform: ${platforms}`,
-        )
-      }
-    }
+    await runCompile(params)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     // 避免未捕获异常导致 Node 打印一整行压缩产物源码

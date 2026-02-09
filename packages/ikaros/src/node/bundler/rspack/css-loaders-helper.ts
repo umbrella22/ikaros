@@ -1,15 +1,15 @@
 import { type LightningcssLoaderOptions } from '@rspack/core'
-import { resolveCliPath } from './const'
+import { resolveCliPath } from '../../shared/constants'
 
 export interface CssLoaderOptions {
   lightningcss?: LightningcssLoaderOptions
   sourceMap?: boolean
-  less?: Record<string, any>
-  sass?: Record<string, any>
-  stylus?: Record<string, any>
+  less?: Record<string, unknown>
+  sass?: Record<string, unknown>
+  stylus?: Record<string, unknown>
 }
 
-const createLoader = (loader: string, options?: any) => ({
+const createLoader = (loader: string, options?: Record<string, unknown>) => ({
   loader: loader.includes('builtin') ? loader : resolveCliPath.resolve(loader),
   options,
 })
@@ -20,7 +20,10 @@ const cssLoaders = (env: string, options?: CssLoaderOptions) => {
     ...lightningcss,
   })
 
-  const generateLoaders = (loader: string, loaderOptions?: any) => {
+  const generateLoaders = (
+    loader: string,
+    loaderOptions?: Record<string, unknown>,
+  ) => {
     const loaders = [lightningcssLoader]
     const rawOptions =
       options && (options as Record<string, never>)[`${loader}`]

@@ -1,10 +1,10 @@
 import chalk from 'chalk'
 import { detect } from 'detect-port'
 
-import type { UserConfig } from '../../user-config'
-import type { Pages } from '../../utils/loader-plugin-helper'
-import { checkDependency } from '../../utils/common-tools'
-import { Command } from '../core/base-compile-service'
+import type { UserConfig } from '../../config/user-config'
+import type { Pages } from '../../bundler/rspack/loader-plugin-helper'
+import { checkDependency } from '../../shared/common'
+import { Command } from '../compile-context'
 
 export type WebPreConfig = {
   userConfig?: UserConfig
@@ -19,6 +19,7 @@ export type WebPreConfig = {
 
 export type ResolveWebPreConfigParams = {
   command: Command
+  context?: string
   resolveContext: (...paths: string[]) => string
   getUserConfig: () => Promise<UserConfig | undefined>
   isElectron?: boolean
@@ -68,7 +69,7 @@ const resolveDefaultPages = (
 export const resolveWebPreConfig = async (
   params: ResolveWebPreConfigParams,
 ): Promise<WebPreConfig> => {
-  const { command, resolveContext, getUserConfig, isElectron } = params
+  const { command, context, resolveContext, getUserConfig, isElectron } = params
 
   const userConfig = await getUserConfig()
 
@@ -91,8 +92,8 @@ export const resolveWebPreConfig = async (
   let isReact = false
   try {
     const [hasReact, hasVue] = await Promise.all([
-      checkDependency('react'),
-      checkDependency('vue'),
+      checkDependency('react', context),
+      checkDependency('vue', context),
     ])
     isVue = hasVue
     isReact = hasReact

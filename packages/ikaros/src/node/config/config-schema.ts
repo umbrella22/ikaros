@@ -1,4 +1,5 @@
-import { isObject } from 'es-toolkit/compat'
+// config/config-schema.ts — Zod 校验逻辑（从 common-tools.ts 拆出）
+
 import type { Configuration } from '@rspack/dev-server'
 import type {
   DefinePluginOptions,
@@ -6,57 +7,16 @@ import type {
   ModuleFederationPluginOptions,
   Plugin,
 } from '@rspack/core'
-import fsp from 'fs/promises'
 import { z } from 'zod/v4'
-import { join } from 'path'
 
-import type { Pages, RspackExperiments } from './loader-plugin-helper'
+import type {
+  Pages,
+  RspackExperiments,
+} from '../bundler/rspack/loader-plugin-helper'
 import { CdnPluginOptions } from '../plugins/cdn-plugin'
-import type { UserConfig } from '../user-config'
+import type { UserConfig } from './user-config'
 
 type Bundler = 'rspack' | 'vite'
-
-export const mergeUserConfig = <T extends Record<string, unknown>>(
-  target: T,
-  source: T,
-): T => {
-  const targetRecord = target as Record<string, unknown>
-  const sourceRecord = source as Record<string, unknown>
-
-  for (const key of Object.keys(sourceRecord)) {
-    const sourceValue = sourceRecord[key]
-    const targetValue = targetRecord[key]
-
-    if (isObject(sourceValue) && isObject(targetValue)) {
-      targetRecord[key] = mergeUserConfig(
-        targetValue as Record<string, unknown>,
-        sourceValue as Record<string, unknown>,
-      )
-    } else {
-      targetRecord[key] = sourceValue
-    }
-  }
-
-  return target
-}
-
-/**
- * 检查指定依赖是否存在（Promise化）
- * @param {string} packageName 要检查的包名
- * @returns {Promise<boolean>} 是否存在
- */
-export async function checkDependency(packageName: string): Promise<boolean> {
-  try {
-    const modulePath = join(process.cwd(), 'node_modules', packageName)
-    await fsp.access(modulePath, fsp.constants.F_OK)
-    return true
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return false
-    }
-    throw error // 抛出非"文件不存在"的其他错误
-  }
-}
 
 const commonSchema = {
   target: z.enum(['pc', 'mobile']).optional().default('pc'),
@@ -161,7 +121,7 @@ const viteConfigSchema = z
       .optional(),
   })
   .passthrough()
-  // vite 模式下禁止使用 rspack-only 字段，避免“看起来配置了但其实不生效”的困扰
+  // vite 模式下禁止使用 rspack-only 字段，避免"看起来配置了但其实不生效"的困扰
   .superRefine((val, ctx) => {
     const forbiddenKeys = [
       'plugins',

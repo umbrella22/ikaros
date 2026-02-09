@@ -3,18 +3,18 @@ import { rspack } from '@rspack/core'
 import { isString } from 'es-toolkit'
 import { join } from 'node:path'
 
-import type { Pages } from '../../utils/loader-plugin-helper'
+import type { Pages } from '../../bundler/rspack/loader-plugin-helper'
 import {
   CreateLoader,
   CreateMpaAssets,
   CreatePlugins,
-} from '../../utils/loader-plugin-helper'
-import { extensions, resolveCLI } from '../../utils/const'
+} from '../../bundler/rspack/loader-plugin-helper'
+import { extensions, resolveCLI } from '../../shared/constants'
 import StatsPlugin from '../../plugins/stats-plugin'
-import { CreatePluginHelper } from '../../utils/create-plugin-helper'
-import type { UserConfig } from '../../user-config'
-import type { PackageJson } from '../core/base-compile-service'
-import { Command } from '../core/base-compile-service'
+import { CreatePluginHelper } from '../../bundler/rspack/plugin-factory'
+import type { UserConfig } from '../../config/user-config'
+import type { PackageJson } from '../compile-context'
+import { Command } from '../compile-context'
 
 export type CreateWebRspackConfigParams = {
   command: Command
@@ -267,7 +267,7 @@ export const createWebRspackConfig = (
     output: {
       clean: true,
       path: getOutDirPath({ userConfig, isElectron, resolveContext }),
-      publicPath: isElectron ? './' : base,
+      publicPath: isElectron && !isDev ? './' : base,
       filename: isDev
         ? '[name].[contenthash:8].js'
         : formatAssetsPath(assetsDir, 'assets/js/[contenthash:8].js'),

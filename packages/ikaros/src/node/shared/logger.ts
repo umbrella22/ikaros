@@ -1,3 +1,6 @@
+// shared/logger.ts — 日志系统
+/* eslint-disable no-console */
+
 import chalk from 'chalk'
 
 type LogType = 'DONE' | 'ERROR' | 'OKAY' | 'WARNING' | 'INFO'

@@ -1,14 +1,20 @@
+// config/user-config.ts — UserConfig 类型定义（bundler-agnostic 方向的过渡版本）
+// 当前保持与旧 user-config.ts 完全一致，仅迁移位置
+
 import type {
   Plugin,
   Loader,
   ModuleFederationPluginOptions,
   DefinePluginOptions,
 } from '@rspack/core'
-import type { Command } from './compile/core/base-compile-service'
-import type { Pages, RspackExperiments } from './utils/loader-plugin-helper'
-import type { CssLoaderOptions } from './utils/css-loaders-helper'
-import type { ImportMeta } from '../types/env'
-import type { CdnPluginOptions } from './plugins/cdn-plugin'
+import type { Command } from '../compile/compile-context'
+import type {
+  Pages,
+  RspackExperiments,
+} from '../bundler/rspack/loader-plugin-helper'
+import type { CssLoaderOptions } from '../bundler/rspack/css-loaders-helper'
+import type { ImportMeta } from '../../types/env'
+import type { CdnPluginOptions } from '../plugins/cdn-plugin'
 
 export type Bundler = 'rspack' | 'vite'
 
@@ -67,6 +73,7 @@ export interface ModuleFederationOptions extends Omit<
     | 'module-import'
     | 'node-commonjs'
 }
+
 export interface UserConfig {
   /**
    * 底层打包器

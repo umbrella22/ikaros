@@ -1,5 +1,15 @@
 # @ikaros-cli/ikaros
 
+## 2.2.0
+
+### Minor Changes
+
+- 新增平台适配器接口，支持 web 和 desktopClient 平台
+- 新增打包器适配器接口，支持 rspack 和 vite 打包器
+- 实现统一编译管线，将原有分散的编译逻辑整合为线性流程
+- 重构配置文件加载、环境变量加载等工具函数到独立模块
+- 更新依赖版本并添加单元测试
+
 ## 2.1.0
 
 ### Minor Changes

@@ -1,3 +1,5 @@
+// config/config-loader.ts — 配置文件发现与加载
+
 import { dirname, extname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parse } from 'yaml'
@@ -5,7 +7,7 @@ import fsp from 'node:fs/promises'
 import fse from 'fs-extra'
 import { OxcError, transform } from 'oxc-transform'
 import { readFile } from 'node:fs/promises'
-import type { UserConfig } from '../user-config'
+import type { UserConfig } from './user-config'
 
 async function transformConfig(path: string, isTs: boolean) {
   const filename = path
@@ -78,11 +80,13 @@ fileType.set('.yaml', async (filePath) => {
  */
 export async function resolveConfig({
   configFile,
+  context,
 }: {
   configFile?: string
+  context?: string
 }): Promise<UserConfig | undefined> {
   let suffix: FileType | undefined
-  let configPath = process.cwd()
+  let configPath = context ?? process.cwd()
   const configName = 'ikaros.config'
 
   const configList = ['ts', 'mjs', 'json', 'yaml'].map(
