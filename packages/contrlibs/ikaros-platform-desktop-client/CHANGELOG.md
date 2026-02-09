@@ -1,6 +1,18 @@
 # @ikaros-cli/ikaros-platform-desktop-client
 
-## 3.0.0
+## 2.2.0
+
+### Minor Changes
+
+- 重构 Electron 平台为 PlatformAdapter 架构
+- 删除旧的基于 BaseCompileService 的编译服务类
+- 新增 ElectronDesktopPlatform 类实现 PlatformAdapter 接口
+- 将 main/preload 的 Rspack 配置提取到独立的 config 文件中
+- 通过 BundlerAdapter 统一管理渲染进程的构建（支持 Rspack/Vite）
+- 优化开发/构建流程，支持三合一并行构建
+- 提升代码可维护性和与核心平台的架构一致性
+
+## 2.1.3
 
 ### Minor Changes
 
