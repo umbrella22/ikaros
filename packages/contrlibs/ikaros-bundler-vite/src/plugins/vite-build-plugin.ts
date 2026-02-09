@@ -1,5 +1,8 @@
 import type { Plugin } from 'vite'
-import { gzipSync } from 'node:zlib'
+import { promisify } from 'node:util'
+import { gzip as gzipCb } from 'node:zlib'
+
+const gzipAsync = promisify(gzipCb)
 
 export type IkarosViteBuildPluginOptions = {
   gzip?: boolean
@@ -36,13 +39,21 @@ const toUint8Array = (input: string | Uint8Array): Uint8Array => {
   return typeof input === 'string' ? Buffer.from(input) : input
 }
 
-const detectCycles = (ctx: {
+export type DetectCyclesContext = {
   getModuleIds: () => IterableIterator<string>
   getModuleInfo: (id: string) => {
     id: string
     importedIds: readonly string[]
   } | null
-}): string[][] => {
+}
+
+/**
+ * 检测模块图中的循环依赖
+ *
+ * @param ctx - 提供 getModuleIds / getModuleInfo 的上下文（兼容 Rollup PluginContext）
+ * @returns 所有检测到的循环路径
+ */
+export const detectCycles = (ctx: DetectCyclesContext): string[][] => {
   const graph = new Map<string, string[]>()
 
   for (const id of ctx.getModuleIds()) {
@@ -62,6 +73,7 @@ const detectCycles = (ctx: {
   const stack = new Set<string>()
   const path: string[] = []
   const cycles: string[][] = []
+  const seen = new Set<string>()
 
   const dfs = (node: string) => {
     visited.add(node)
@@ -82,7 +94,8 @@ const detectCycles = (ctx: {
         if (startIndex !== -1) {
           const cycle = path.slice(startIndex).concat(dep)
           const signature = cycle.join(' -> ')
-          if (!cycles.some((c) => c.join(' -> ') === signature)) {
+          if (!seen.has(signature)) {
+            seen.add(signature)
             cycles.push(cycle)
           }
         }
@@ -109,7 +122,7 @@ export const createIkarosViteBuildPlugin = (
     name: 'ikaros:vite-build',
     apply: 'build',
 
-    generateBundle(_outputOptions, bundle) {
+    async generateBundle(_outputOptions, bundle) {
       const reportItems: BundleReportItem[] = []
       let totalBytes = 0
       let totalGzipBytes = 0
@@ -126,7 +139,7 @@ export const createIkarosViteBuildPlugin = (
           totalBytes += bytes
 
           if (gzip && shouldGzipFile(item.fileName)) {
-            const gz = gzipSync(toUint8Array(item.code))
+            const gz = await gzipAsync(toUint8Array(item.code))
             reportItem.gzipBytes = gz.byteLength
             totalGzipBytes += gz.byteLength
 
@@ -161,7 +174,7 @@ export const createIkarosViteBuildPlugin = (
               ? toUint8Array(source)
               : Buffer.from(String(source))
 
-          const gz = gzipSync(normalized)
+          const gz = await gzipAsync(normalized)
           reportItem.gzipBytes = gz.byteLength
           totalGzipBytes += gz.byteLength
 

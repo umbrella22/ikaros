@@ -1,6 +1,7 @@
 import type { InlineConfig, ViteDevServer } from 'vite'
 import { build, createServer } from 'vite'
 
+import { BundlerError } from '../errors'
 import type { BuildStatus } from '../types'
 
 export type RunViteBuildOptions = {
@@ -46,7 +47,7 @@ export const runViteBuild = async (
       success: false,
       message,
     })
-    throw err
+    throw new BundlerError(message, 'build', { cause: err })
   }
 }
 
@@ -90,6 +91,6 @@ export const startViteDevServer = async (
       port,
       message,
     })
-    throw err
+    throw new BundlerError(message, 'dev', { cause: err })
   }
 }
