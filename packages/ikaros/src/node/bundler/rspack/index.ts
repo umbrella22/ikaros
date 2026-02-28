@@ -8,8 +8,8 @@ export {
   runRspackBuild,
   startRspackDevServer,
   watchRspackBuild,
-  type BuildStatus as RspackBuildStatus,
 } from './rspack-runner'
+export { type BuildStatus as RspackBuildStatus } from '../types'
 export {
   CreateLoader,
   CreatePlugins,

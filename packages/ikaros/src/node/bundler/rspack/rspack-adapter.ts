@@ -17,12 +17,14 @@ import { Command } from '../../compile/compile-context'
  * 实现 BundlerAdapter<Configuration | Configuration[]>，将现有 rspack 相关逻辑封装为统一接口。
  * 库模式下 createConfig 可能返回 Configuration[]（多格式构建）。
  */
-export class RspackAdapter Configuration | Configurat
-  ion[]
-> > {
+export class RspackAdapter implements BundlerAdapter<
+  Configuration | Configuration[]
+> {
   readonly name = 'rspack' as const
 
-  createConfig(// 库模式：build 命令 + 配置了 libr  if (params.command === 'build' && params.userConfig?.library) {
+  createConfig(params: CreateConfigParams): Configuration | Configuration[] {
+    // 库模式：build 命令 + 配置了 library
+    if (params.command === 'build' && params.userConfig?.library) {
       return createLibraryRspackConfigs(params)
     }
 

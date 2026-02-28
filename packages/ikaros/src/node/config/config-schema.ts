@@ -39,7 +39,9 @@ const librarySchema = z
       ])
       .optional(),
     cssFileName: z.string().optional(),
-    externals: zobals: z.record(z.string(), z.string()).optional(
+    externals: z.array(z.union([z.string(), z.instanceof(RegExp)])).optional(),
+    globals: z.record(z.string(), z.string()).optional(),
+  })
   .superRefine((val, ctx) => {
     const formats = val.formats ?? []
     const needsName = formats.some((f) => f === 'umd' || f === 'iife')
@@ -50,6 +52,7 @@ const librarySchema = z
         message: "library.name 在使用 'umd' 或 'iife' 格式时必须指定",
       })
     }
+  })
   .optional()
 
 const commonSchema = {

@@ -344,5 +344,5 @@ export const createWebRspackConfig = (
       css: true,
     },
     ...createCacheConfig({ command, userConfig }),
-  } as Configuration
+  } satisfies Configuration
 }

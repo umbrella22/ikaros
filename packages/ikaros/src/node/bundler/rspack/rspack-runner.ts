@@ -14,11 +14,7 @@ type StatsLike = {
   toString: (options: StatsValue) => string
 }
 
-export type BuildStatus = {
-  success: boolean
-  port?: number
-  message?: string
-}
+import type { BuildStatus } from '../types'
 
 export type RunRspackBuildOptions = {
   onBuildStatus?: (status: BuildStatus) => void
