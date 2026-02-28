@@ -3,6 +3,7 @@ export {
   createWebRspackConfig,
   type CreateWebRspackConfigParams,
 } from './rspack-config-builder'
+export { createLibraryRspackConfigs } from './create-library-rspack-config'
 export {
   runRspackBuild,
   startRspackDevServer,

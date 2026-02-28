@@ -1,0 +1,31 @@
+{
+    "private": true,
+    "name": "ikaros-vue3-lib-example",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "./dist/ikaros-vue3-lib-example.umd.cjs",
+    "module": "./dist/ikaros-vue3-lib-example.mjs",
+    "exports": {
+        ".": {
+            "import": "./dist/ikaros-vue3-lib-example.mjs",
+            "require": "./dist/ikaros-vue3-lib-example.umd.cjs"
+        },
+        "./style.css": "./dist/ikaros-vue3-lib-example.css"
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "dev": "ikaros -m dev",
+        "build:lib": "ikaros build -m master"
+    },
+    "devDependencies": {
+        "@ikaros-cli/ikaros": "workspace:*",
+        "rspack-vue-loader": "^17.4.5",
+        "sass-embedded": "^1.97.2",
+        "vue": "^3.5.26"
+    },
+    "peerDependencies": {
+        "vue": "^3.5.0"
+    }
+}

@@ -18,6 +18,73 @@ import type { CdnPluginOptions } from '../plugins/cdn-plugin'
 
 export type Bundler = 'rspack' | 'vite'
 
+// ─── Library Mode ────────────────────────────────────────────────────────────
+
+/**
+ * 库模式输出格式
+ * - 'es': ESM (import/export)
+ * - 'cjs': CommonJS (module.exports)
+ * - 'umd': Universal Module Definition
+ * - 'iife': Immediately Invoked Function Expression
+ */
+export type LibraryFormat = 'es' | 'cjs' | 'umd' | 'iife'
+
+/**
+ * 库模式配置（仅在 build 时生效）
+ *
+ * 启用后 ikaros 将以库模式构建，而非应用模式。
+ * 统一适配 Vite build.lib 与 Rspack output.library，
+ * 切换 bundler 时无需修改配置。
+ *
+ * @see Vite  https://cn.vitejs.dev/guide/build#library-mode
+ * @see Rspack https://rspack.rs/zh/config/output#outputlibrary
+ */
+export interface LibraryConfig {
+  /**
+   * 库入口文件路径（相对于项目根目录）
+   * @example 'src/index.ts'
+   * @example ['src/index.ts']
+   * @example { main: 'src/index.ts', utils: 'src/utils.ts' }
+   */
+  entry: string | string[] | Record<string, string>
+
+  /**
+   * 库的全局变量名（UMD/IIFE 格式必须指定）
+   * @example 'MyLib'
+   */
+  name?: string
+
+  /**
+   * 输出格式
+   * - 单入口默认: ['es', 'umd']
+   * - 多入口默认: ['es', 'cjs']
+   */
+  formats?: LibraryFormat[]
+
+  /**
+   * 输出文件名（不含扩展名），可以是固定字符串或函数
+   * @default 基于 package.json 的 name 字段
+   */
+  fileName?: string | ((format: LibraryFormat, entryName: string) => string)
+
+  /**
+   * CSS 输出文件名
+   */
+  cssFileName?: string
+
+  /**
+   * 不打包的外部依赖
+   * @example ['vue', 'react', /^@shared\//]
+   */
+  externals?: (string | RegExp)[]
+
+  /**
+   * UMD/IIFE 格式下外部依赖的全局变量映射
+   * @example { vue: 'Vue', react: 'React' }
+   */
+  globals?: Record<string, string>
+}
+
 export interface ElectronConfig {
   main?: {
     entry?: string
@@ -257,6 +324,27 @@ export interface UserConfig {
      */
     extensions?: string[]
   }
+  /**
+   * 库模式配置（仅在 build 时生效）
+   *
+   * 启用后 ikaros 将以库模式构建，而非应用模式。
+   * 同一份配置在 rspack / vite 之间无缝切换。
+   *
+   * @example
+   * ```ts
+   * library: {
+   *   entry: 'src/index.ts',
+   *   name: 'MyLib',
+   *   formats: ['es', 'umd'],
+   *   externals: ['vue'],
+   *   globals: { vue: 'Vue' },
+   * }
+   * ```
+   * @see https://cn.vitejs.dev/guide/build#library-mode
+   * @see https://rspack.rs/zh/config/output#outputlibrary
+   */
+  library?: LibraryConfig
+
   /**
    * Electron应用配置
    * @default undefined
