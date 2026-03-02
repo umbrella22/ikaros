@@ -54,7 +54,13 @@ export const runRspackBuild = (
 
     compiler.run((err, stats) => {
       compiler.close((closeError) => {
-        const error = err || closeError
+        const error =
+          err && closeError
+            ? new AggregateError(
+                [err, closeError],
+                `Build failed: ${err.message}; Close failed: ${closeError.message}`,
+              )
+            : err || closeError
         if (error) {
           onBuildStatus?.({
             success: false,

@@ -12,7 +12,9 @@ import { extensions } from '../../shared/constants'
 /**
  * 将统一的 LibraryFormat 映射为 Rspack output.library.type
  */
-const mapFormatToRspackLibraryType = (format: LibraryFormat): string => {
+const mapFormatToRspackLibraryType = (
+  format: LibraryFormat,
+): 'module' | 'commonjs2' | 'umd' | 'iife' => {
   switch (format) {
     case 'es':
       return 'module'
@@ -193,7 +195,7 @@ const createSingleFormatConfig = (params: {
       ...(isEsm ? { module: true } : {}),
       library: {
         ...(needsName && library.name ? { name: library.name } : {}),
-        type: mapFormatToRspackLibraryType(format) as any,
+        type: mapFormatToRspackLibraryType(format),
       },
       globalObject: format === 'umd' ? 'this' : undefined,
     },

@@ -12,7 +12,17 @@ import type {
  */
 type LoadedViteAdapter = BundlerAdapter<unknown>
 
-const createMissingViteError = (): Error => {
+/**
+ * 自定义错误类，用于标识 Vite 适配器加载阶段的已知错误
+ */
+class ViteAdapterError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ViteAdapterError'
+  }
+}
+
+const createMissingViteError = (): ViteAdapterError => {
   const pkg = '@ikaros-cli/ikaros-bundler-vite'
   const lines = [
     `你启用了 bundler='vite'，但未安装可选依赖 ${pkg}。`,
@@ -20,16 +30,16 @@ const createMissingViteError = (): Error => {
     '请安装后重试：',
     `  pnpm add -D ${pkg}`,
   ]
-  return new Error(lines.join('\n'))
+  return new ViteAdapterError(lines.join('\n'))
 }
 
-const createNodeTooOldForViteError = (): Error => {
+const createNodeTooOldForViteError = (): ViteAdapterError => {
   const lines = [
     "你启用了 bundler='vite'，但当前 Node.js 版本过低。",
     `当前版本：v${process.versions.node}`,
     'Vite 7 运行时通常需要 Node.js >= 22。',
   ]
-  return new Error(lines.join('\n'))
+  return new ViteAdapterError(lines.join('\n'))
 }
 
 /**
@@ -82,7 +92,7 @@ export class ViteAdapterLoader implements BundlerAdapter<unknown> {
       this.adapter = new AdapterClass()
       return this.adapter
     } catch (err) {
-      if (err instanceof Error && err.message.includes("bundler='vite'")) {
+      if (err instanceof ViteAdapterError) {
         throw err
       }
       throw createMissingViteError()

@@ -8,7 +8,6 @@ import {
 } from '@rspack/core'
 
 import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
-import { workPath } from '../../shared/constants'
 import { join } from 'path'
 import { isArray, isEmpty } from 'es-toolkit/compat'
 import { LoggerSystem } from '../../shared/logger'
@@ -31,16 +30,20 @@ export class BaseCreate<T extends ListItemType> {
   protected env: 'development' | 'none' | 'production' = 'development'
   protected mode: string = ''
   protected isDev = true
+  protected context: string
   constructor({
     env = 'development',
     mode = '',
+    context = process.cwd(),
   }: {
     env: 'development' | 'none' | 'production'
     mode?: string
+    context?: string
   }) {
     this.env = env
     this.mode = mode
     this.isDev = env === 'development'
+    this.context = context
   }
 
   add(item: T | T[] | undefined): this {
@@ -64,11 +67,13 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
   constructor({
     env = 'development',
     mode = '',
+    context,
   }: {
     env: 'development' | 'none' | 'production'
     mode?: string
+    context?: string
   }) {
-    super({ env, mode })
+    super({ env, mode, context })
   }
   private defaultScriptLoader = (rspackExperiments?: RspackExperiments) => {
     return [
@@ -83,7 +88,7 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
           },
         },
         type: 'javascript/auto',
-        exclude: [join(workPath, 'node_modules')],
+        exclude: [join(this.context, 'node_modules')],
       },
       {
         test: /\.m?js$/i,
@@ -93,7 +98,7 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
           rspackExperiments,
         },
         type: 'javascript/auto',
-        exclude: [join(workPath, 'node_modules')],
+        exclude: [join(this.context, 'node_modules')],
       },
     ]
   }
@@ -141,11 +146,13 @@ export class CreatePlugins extends BaseCreate<Plugin> {
   constructor({
     env = 'development',
     mode = '',
+    context,
   }: {
     env: 'development' | 'none' | 'production'
     mode?: string
+    context?: string
   }) {
-    super({ env, mode })
+    super({ env, mode, context })
   }
   useDefaultEnvPlugin(otherEnv?: OtherEnv): this {
     const { frameworkEnv = {}, extEnv = {}, env = {} } = otherEnv ?? {}
@@ -165,7 +172,7 @@ export class CreatePlugins extends BaseCreate<Plugin> {
         new rspack.CopyRspackPlugin({
           patterns: [
             {
-              context: join(workPath, 'public'),
+              context: join(this.context, 'public'),
               from: './',
               noErrorOnMissing: true,
               globOptions: {
@@ -181,7 +188,7 @@ export class CreatePlugins extends BaseCreate<Plugin> {
   useHtmlPlugin(templatePath?: string): this {
     this.add(
       new rspack.HtmlRspackPlugin({
-        template: templatePath ?? join(workPath, 'index.html'),
+        template: templatePath ?? join(this.context, 'index.html'),
       }),
     )
     return this
@@ -252,10 +259,10 @@ export class CreateMpaAssets {
         }
       })
 
-      if (isEmpty(notFoundPageName)) {
+      if (!isEmpty(notFoundPageName)) {
         emitEvent(
           warning({
-            text: `当前设置页面${notFoundPageName.join()}不存在`,
+            text: `当前设置页面${notFoundPageName.join('、')}不存在`,
             onlyText: true,
           })!,
         )

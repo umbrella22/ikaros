@@ -1,6 +1,6 @@
 import type { Configuration, DefinePluginOptions } from '@rspack/core'
 import { rspack } from '@rspack/core'
-import { isString } from 'es-toolkit'
+import { isString, escapeRegExp } from 'es-toolkit'
 import { join } from 'node:path'
 
 import type { Pages } from '../../bundler/rspack/loader-plugin-helper'
@@ -190,10 +190,12 @@ export const createWebRspackConfig = (
   const loaderHelper = new CreateLoader({
     env,
     mode,
+    context,
   })
   const pluginHelper = new CreatePlugins({
     env,
     mode,
+    context,
   })
 
   const mpaAssetsHelper = new CreateMpaAssets({
@@ -317,7 +319,13 @@ export const createWebRspackConfig = (
             from: /\.(js|css|json|png|jpe?g|gif|svg|ico|woff2?|eot|ttf|otf|mp4|webm|ogg|mp3|wav|flac|aac|map)(\?.*)?$/,
             to: (context) => context.parsedUrl.pathname,
           },
-          { from: new RegExp(`^${base}`), to: join(base, 'index.html') },
+          {
+            from: new RegExp(`^${escapeRegExp(base)}`),
+            to: join(base, 'index.html'),
+
+            from: new RegExp(`^${escapeRegExp(base)}`),
+            to: join(base, 'index.html'),
+          },
         ],
       },
 
