@@ -9,3 +9,4 @@ export {
   resolveCLI,
 } from './constants'
 export { mergeUserConfig, checkDependency } from './common'
+export { assertNodeVersion, checkNodeVersion } from './check-env'

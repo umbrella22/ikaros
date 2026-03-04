@@ -4,6 +4,7 @@ import { createBundlerAdapter } from '../bundler/bundler-factory'
 import { createPlatformAdapter } from '../platform/platform-factory'
 import {
   createCompileContext,
+  type CompileContext,
   type CompileServeParams,
 } from './compile-context'
 
@@ -27,19 +28,22 @@ export async function runCompile(params: CompileServeParams): Promise<void> {
   // 3. 解析平台预配置
   const preConfig = await platform.resolvePreConfig(ctx)
 
-  // 4. 用预配置更新上下文中的 userConfig（resolvePreConfig 可能调整了 userConfig）
-  ctx.userConfig = preConfig.userConfig
+  // 4. 创建新的上下文对象（不可变更新，避免直接修改原 ctx）
+  const updatedCtx: CompileContext = {
+    ...ctx,
+    userConfig: preConfig.userConfig,
+  }
 
   // 5. 获取编译器适配器
   const bundler = createBundlerAdapter({
-    bundler: ctx.userConfig?.bundler ?? 'rspack',
-    loadContextModule: ctx.loadContextModule,
+    bundler: updatedCtx.userConfig?.bundler ?? 'rspack',
+    loadContextModule: updatedCtx.loadContextModule,
   })
 
   // 6. 通过平台适配器执行编译
   await platform.compile(bundler, {
-    command: ctx.command,
+    command: updatedCtx.command,
     preConfig,
-    compileContext: ctx,
+    compileContext: updatedCtx,
   })
 }

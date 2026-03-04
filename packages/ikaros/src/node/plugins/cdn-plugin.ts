@@ -29,10 +29,33 @@ const DEFAULT_PROD_URL = 'https://unpkg.com/:name@:version/:path'
 const DEFAULT_DEV_URL = ':name/:path'
 const PARAM_REGEX = /:([a-z]+)/gi
 
+/**
+ * 从 CDN 配置中提取 externals 映射
+ *
+ * 将 externals 的处理从插件运行时提升到配置阶段，
+ * 避免在 apply() 中直接修改 compiler.options，符合 rspack 插件最佳实践。
+ *
+ * @param modules - CDN 模块列表
+ * @returns externals 映射对象，可直接传给 rspack config 的 externals 字段
+ */
+export function createCdnExternals(
+  modules: CdnModule[],
+): Record<string, string> {
+  return modules
+    .filter((m) => !m.cssOnly)
+    .reduce(
+      (acc, m) => {
+        acc[m.name] = m.var || m.name
+        return acc
+      },
+      {} as Record<string, string>,
+    )
+}
+
 export default class CdnPlugin implements RspackPluginInstance {
-  private compiler!: Compiler
   private options: CdnPluginOptions
   private isDev: boolean = false
+  private versionCache = new Map<string, string>()
 
   constructor(options: CdnPluginOptions) {
     this.options = {
@@ -44,13 +67,9 @@ export default class CdnPlugin implements RspackPluginInstance {
   }
 
   public apply(compiler: Compiler): void {
-    this.compiler = compiler
     this.isDev = compiler.options.mode === 'development'
 
-    // 处理外部模块
-    this.handleExternals()
-
-    // 注册 HTML 标签注入
+    // 注册 HTML 标签注入（externals 已在配置阶段处理，此处只负责注入资源标签）
     compiler.hooks.compilation.tap(PLUGIN_NAME, (compilation) => {
       const hooks = rspack.HtmlRspackPlugin.getCompilationHooks(compilation)
 
@@ -64,18 +83,6 @@ export default class CdnPlugin implements RspackPluginInstance {
         }
       })
     })
-  }
-
-  private handleExternals(): void {
-    const externals = this.compiler.options.externals || {}
-
-    this.options.modules
-      .filter((m) => !m.cssOnly)
-      .forEach((m) => {
-        ;(externals as Record<string, string>)[m.name] = m.var || m.name
-      })
-
-    this.compiler.options.externals = externals
   }
 
   private injectResources(data: JsAlterAssetTagsData): void {
@@ -175,10 +182,15 @@ export default class CdnPlugin implements RspackPluginInstance {
   }
 
   private getModuleVersion(name: string): string {
+    const cached = this.versionCache.get(name)
+    if (cached) return cached
+
     try {
-      return createRequire(path.join(process.cwd(), 'node_modules'))(
+      const version = createRequire(path.join(process.cwd(), 'node_modules'))(
         path.join(name, 'package.json'),
-      ).version
+      ).version as string
+      this.versionCache.set(name, version)
+      return version
     } catch {
       // eslint-disable-next-line no-console
       console.warn(

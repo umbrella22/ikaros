@@ -42,8 +42,18 @@ const tryCleanDir = async (dir: string | undefined) => {
   if (!dir) return
   try {
     await fsp.rm(dir, { recursive: true, force: true })
-  } catch {
-    // ignore
+  } catch (err: unknown) {
+    // ENOENT 表示目录不存在，可安全忽略；其他错误（如权限不足）应给出警告
+    if (
+      err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      err.code !== 'ENOENT'
+    ) {
+      info({
+        text: `⚠️ 清理目录失败 ${dir}: ${err instanceof Error ? err.message : String(err)}`,
+      })
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/ikaros-platform-desktop-client",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "type": "module",
   "description": "Optional desktopClient (Electron) platform runner for @ikaros-cli/ikaros",
   "publishConfig": {
@@ -33,12 +33,12 @@
     "node": ">=20.0.0"
   },
   "peerDependencies": {
-    "@ikaros-cli/ikaros": "^2.1.0"
+    "@ikaros-cli/ikaros": "^2.2.1"
   },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*"
   },
   "dependencies": {
-    "@rspack/core": "^1.7.2"
+    "@rspack/core": "^1.7.7"
   }
 }

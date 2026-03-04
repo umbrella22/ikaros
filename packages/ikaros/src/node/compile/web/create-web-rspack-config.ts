@@ -12,6 +12,7 @@ import {
 import { extensions, resolveCLI } from '../../shared/constants'
 import StatsPlugin from '../../plugins/stats-plugin'
 import { CreatePluginHelper } from '../../bundler/rspack/plugin-factory'
+import { createCdnExternals } from '../../plugins/cdn-plugin'
 import type { UserConfig } from '../../config/user-config'
 import type { PackageJson } from '../compile-context'
 import { Command } from '../compile-context'
@@ -47,11 +48,6 @@ const createVueOrReactConfig = (params: {
   if (isVue) {
     return {
       noParse: /^(vue|vue-router|vuex|vuex-router-sync)$/,
-      env: {
-        __VUE_OPTIONS_API__: true,
-        __VUE_PROD_DEVTOOLS__: false,
-        __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
-      },
     }
   }
 
@@ -250,6 +246,9 @@ export const createWebRspackConfig = (
     target: isElectron
       ? 'electron-renderer'
       : ['web', 'es2015', `browserslist:${browserslist}`],
+    externals: userConfig?.cdnOptions?.modules
+      ? createCdnExternals(userConfig.cdnOptions.modules)
+      : undefined,
     resolve: {
       alias: {
         '@': resolveContext('src'),
@@ -265,15 +264,21 @@ export const createWebRspackConfig = (
       ],
     },
     output: {
-      clean: true,
+      clean: !isDev,
       path: getOutDirPath({ userConfig, isElectron, resolveContext }),
       publicPath: isElectron && !isDev ? './' : base,
       filename: isDev
-        ? '[name].[contenthash:8].js'
+        ? '[name].js'
         : formatAssetsPath(assetsDir, 'assets/js/[contenthash:8].js'),
       chunkFilename: isDev
-        ? '[name].[contenthash:8].chunk.js'
+        ? '[name].chunk.js'
         : formatAssetsPath(assetsDir, 'assets/js/[contenthash:8].chunk.js'),
+      cssFilename: isDev
+        ? '[name].css'
+        : formatAssetsPath(assetsDir, 'assets/css/[contenthash:8].css'),
+      cssChunkFilename: isDev
+        ? '[name].chunk.css'
+        : formatAssetsPath(assetsDir, 'assets/css/[contenthash:8].chunk.css'),
       chunkLoadingGlobal: `${contextPkg?.name || 'ikaros'}_chunk`,
       pathinfo: false,
     },
@@ -311,11 +316,11 @@ export const createWebRspackConfig = (
       proxy: userConfig?.server?.proxy,
 
       historyApiFallback: {
-        disableDotRule: true,
         rewrites: [
           {
             from: /\.(js|css|json|png|jpe?g|gif|svg|ico|woff2?|eot|ttf|otf|mp4|webm|ogg|mp3|wav|flac|aac|map)(\?.*)?$/,
-            to: (context) => context.parsedUrl.pathname,
+            to: (context: { parsedUrl: { pathname: string } }) =>
+              context.parsedUrl.pathname,
           },
           { from: new RegExp(`^${base}`), to: join(base, 'index.html') },
         ],

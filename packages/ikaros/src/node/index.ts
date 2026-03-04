@@ -30,6 +30,7 @@ export {
 } from './compile/web/resolve-web-preconfig'
 
 export { LoggerSystem } from './shared/logger'
+export { assertNodeVersion, checkNodeVersion } from './shared/check-env'
 export {
   runRspackBuild,
   watchRspackBuild,
@@ -53,17 +54,10 @@ export type {
   BuildStatus,
 } from './bundler/types'
 
-import chalk from 'chalk'
+import { assertNodeVersion } from './shared/check-env'
 
 /** 识别版本 */
-const majorVersion = Number(process.versions.node.split('.')[0])
-if (majorVersion < 22) {
-  const errorTip = chalk.bgRed.white(' ERROR ')
-  process.stderr.write(
-    `${errorTip} Node.js version must be greater than or equal to v22!\n\n`,
-  )
-  process.exit(1)
-}
+assertNodeVersion(22)
 
 program.version(version, '-v, --version')
 

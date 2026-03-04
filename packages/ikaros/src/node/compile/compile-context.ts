@@ -40,6 +40,8 @@ export type CompileServeParams = {
   command: Command
   options: CompileOptions
   configFile?: string
+  /** 工作目录，默认 process.cwd() */
+  context?: string
   onBuildStatus?: (status: BuildStatus) => void
 }
 
@@ -94,7 +96,7 @@ export async function createCompileContext(
   params: CompileServeParams,
 ): Promise<CompileContext> {
   const { command, options, configFile, onBuildStatus } = params
-  const context = process.cwd()
+  const context = params.context ?? process.cwd()
   const contextRequire = createRequire(join(context, './'))
 
   const resolveContext = (...paths: string[]) => join(context, ...paths)

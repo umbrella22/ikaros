@@ -4,6 +4,7 @@ import type {
   BundlerDevOptions,
   CreateConfigParams,
 } from '../types'
+import { checkNodeVersion } from '../../shared/check-env'
 
 /**
  * 可选 Vite 依赖加载的 adapter 接口
@@ -19,15 +20,6 @@ const createMissingViteError = (): Error => {
     '',
     '请安装后重试：',
     `  pnpm add -D ${pkg}`,
-  ]
-  return new Error(lines.join('\n'))
-}
-
-const createNodeTooOldForViteError = (): Error => {
-  const lines = [
-    "你启用了 bundler='vite'，但当前 Node.js 版本过低。",
-    `当前版本：v${process.versions.node}`,
-    'Vite 7 运行时通常需要 Node.js >= 22。',
   ]
   return new Error(lines.join('\n'))
 }
@@ -53,10 +45,8 @@ export class ViteAdapterLoader implements BundlerAdapter<unknown> {
   private ensureAdapter(): LoadedViteAdapter {
     if (this.adapter) return this.adapter
 
-    const majorVersion = Number(process.versions.node.split('.')[0])
-    if (Number.isFinite(majorVersion) && majorVersion < 22) {
-      throw createNodeTooOldForViteError()
-    }
+    // 使用共享的版本检查（Vite 7 需要 Node.js >= 22）
+    checkNodeVersion(22)
 
     try {
       const mod = this.loadContextModule<
