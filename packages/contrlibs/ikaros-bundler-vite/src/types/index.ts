@@ -13,6 +13,20 @@ export type Pages = Record<
   }
 >
 
+// ─── Library Mode（与主包 user-config.ts 对齐）─────────────────────────────
+
+export type LibraryFormat = 'es' | 'cjs' | 'umd' | 'iife'
+
+export interface LibraryConfig {
+  entry: string | string[] | Record<string, string>
+  name?: string
+  formats?: LibraryFormat[]
+  fileName?: string | ((format: LibraryFormat, entryName: string) => string)
+  cssFileName?: string
+  externals?: (string | RegExp)[]
+  globals?: Record<string, string>
+}
+
 // ─── BuildStatus（与主包 bundler/types.ts 对齐）──────────────────────────
 
 export interface BuildStatus {
@@ -106,4 +120,5 @@ export type ViteUserConfigSubset = {
   vite?: {
     plugins?: PluginOption | PluginOption[]
   }
+  library?: LibraryConfig
 }

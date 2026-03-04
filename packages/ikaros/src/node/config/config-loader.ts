@@ -1,6 +1,6 @@
 // config/config-loader.ts — 配置文件发现与加载
 
-import { dirname, extname, join, resolve } from 'node:path'
+import { extname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parse } from 'yaml'
 import fsp from 'node:fs/promises'
@@ -37,7 +37,7 @@ async function requireConfig(fileName: string, code: string) {
     const module = await import(fileUrl)
     return module.default
   } finally {
-    await fsp.unlink(fileNameTmp) // Ignore errors
+    await fsp.unlink(fileNameTmp).catch(() => {})
   }
 }
 
@@ -105,8 +105,8 @@ export async function resolveConfig({
   configPath = resolve(configPath, `${configName}${suffix}`)
 
   if (configFile) {
-    configPath = dirname(configFile)
     suffix = extname(configFile) as FileType
+    configPath = configFile
   }
   if (!fileType.has(suffix)) throw new Error('No configuration file ! ')
   return fileType.get(suffix)!(configPath)

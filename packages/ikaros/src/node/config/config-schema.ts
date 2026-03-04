@@ -15,14 +15,52 @@ import type {
 } from '../bundler/rspack/loader-plugin-helper'
 import { CdnPluginOptions } from '../plugins/cdn-plugin'
 import type { UserConfig } from './user-config'
+import type { LibraryConfig, LibraryFormat } from './user-config'
 
 type Bundler = 'rspack' | 'vite'
+
+// ─── Library Schema ─────────────────────────────────────────────────────────
+
+const libraryFormatSchema = z.enum(['es', 'cjs', 'umd', 'iife'])
+
+const librarySchema = z
+  .object({
+    entry: z.union([
+      z.string(),
+      z.array(z.string()),
+      z.record(z.string(), z.string()),
+    ]),
+    name: z.string().optional(),
+    formats: z.array(libraryFormatSchema).optional(),
+    fileName: z
+      .union([
+        z.string(),
+        z.custom<(format: LibraryFormat, entryName: string) => string>(),
+      ])
+      .optional(),
+    cssFileName: z.string().optional(),
+    externals: z.array(z.union([z.string(), z.instanceof(RegExp)])).optional(),
+    globals: z.record(z.string(), z.string()).optional(),
+  })
+  .superRefine((val, ctx) => {
+    const formats = val.formats ?? []
+    const needsName = formats.some((f) => f === 'umd' || f === 'iife')
+    if (needsName && !val.name) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['name'],
+        message: "library.name 在使用 'umd' 或 'iife' 格式时必须指定",
+      })
+    }
+  })
+  .optional()
 
 const commonSchema = {
   target: z.enum(['pc', 'mobile']).optional().default('pc'),
   pages: z.custom<Pages>().optional(),
   enablePages: z.union([z.array(z.string()), z.literal(false)]).optional(),
   define: z.custom<DefinePluginOptions>().optional(),
+  library: librarySchema,
   build: z
     .object({
       base: z.string().optional().default('/'),

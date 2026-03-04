@@ -3,6 +3,8 @@
 export type {
   Bundler,
   ElectronConfig,
+  LibraryConfig,
+  LibraryFormat,
   ModuleFederationOptions,
   UserConfig,
   ConfigEnvPre,

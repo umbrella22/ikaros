@@ -3,12 +3,13 @@ export {
   createWebRspackConfig,
   type CreateWebRspackConfigParams,
 } from './rspack-config-builder'
+export { createLibraryRspackConfigs } from './create-library-rspack-config'
 export {
   runRspackBuild,
   startRspackDevServer,
   watchRspackBuild,
-  type BuildStatus as RspackBuildStatus,
 } from './rspack-runner'
+export { type BuildStatus as RspackBuildStatus } from '../types'
 export {
   CreateLoader,
   CreatePlugins,

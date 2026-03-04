@@ -14,11 +14,7 @@ type StatsLike = {
   toString: (options: StatsValue) => string
 }
 
-export type BuildStatus = {
-  success: boolean
-  port?: number
-  message?: string
-}
+import type { BuildStatus } from '../types'
 
 export type RunRspackBuildOptions = {
   onBuildStatus?: (status: BuildStatus) => void
@@ -58,7 +54,13 @@ export const runRspackBuild = (
 
     compiler.run((err, stats) => {
       compiler.close((closeError) => {
-        const error = err || closeError
+        const error =
+          err && closeError
+            ? new AggregateError(
+                [err, closeError],
+                `Build failed: ${err.message}; Close failed: ${closeError.message}`,
+              )
+            : err || closeError
         if (error) {
           onBuildStatus?.({
             success: false,

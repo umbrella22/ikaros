@@ -7,18 +7,27 @@ import type {
   CreateConfigParams,
 } from '../types'
 import { createWebRspackConfig } from '../../compile/web/create-web-rspack-config'
+import { createLibraryRspackConfigs } from './create-library-rspack-config'
 import { runRspackBuild, startRspackDevServer } from './rspack-runner'
 import { Command } from '../../compile/compile-context'
 
 /**
  * Rspack 编译器适配器
  *
- * 实现 BundlerAdapter<Configuration>，将现有 rspack 相关逻辑封装为统一接口
+ * 实现 BundlerAdapter<Configuration | Configuration[]>，将现有 rspack 相关逻辑封装为统一接口。
+ * 库模式下 createConfig 可能返回 Configuration[]（多格式构建）。
  */
-export class RspackAdapter implements BundlerAdapter<Configuration> {
+export class RspackAdapter implements BundlerAdapter<
+  Configuration | Configuration[]
+> {
   readonly name = 'rspack' as const
 
-  createConfig(params: CreateConfigParams): Configuration {
+  createConfig(params: CreateConfigParams): Configuration | Configuration[] {
+    // 库模式：build 命令 + 配置了 library
+    if (params.command === 'build' && params.userConfig?.library) {
+      return createLibraryRspackConfigs(params)
+    }
+
     return createWebRspackConfig({
       command: params.command === 'server' ? Command.SERVER : Command.BUILD,
       mode: params.mode,
@@ -38,17 +47,19 @@ export class RspackAdapter implements BundlerAdapter<Configuration> {
   }
 
   async runDev(
-    config: Configuration,
+    config: Configuration | Configuration[],
     options: BundlerDevOptions,
   ): Promise<void> {
-    await startRspackDevServer(config, {
+    // Dev 模式始终使用单一配置
+    const singleConfig = Array.isArray(config) ? config[0] : config
+    await startRspackDevServer(singleConfig, {
       port: options.port,
       onBuildStatus: options.onBuildStatus,
     })
   }
 
   async runBuild(
-    config: Configuration,
+    config: Configuration | Configuration[],
     options: BundlerBuildOptions,
   ): Promise<string | undefined> {
     return runRspackBuild(config, {
