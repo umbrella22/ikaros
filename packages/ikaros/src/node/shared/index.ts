@@ -1,4 +1,4 @@
 // shared/ 统一导出
 export { LoggerSystem } from './logger'
 export { extensions, CLI_PATH, resolveCliPath, resolveCLI } from './constants'
-export { assertNodeVersion, checkNodeVersion } from './check-env'
+export { assertNodeVersion } from './check-env'
