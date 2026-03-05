@@ -237,9 +237,7 @@ export interface UserConfig {
      * - vite 模式：同 Vite server.proxy
      * @default undefined
      */
-    proxy?:
-      | import('@rspack/dev-server').Configuration['proxy']
-      | Record<string, string | Record<string, unknown>>
+    proxy?: import('@rspack/dev-server').Configuration['proxy']
 
     /**
      * https

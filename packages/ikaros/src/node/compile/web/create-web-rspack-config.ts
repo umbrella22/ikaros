@@ -321,13 +321,10 @@ export const createWebRspackConfig = (
         rewrites: [
           {
             from: /\.(js|css|json|png|jpe?g|gif|svg|ico|woff2?|eot|ttf|otf|mp4|webm|ogg|mp3|wav|flac|aac|map)(\?.*)?$/,
-            to: (context: { parsedUrl: { pathname: string } }) =>
-              context.parsedUrl.pathname,
+            to: (context: { parsedUrl: { pathname: string | null } }) =>
+              context.parsedUrl.pathname ?? '',
           },
           {
-            from: new RegExp(`^${escapeRegExp(base)}`),
-            to: join(base, 'index.html'),
-
             from: new RegExp(`^${escapeRegExp(base)}`),
             to: join(base, 'index.html'),
           },

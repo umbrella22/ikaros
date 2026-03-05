@@ -292,10 +292,5 @@ const createEnvPlugin = ({
       return [`import.meta.env.${key}`, JSON.stringify(val)]
     }),
   )
-  const envs = Object.fromEntries(
-    Object.entries({ ...clientEnvs, ...frameworkEnv }).map(([key, val]) => {
-      return [key, val]
-    }),
-  )
-  return new rspack.DefinePlugin(envs)
+  return new rspack.DefinePlugin({ ...clientEnvs, ...frameworkEnv })
 }

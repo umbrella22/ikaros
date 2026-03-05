@@ -88,18 +88,8 @@ export const resolveWebPreConfig = async (
 
   const port = userConfig?.server?.port ?? (await detect('8080'))
 
-  let isVue = false
-  let isReact = false
-  try {
-    const [hasReact, hasVue] = await Promise.all([
-      checkDependency('react', context),
-      checkDependency('vue', context),
-    ])
-    isVue = hasVue
-    isReact = hasReact
-  } catch {
-    // ignore dependency check errors
-  }
+  const isReact = checkDependency('react', context)
+  const isVue = checkDependency('vue', context)
 
   const browserslist = resolveBrowserslist(target)
 

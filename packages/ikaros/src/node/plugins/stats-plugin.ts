@@ -65,8 +65,8 @@ export default class StatsPlugin implements RspackPluginInstance {
     return (end[0] * 1e9 + end[1]) / 1e6
   }
 
-  private getError(stast: StatsCompilation) {
-    const { errors, errorsCount = 0 } = stast
+  private getError(stats: StatsCompilation) {
+    const { errors, errorsCount = 0 } = stats
 
     if (!errors || errorsCount === 0) return
 
@@ -75,8 +75,8 @@ export default class StatsPlugin implements RspackPluginInstance {
       .join('\n\n')
   }
 
-  private getWarn(stast: StatsCompilation) {
-    const { warnings, warningsCount = 0 } = stast
+  private getWarn(stats: StatsCompilation) {
+    const { warnings, warningsCount = 0 } = stats
 
     if (!warnings || warningsCount === 0) return
 
@@ -88,9 +88,9 @@ export default class StatsPlugin implements RspackPluginInstance {
   /**
    * 结束语
    */
-  private getEndTips(stast: StatsCompilation, time: number) {
+  private getEndTips(stats: StatsCompilation, time: number) {
     const { gray, cyan, red, green, yellow } = chalk
-    const { errorsCount = -1, warningsCount = -1 } = stast
+    const { errorsCount = -1, warningsCount = -1 } = stats
 
     const timer = ((time as number) / 1000).toFixed(2)
 
@@ -116,8 +116,8 @@ export default class StatsPlugin implements RspackPluginInstance {
   /**
    * 获取资源表格
    */
-  private getTableInfo(stast: StatsCompilation) {
-    const { assets } = stast
+  private getTableInfo(stats: StatsCompilation) {
+    const { assets } = stats
 
     if (!assets || assets.length === 0) return
 
@@ -182,20 +182,20 @@ export default class StatsPlugin implements RspackPluginInstance {
     const userPort = Number(devServer?.port)
 
     let hosts: string[] = []
-    let urlPaht = ''
+    let urlPath = ''
     const networks = Object.values(os.networkInterfaces())
 
     if (userConfig) {
-      urlPaht = userConfig.build?.base ?? ''
-      if (!urlPaht || urlPaht === 'auto') {
-        urlPaht = '/'
+      urlPath = userConfig.build?.base ?? ''
+      if (!urlPath || urlPath === 'auto') {
+        urlPath = '/'
       }
 
       const firstPage = Object.keys(userConfig?.pages || {})[0]
       if (firstPage && firstPage !== 'index') {
-        urlPaht = path.join(urlPaht, `${firstPage}.html`)
-      } else if (!urlPaht.endsWith('/')) {
-        urlPaht += '/'
+        urlPath = path.join(urlPath, `${firstPage}.html`)
+      } else if (!urlPath.endsWith('/')) {
+        urlPath += '/'
       }
     }
 
@@ -209,15 +209,15 @@ export default class StatsPlugin implements RspackPluginInstance {
       const as = a.split('.')
       const bs = b.split('.')
       for (const [i] of as.entries()) {
-        if (a[i] === bs[i]) continue
-        return Number(bs[i]) - Number(a[i])
+        if (as[i] === bs[i]) continue
+        return Number(bs[i]) - Number(as[i])
       }
       return 0
     })
 
-    const loaclIndex = hosts.indexOf('127.0.0.1')
-    if (loaclIndex !== -1) {
-      hosts.splice(loaclIndex, 1)
+    const localIndex = hosts.indexOf('127.0.0.1')
+    if (localIndex !== -1) {
+      hosts.splice(localIndex, 1)
       hosts.unshift('localhost')
     }
 
@@ -233,7 +233,7 @@ export default class StatsPlugin implements RspackPluginInstance {
           item = item + ':' + userPort
         }
       }
-      const url = new URL(urlPaht, item)
+      const url = new URL(urlPath, item)
       return url.href
     })
 
@@ -262,23 +262,23 @@ export default class StatsPlugin implements RspackPluginInstance {
 
     compiler.hooks.done.intercept({
       name: PLUGIN_NAME,
-      call: (stast: Stats) => {
+      call: (stats: Stats) => {
         console.clear()
 
-        const stastJson = stast.toJson({
+        const statsJson = stats.toJson({
           preset: 'errors-warnings',
           colors: true,
         })
         const { eventArray } = LoggerSystem()
 
-        const { errorsCount = 0, warningsCount = 0 } = stastJson
+        const { errorsCount = 0, warningsCount = 0 } = statsJson
 
         if (errorsCount > 0) {
-          console.log(this.getError(stastJson))
+          console.log(this.getError(statsJson))
           console.log()
         } else {
           if (warningsCount > 0) {
-            console.log(this.getWarn(stastJson))
+            console.log(this.getWarn(statsJson))
             console.log()
           }
           if (eventArray.length > 0) {
@@ -294,7 +294,7 @@ export default class StatsPlugin implements RspackPluginInstance {
           console.log(gray(hostTips))
         }
 
-        console.log(this.getEndTips(stastJson, this.getCurrentEndCompileTime()))
+        console.log(this.getEndTips(statsJson, this.getCurrentEndCompileTime()))
         console.log()
       },
     })
@@ -306,7 +306,7 @@ export default class StatsPlugin implements RspackPluginInstance {
   private initProdHook() {
     const { compiler } = this
 
-    let stastJson: StatsCompilation
+    let statsJson: StatsCompilation
 
     compiler.hooks.environment.intercept({
       name: PLUGIN_NAME,
@@ -318,8 +318,8 @@ export default class StatsPlugin implements RspackPluginInstance {
 
     compiler.hooks.done.intercept({
       name: PLUGIN_NAME,
-      call: (stast: Stats) => {
-        stastJson = stast.toJson({
+      call: (stats: Stats) => {
+        statsJson = stats.toJson({
           preset: 'normal',
           colors: true,
           assetsSort: 'size',
@@ -330,24 +330,24 @@ export default class StatsPlugin implements RspackPluginInstance {
     compiler.cache.hooks.shutdown.intercept({
       name: PLUGIN_NAME,
       done: () => {
-        const { errorsCount = 0, warningsCount = 0 } = stastJson
+        const { errorsCount = 0, warningsCount = 0 } = statsJson
 
         console.log()
 
         if (errorsCount > 0) {
-          console.log(this.getError(stastJson))
+          console.log(this.getError(statsJson))
           console.log()
         } else {
           if (warningsCount > 0) {
-            console.log(this.getWarn(stastJson))
+            console.log(this.getWarn(statsJson))
             console.log()
           }
 
-          console.log(this.getTableInfo(stastJson))
+          console.log(this.getTableInfo(statsJson))
           console.log()
         }
 
-        console.log(this.getEndTips(stastJson, this.getCurrentEndCompileTime()))
+        console.log(this.getEndTips(statsJson, this.getCurrentEndCompileTime()))
       },
     })
   }

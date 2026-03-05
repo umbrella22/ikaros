@@ -91,7 +91,7 @@ export default class CdnPlugin implements RspackPluginInstance {
 
     // 注入 CSS
     modules.forEach((module) => {
-      const styles = this.getStyles(module)
+      const styles = this.getAssets(module, 'style', 'styles')
       styles.forEach((style) => {
         tags.push({
           tagName: 'link',
@@ -111,7 +111,7 @@ export default class CdnPlugin implements RspackPluginInstance {
     modules
       .filter((m) => !m.cssOnly)
       .forEach((module) => {
-        const scripts = this.getScripts(module)
+        const scripts = this.getAssets(module, 'path', 'paths')
         scripts.forEach((script) => {
           tags.push({
             tagName: 'script',
@@ -135,20 +135,17 @@ export default class CdnPlugin implements RspackPluginInstance {
     }
   }
 
-  private getStyles(module: CdnModule): string[] {
-    const styles = [...(module.styles || [])]
-    if (module.style) {
-      styles.unshift(module.style)
+  private getAssets(
+    module: CdnModule,
+    singularKey: 'style' | 'path',
+    pluralKey: 'styles' | 'paths',
+  ): string[] {
+    const items = [...(module[pluralKey] || [])]
+    const singular = module[singularKey]
+    if (singular) {
+      items.unshift(singular)
     }
-    return styles.map((style) => this.generateUrl(module, style))
-  }
-
-  private getScripts(module: CdnModule): string[] {
-    const scripts = [...(module.paths || [])]
-    if (module.path) {
-      scripts.unshift(module.path)
-    }
-    return scripts.map((script) => this.generateUrl(module, script))
+    return items.map((item) => this.generateUrl(module, item))
   }
   private joinUrl(base: string, path: string): string {
     // 移除 base 结尾的斜杠和 path 开头的斜杠

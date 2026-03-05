@@ -34,15 +34,6 @@ const createMissingViteError = (): ViteAdapterError => {
   return new ViteAdapterError(lines.join('\n'))
 }
 
-const createNodeTooOldForViteError = (): ViteAdapterError => {
-  const lines = [
-    "你启用了 bundler='vite'，但当前 Node.js 版本过低。",
-    `当前版本：v${process.versions.node}`,
-    'Vite 7 运行时通常需要 Node.js >= 22。',
-  ]
-  return new ViteAdapterError(lines.join('\n'))
-}
-
 /**
  * Vite 编译器适配器（懒加载代理）
  *
