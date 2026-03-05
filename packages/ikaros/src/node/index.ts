@@ -30,7 +30,7 @@ export {
 } from './compile/web/resolve-web-preconfig'
 
 export { LoggerSystem } from './shared/logger'
-export { assertNodeVersion, checkNodeVersion } from './shared/check-env'
+export { assertNodeVersion } from './shared/check-env'
 export {
   runRspackBuild,
   watchRspackBuild,

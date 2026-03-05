@@ -4,7 +4,7 @@ import type {
   BundlerDevOptions,
   CreateConfigParams,
 } from '../types'
-import { checkNodeVersion } from '../../shared/check-env'
+import { assertNodeVersion } from '../../shared/check-env'
 
 /**
  * 可选 Vite 依赖加载的 adapter 接口
@@ -56,7 +56,7 @@ export class ViteAdapterLoader implements BundlerAdapter<unknown> {
     if (this.adapter) return this.adapter
 
     // 使用共享的版本检查（Vite 7 需要 Node.js >= 22）
-    checkNodeVersion(22)
+    assertNodeVersion(22)
 
     try {
       const mod = this.loadContextModule<

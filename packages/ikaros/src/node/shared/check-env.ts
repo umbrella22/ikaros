@@ -18,18 +18,3 @@ export function assertNodeVersion(minMajor: number): void {
     process.exit(1)
   }
 }
-
-/**
- * 检查 Node.js 版本是否满足最低要求（不终止进程，抛出错误）
- *
- * @param minMajor - 最低的主版本号
- * @throws Error 当 Node.js 版本低于要求时
- */
-export function checkNodeVersion(minMajor: number): void {
-  const major = Number(process.versions.node.split('.')[0])
-  if (Number.isFinite(major) && major < minMajor) {
-    throw new Error(
-      `Node.js >= ${minMajor} is required (current: v${process.versions.node})`,
-    )
-  }
-}
