@@ -4,6 +4,13 @@ import { detect } from 'detect-port'
 import type { UserConfig } from '../../config/user-config'
 import type { Pages } from '../../bundler/rspack/loader-plugin-helper'
 import { checkDependency } from '../../shared/common'
+import {
+  BROWSERSLIST,
+  DEFAULT_BASE_PATH,
+  DEFAULT_ENTRY_PATH,
+  DEFAULT_HTML_TEMPLATE,
+  DEFAULT_PORT,
+} from '../../shared/constants'
 import { Command } from '../compile-context'
 
 export type WebPreConfig = {
@@ -26,23 +33,8 @@ export type ResolveWebPreConfigParams = {
 }
 
 const resolveBrowserslist = (target: WebPreConfig['target']): string => {
-  const isMobile = target === 'mobile'
-
-  const bl = ['defaults']
-
-  if (isMobile) {
-    bl.push('IOS >= 16', 'Chrome >= 80')
-  } else {
-    bl.push(
-      '>0.2%',
-      'Chrome >= 90',
-      'Safari >= 16',
-      'last 2 versions',
-      'not dead',
-    )
-  }
-
-  return bl.join(',')
+  const list = target === 'mobile' ? BROWSERSLIST.mobile : BROWSERSLIST.pc
+  return list.join(',')
 }
 
 const resolveDefaultPages = (
@@ -52,7 +44,7 @@ const resolveDefaultPages = (
   if (isElectron) {
     return {
       index: {
-        html: resolveContext('src/renderer/index.html'),
+        html: resolveContext(`src/renderer/${DEFAULT_HTML_TEMPLATE}`),
         entry: resolveContext('src/renderer/index'),
       },
     }
@@ -60,8 +52,8 @@ const resolveDefaultPages = (
 
   return {
     index: {
-      html: resolveContext('index.html'),
-      entry: resolveContext('src/index'),
+      html: resolveContext(DEFAULT_HTML_TEMPLATE),
+      entry: resolveContext(DEFAULT_ENTRY_PATH),
     },
   }
 }
@@ -73,7 +65,7 @@ export const resolveWebPreConfig = async (
 
   const userConfig = await getUserConfig()
 
-  const base = userConfig?.build?.base ?? '/'
+  const base = userConfig?.build?.base ?? DEFAULT_BASE_PATH
 
   if (command === Command.SERVER && /^https?:/.test(base)) {
     const optsText = chalk.cyan('build.base')
@@ -86,7 +78,7 @@ export const resolveWebPreConfig = async (
     userConfig?.pages ??
     resolveDefaultPages(resolveContext, Boolean(isElectron))
 
-  const port = userConfig?.server?.port ?? (await detect('8080'))
+  const port = userConfig?.server?.port ?? (await detect(String(DEFAULT_PORT)))
 
   const isReact = checkDependency('react', context)
   const isVue = checkDependency('vue', context)

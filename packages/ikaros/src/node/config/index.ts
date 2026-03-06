@@ -17,4 +17,4 @@ export { configSchema } from './config-schema'
 
 export { resolveConfig } from './config-loader'
 
-export { getEnv } from './env-loader'
+export { getEnv, type EnvResult } from './env-loader'

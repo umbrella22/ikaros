@@ -150,6 +150,11 @@ export interface UserConfig {
    */
   bundler?: Bundler
   /**
+   * 静默模式，抑制非关键警告（如缺少 env 文件、页面配置等）
+   * @default false
+   */
+  quiet?: boolean
+  /**
    * 编译的平台，该值影响底层优化逻辑
    * @default 'pc'
    * @future 该功能受限，目前仅支持 'pc'

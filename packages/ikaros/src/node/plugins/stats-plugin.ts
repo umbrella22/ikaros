@@ -17,7 +17,6 @@ import process from 'node:process'
 import { isArray } from 'es-toolkit/compat'
 import type { UserConfig } from '../config/user-config'
 import { name, version } from '../../../package.json'
-import { LoggerSystem } from '../shared/logger'
 
 const cliPackageJson = { name, version }
 const PLUGIN_NAME = '@rspack/ikaros-stats-plugin'
@@ -83,6 +82,26 @@ export default class StatsPlugin implements RspackPluginInstance {
     return warnings
       .map((item) => `${black.bgYellow(' WARN ')} ${item.message.trim()}`)
       .join('\n\n')
+  }
+
+  /**
+   * 从 stats.logging 中提取 infrastructure logger 的警告信息
+   */
+  private getInfraWarnings(stats: StatsCompilation) {
+    const { logging } = stats
+    if (!logging) return
+
+    const messages: string[] = []
+    for (const [source, logEntry] of Object.entries(logging)) {
+      for (const entry of logEntry.entries) {
+        if (entry.type === 'warn') {
+          const msg = (entry.args ?? [entry.message]).join(' ')
+          messages.push(`${black.bgYellow(' WARN ')} [${source}] ${msg}`)
+        }
+      }
+    }
+    if (messages.length === 0) return
+    return messages.join('\n')
   }
 
   /**
@@ -268,8 +287,9 @@ export default class StatsPlugin implements RspackPluginInstance {
         const statsJson = stats.toJson({
           preset: 'errors-warnings',
           colors: true,
+          logging: 'warn',
+          loggingTrace: false,
         })
-        const { eventArray } = LoggerSystem()
 
         const { errorsCount = 0, warningsCount = 0 } = statsJson
 
@@ -281,8 +301,12 @@ export default class StatsPlugin implements RspackPluginInstance {
             console.log(this.getWarn(statsJson))
             console.log()
           }
-          if (eventArray.length > 0) {
-            console.log(eventArray.map((item) => item).join('\n'))
+
+          const infraWarnings = this.userConfig?.quiet
+            ? undefined
+            : this.getInfraWarnings(statsJson)
+          if (infraWarnings) {
+            console.log(infraWarnings)
             console.log()
           }
 
@@ -323,6 +347,8 @@ export default class StatsPlugin implements RspackPluginInstance {
           preset: 'normal',
           colors: true,
           assetsSort: 'size',
+          logging: 'warn',
+          loggingTrace: false,
         })
       },
     })
@@ -340,6 +366,14 @@ export default class StatsPlugin implements RspackPluginInstance {
         } else {
           if (warningsCount > 0) {
             console.log(this.getWarn(statsJson))
+            console.log()
+          }
+
+          const infraWarnings = this.userConfig?.quiet
+            ? undefined
+            : this.getInfraWarnings(statsJson)
+          if (infraWarnings) {
+            console.log(infraWarnings)
             console.log()
           }
 

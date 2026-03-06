@@ -51,6 +51,7 @@ export class WebPlatformAdapter implements PlatformAdapter {
       isVue: preConfig.isVue,
       isReact: preConfig.isReact,
       resolveContext: ctx.resolveContext,
+      preWarnings: ctx.preWarnings,
     })
 
     // 根据命令执行 dev 或 build

@@ -5,7 +5,7 @@ import { rspack } from '@rspack/core'
 
 import type { LibraryConfig, LibraryFormat } from '../../config/user-config'
 import type { CreateConfigParams } from '../types'
-import { extensions } from '../../shared/constants'
+import { DEFAULT_OUT_DIR, extensions } from '../../shared/constants'
 
 // ─── Format Mapping ─────────────────────────────────────────────────────────
 
@@ -148,7 +148,7 @@ const getOutDirPath = (
     return resolveContext(outDirName)
   }
 
-  return resolveContext('dist')
+  return resolveContext(DEFAULT_OUT_DIR)
 }
 
 // ─── Single Format Config ───────────────────────────────────────────────────

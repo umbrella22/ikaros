@@ -43,6 +43,7 @@ export class RspackAdapter implements BundlerAdapter<
       isVue: params.isVue,
       isReact: params.isReact,
       resolveContext: params.resolveContext,
+      preWarnings: params.preWarnings,
     })
   }
 

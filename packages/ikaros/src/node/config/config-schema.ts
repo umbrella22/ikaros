@@ -15,7 +15,8 @@ import type {
 } from '../bundler/rspack/loader-plugin-helper'
 import { CdnPluginOptions } from '../plugins/cdn-plugin'
 import type { UserConfig } from './user-config'
-import type { LibraryConfig, LibraryFormat } from './user-config'
+import type { LibraryFormat } from './user-config'
+import { DEFAULT_BASE_PATH, DEFAULT_OUT_DIR } from '../shared/constants'
 
 type Bundler = 'rspack' | 'vite'
 
@@ -57,16 +58,17 @@ const librarySchema = z
 
 const commonSchema = {
   target: z.enum(['pc', 'mobile']).optional().default('pc'),
+  quiet: z.boolean().optional().default(false),
   pages: z.custom<Pages>().optional(),
   enablePages: z.union([z.array(z.string()), z.literal(false)]).optional(),
   define: z.custom<DefinePluginOptions>().optional(),
   library: librarySchema,
   build: z
     .object({
-      base: z.string().optional().default('/'),
+      base: z.string().optional().default(DEFAULT_BASE_PATH),
       assetsDir: z.string().optional(),
       sourceMap: z.boolean().optional().default(false),
-      outDirName: z.string().optional().default('dist'),
+      outDirName: z.string().optional().default(DEFAULT_OUT_DIR),
     })
     .optional(),
   resolve: z
@@ -126,11 +128,11 @@ const rspackConfigSchema = z.object({
     .optional(),
   build: z
     .object({
-      base: z.string().optional().default('/'),
+      base: z.string().optional().default(DEFAULT_BASE_PATH),
       assetsDir: z.string().optional(),
       gzip: z.boolean().optional().default(false),
       sourceMap: z.boolean().optional().default(false),
-      outDirName: z.string().optional().default('dist'),
+      outDirName: z.string().optional().default(DEFAULT_OUT_DIR),
       outReport: z.boolean().optional().default(false),
       cache: z.boolean().optional().default(false),
       dependencyCycleCheck: z.boolean().optional().default(false),

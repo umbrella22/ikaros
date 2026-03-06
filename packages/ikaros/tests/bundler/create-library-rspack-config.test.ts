@@ -3,6 +3,21 @@ import { describe, it, expect } from 'vitest'
 import { createLibraryRspackConfigs } from '../../src/node/bundler/rspack/create-library-rspack-config'
 import type { CreateConfigParams } from '../../src/node/bundler/types'
 
+interface TestCfg {
+  output: {
+    library: { type: string; name?: string }
+    filename: string
+    path: string
+    module?: boolean
+    globalObject?: string
+  }
+  entry: string | Record<string, string>
+  experiments?: { outputModule?: boolean }
+  externals: Record<string, Record<string, string>>
+  resolve: { alias: Record<string, string> }
+  devtool: string | false
+}
+
 const createMinimalParams = (
   overrides?: Partial<CreateConfigParams>,
 ): CreateConfigParams => ({
@@ -40,7 +55,7 @@ describe('createLibraryRspackConfigs', () => {
     )
 
     expect(Array.isArray(configs)).toBe(true)
-    const arr = configs as any[]
+    const arr = configs as TestCfg[]
     expect(arr).toHaveLength(2)
 
     // ES 格式
@@ -64,7 +79,7 @@ describe('createLibraryRspackConfigs', () => {
     )
 
     expect(Array.isArray(configs)).toBe(true)
-    const arr = configs as any[]
+    const arr = configs as TestCfg[]
     expect(arr).toHaveLength(2)
 
     expect(arr[0].output.library.type).toBe('module')
@@ -85,7 +100,7 @@ describe('createLibraryRspackConfigs', () => {
 
     // 单一格式返回单个 Configuration
     expect(Array.isArray(config)).toBe(false)
-    expect((config as any).output.library.type).toBe('commonjs2')
+    expect((config as TestCfg).output.library.type).toBe('commonjs2')
   })
 
   it('es 格式应启用 outputModule', () => {
@@ -100,7 +115,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.experiments?.outputModule).toBe(true)
     expect(cfg.output?.module).toBe(true)
     expect(cfg.output?.library?.type).toBe('module')
@@ -119,7 +134,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.output.library.name).toBe('MyLib')
     expect(cfg.output.library.type).toBe('umd')
     expect(cfg.output.globalObject).toBe('this')
@@ -138,7 +153,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.externals).toEqual(['vue', 'react'])
   })
 
@@ -157,7 +172,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.externals).toBeDefined()
     expect(cfg.externals).toHaveProperty('vue')
     expect(cfg.externals.vue.root).toBe('Vue')
@@ -176,7 +191,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.output.filename).toBe('my-custom-name.cjs')
   })
 
@@ -187,12 +202,13 @@ describe('createLibraryRspackConfigs', () => {
           library: {
             entry: 'src/index.ts',
             formats: ['es'],
-            fileName: (format, entryName) =>
+            fileName: (format, entryName) => `${entryName}.${format}.custom`,
+          },
         },
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.output.filename).toBe('index.es.custom.js')
   })
 
@@ -208,7 +224,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.entry).toBe('/test/project/src/index.ts')
   })
 
@@ -227,7 +243,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.resolve.alias).toHaveProperty('@', '/test/project/src')
     expect(cfg.resolve.alias).toHaveProperty('~', '/custom/path')
   })
@@ -247,7 +263,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.output.path).toBe('/test/project/output')
   })
 
@@ -266,7 +282,7 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as any
+    const cfg = config as TestCfg
     expect(cfg.devtool).toBe('source-map')
   })
 

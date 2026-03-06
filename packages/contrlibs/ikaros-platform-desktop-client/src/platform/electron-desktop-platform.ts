@@ -141,6 +141,7 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
         isVue: preConfig.isVue,
         isReact: preConfig.isReact,
         resolveContext: ctx.resolveContext,
+        preWarnings: ctx.preWarnings,
       })
 
       let mainPreloadWatchPromise: Promise<unknown> | undefined
@@ -239,6 +240,7 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
       isVue: preConfig.isVue,
       isReact: preConfig.isReact,
       resolveContext: ctx.resolveContext,
+      preWarnings: ctx.preWarnings,
     })
 
     let unionBuild = false

@@ -3,8 +3,7 @@
 import fse from 'fs-extra'
 import { join } from 'path'
 import { config } from 'dotenv'
-
-import { LoggerSystem } from '../shared/logger'
+import type { PreWarning } from '../plugins/pre-warnings-plugin'
 
 const getEnvPath = (context: string, mode?: string) => {
   if (!mode) {
@@ -13,11 +12,14 @@ const getEnvPath = (context: string, mode?: string) => {
   return join(context, 'env', `.env.${mode}`)
 }
 
-const checkEnv = async (context: string, mode?: string) => {
-  const { warning, emitEvent } = LoggerSystem()
+const checkEnv = async (
+  context: string,
+  warnings: PreWarning[],
+  mode?: string,
+) => {
   const hasEnvFolder = await fse.pathExists(join(context, 'env'))
   if (!hasEnvFolder) {
-    emitEvent(warning({ text: 'env folder not found', onlyText: true })!)
+    warnings.push({ source: 'env-loader', message: 'env folder not found' })
     return false
   }
 
@@ -25,10 +27,18 @@ const checkEnv = async (context: string, mode?: string) => {
   const hasEnv = await fse.pathExists(envPath)
   if (!hasEnv) {
     const fileName = mode ? `.env.${mode}` : '.env'
-    emitEvent(warning({ text: `${fileName} file not found`, onlyText: true })!)
+    warnings.push({
+      source: 'env-loader',
+      message: `${fileName} file not found`,
+    })
     return false
   }
   return true
+}
+
+export type EnvResult = {
+  env: Record<string, string>
+  warnings: PreWarning[]
 }
 
 /**
@@ -36,10 +46,17 @@ const checkEnv = async (context: string, mode?: string) => {
  * @param context 工作目录
  * @param mode 模式
  */
-export const getEnv = async (context: string, mode?: string) => {
-  const hasEnv = await checkEnv(context, mode)
+export const getEnv = async (
+  context: string,
+  mode?: string,
+): Promise<EnvResult> => {
+  const warnings: PreWarning[] = []
+  const hasEnv = await checkEnv(context, warnings, mode)
   if (!hasEnv) {
-    return {}
+    return { env: {}, warnings }
   }
-  return config({ path: getEnvPath(context, mode), quiet: true }).parsed ?? {}
+  return {
+    env: config({ path: getEnvPath(context, mode), quiet: true }).parsed ?? {},
+    warnings,
+  }
 }

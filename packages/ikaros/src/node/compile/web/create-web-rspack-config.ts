@@ -9,8 +9,21 @@ import {
   CreateMpaAssets,
   CreatePlugins,
 } from '../../bundler/rspack/loader-plugin-helper'
-import { extensions, resolveCLI } from '../../shared/constants'
+import {
+  ASSET_PATHS,
+  DEFAULT_HTML_TEMPLATE,
+  DEFAULT_OUT_DIR,
+  DEFAULT_PUBLIC_DIR,
+  ELECTRON_DEFAULT_OUTPUT,
+  ELECTRON_RENDERER_SUBDIR,
+  extensions,
+  resolveCLI,
+} from '../../shared/constants'
 import StatsPlugin from '../../plugins/stats-plugin'
+import {
+  PreWarningsPlugin,
+  type PreWarning,
+} from '../../plugins/pre-warnings-plugin'
 import { CreatePluginHelper } from '../../bundler/rspack/plugin-factory'
 import { createCdnExternals } from '../../plugins/cdn-plugin'
 import type { UserConfig } from '../../config/user-config'
@@ -32,6 +45,7 @@ export type CreateWebRspackConfigParams = {
   isVue: boolean
   isReact: boolean
   resolveContext: (...paths: string[]) => string
+  preWarnings?: PreWarning[]
 }
 
 type VueOrReactConfig = {
@@ -142,10 +156,13 @@ const getOutDirPath = (
 
   if (isElectron) {
     const electronConfig = userConfig?.electron
-    const defaultOutput = resolveContext('dist/electron/renderer')
+    const defaultOutput = resolveContext(ELECTRON_DEFAULT_OUTPUT)
 
     if (electronConfig?.build?.outDir) {
-      return join(resolveContext(electronConfig.build.outDir), 'renderer')
+      return join(
+        resolveContext(electronConfig.build.outDir),
+        ELECTRON_RENDERER_SUBDIR,
+      )
     }
 
     return defaultOutput
@@ -155,7 +172,7 @@ const getOutDirPath = (
     return resolveContext(outDirName)
   }
 
-  return resolveContext('dist')
+  return resolveContext(DEFAULT_OUT_DIR)
 }
 
 const formatAssetsPath = (assetsDir: string, path: string): string => {
@@ -200,6 +217,10 @@ export const createWebRspackConfig = (
   })
 
   const { entry, plugins: mpaPlugins } = mpaAssetsHelper.create()
+  const allPreWarnings = [
+    ...(params.preWarnings ?? []),
+    ...mpaAssetsHelper.warnings,
+  ]
   const { env: frameworkEnv, noParse } = createVueOrReactConfig({
     isVue: params.isVue,
     isReact: params.isReact,
@@ -230,7 +251,8 @@ export const createWebRspackConfig = (
     })
     .useCopyPlugin()
     .add(mpaPlugins)
-    .add(new StatsPlugin())
+    .add(new StatsPlugin(userConfig))
+    .add(new PreWarningsPlugin(allPreWarnings, userConfig?.quiet))
     .add(createPluginHelper.createSourceMapPlugin())
     .add(createPluginHelper.createCssExtractPlugin())
     .add(createPluginHelper.createDoctorPlugin())
@@ -271,16 +293,16 @@ export const createWebRspackConfig = (
       publicPath: isElectron && !isDev ? './' : base,
       filename: isDev
         ? '[name].js'
-        : formatAssetsPath(assetsDir, 'assets/js/[contenthash:8].js'),
+        : formatAssetsPath(assetsDir, ASSET_PATHS.js),
       chunkFilename: isDev
         ? '[name].chunk.js'
-        : formatAssetsPath(assetsDir, 'assets/js/[contenthash:8].chunk.js'),
+        : formatAssetsPath(assetsDir, ASSET_PATHS.jsChunk),
       cssFilename: isDev
         ? '[name].css'
-        : formatAssetsPath(assetsDir, 'assets/css/[contenthash:8].css'),
+        : formatAssetsPath(assetsDir, ASSET_PATHS.css),
       cssChunkFilename: isDev
         ? '[name].chunk.css'
-        : formatAssetsPath(assetsDir, 'assets/css/[contenthash:8].chunk.css'),
+        : formatAssetsPath(assetsDir, ASSET_PATHS.cssChunk),
       chunkLoadingGlobal: `${contextPkg?.name || 'ikaros'}_chunk`,
       pathinfo: false,
     },
@@ -326,7 +348,7 @@ export const createWebRspackConfig = (
           },
           {
             from: new RegExp(`^${escapeRegExp(base)}`),
-            to: join(base, 'index.html'),
+            to: join(base, DEFAULT_HTML_TEMPLATE),
           },
         ],
       },
@@ -336,7 +358,7 @@ export const createWebRspackConfig = (
       },
 
       static: {
-        directory: resolveContext('public'),
+        directory: resolveContext(DEFAULT_PUBLIC_DIR),
         publicPath: base,
       },
 

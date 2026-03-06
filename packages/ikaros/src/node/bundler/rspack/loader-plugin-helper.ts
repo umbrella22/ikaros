@@ -10,8 +10,13 @@ import {
 import { buildCssLoaders, type CssLoaderOptions } from './css-loaders-helper'
 import { join } from 'path'
 import { isArray, isEmpty } from 'es-toolkit/compat'
-import { LoggerSystem } from '../../shared/logger'
 import { mergeUserConfig } from '../../shared/common'
+import type { PreWarning } from '../../plugins/pre-warnings-plugin'
+import {
+  ASSET_PATHS,
+  DEFAULT_HTML_TEMPLATE,
+  DEFAULT_PUBLIC_DIR,
+} from '../../shared/constants'
 
 type ListItemType = RuleSetRule | Plugin
 
@@ -107,21 +112,21 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
       test: /\.(png|jpe?g|gif|svg|ico)(\?.*)?$/,
       type: 'asset/resource',
       generator: {
-        filename: this.isDev ? '[id][ext]' : 'assets/img/[contenthash][ext]',
+        filename: this.isDev ? '[id][ext]' : ASSET_PATHS.img,
       },
     },
     {
       test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,
       type: 'asset/resource',
       generator: {
-        filename: this.isDev ? '[id][ext]' : 'assets/media/[contenthash][ext]',
+        filename: this.isDev ? '[id][ext]' : ASSET_PATHS.media,
       },
     },
     {
       test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/,
       type: 'asset/resource',
       generator: {
-        filename: this.isDev ? '[id][ext]' : 'assets/fonts/[contenthash][ext]',
+        filename: this.isDev ? '[id][ext]' : ASSET_PATHS.fonts,
       },
     },
   ]
@@ -172,7 +177,7 @@ export class CreatePlugins extends BaseCreate<Plugin> {
         new rspack.CopyRspackPlugin({
           patterns: [
             {
-              context: join(this.context, 'public'),
+              context: join(this.context, DEFAULT_PUBLIC_DIR),
               from: './',
               noErrorOnMissing: true,
               globOptions: {
@@ -188,7 +193,7 @@ export class CreatePlugins extends BaseCreate<Plugin> {
   useHtmlPlugin(templatePath?: string): this {
     this.add(
       new rspack.HtmlRspackPlugin({
-        template: templatePath ?? join(this.context, 'index.html'),
+        template: templatePath ?? join(this.context, DEFAULT_HTML_TEMPLATE),
       }),
     )
     return this
@@ -210,6 +215,7 @@ export type Pages = {
 export class CreateMpaAssets {
   protected pages: Pages
   protected enablePages: string[] | false | undefined
+  readonly warnings: PreWarning[] = []
   constructor({
     pages,
     enablePages,
@@ -246,7 +252,6 @@ export class CreateMpaAssets {
     }
   }
   protected getEnablePages() {
-    const { warning, emitEvent } = LoggerSystem()
     if (!isEmpty(this.pages) && isArray(this.enablePages)) {
       const reMakePage: Pages = {}
       // 预留未找到的数组，以便后续给出错误提示
@@ -260,12 +265,7 @@ export class CreateMpaAssets {
       })
 
       if (!isEmpty(notFoundPageName)) {
-        emitEvent(
-          warning({
-            text: `当前设置页面${notFoundPageName.join('、')}不存在`,
-            onlyText: true,
-          })!,
-        )
+        this.warnings.push(`当前设置页面${notFoundPageName.join('、')}不存在`)
       }
 
       // 当出现错误的页面导致没有任何选中时，将使用userConfig中的pages，不做任何处理

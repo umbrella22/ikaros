@@ -14,6 +14,7 @@ import { configSchema } from '../config/config-schema'
 import { getEnv } from '../config/env-loader'
 import { resolveConfig } from '../config/config-loader'
 import type { BuildStatus } from '../bundler/types'
+import type { PreWarning } from '../plugins/pre-warnings-plugin'
 
 // ─── 公共类型 ─────────────────────────────────────────────────────────────
 
@@ -79,6 +80,8 @@ export interface CompileContext {
   readonly configFile?: string
   /** 构建状态回调 */
   onBuildStatus?: (status: BuildStatus) => void
+  /** 编译器创建前收集的警告，会通过 PreWarningsPlugin 注入 rspack logger */
+  readonly preWarnings: PreWarning[]
 }
 
 // ─── 工厂函数 ───────────────────────────────────────────────────────────────
@@ -115,7 +118,7 @@ export async function createCompileContext(
   const contextPkg = await loadContextPkg(resolveContext)
 
   // 2. 加载环境变量
-  const env = await loadEnv(options, context)
+  const { env, preWarnings } = await loadEnv(options, context)
 
   // 3. 加载并验证用户配置
   const userConfig = await loadUserConfig({
@@ -140,6 +143,7 @@ export async function createCompileContext(
     isElectron: options.platform === 'desktopClient',
     configFile,
     onBuildStatus,
+    preWarnings,
   }
 }
 
@@ -162,16 +166,19 @@ async function loadContextPkg(
 async function loadEnv(
   options: CompileOptions,
   context: string,
-): Promise<Record<string, unknown>> {
+): Promise<{ env: Record<string, unknown>; preWarnings: PreWarning[] }> {
   const { platform, mode } = options
   const retain: ConfigEnvPre['env'] = {
     PLATFORM: platform,
     MODE: mode,
   }
-  const envData = await getEnv(context, mode)
+  const { env: envData, warnings } = await getEnv(context, mode)
   return {
-    ...retain,
-    ...envData,
+    env: {
+      ...retain,
+      ...envData,
+    },
+    preWarnings: warnings,
   }
 }
 

@@ -8,6 +8,7 @@ import fse from 'fs-extra'
 import { OxcError, transform } from 'oxc-transform'
 import { readFile } from 'node:fs/promises'
 import type { UserConfig } from './user-config'
+import { CONFIG_FILE_NAME, CONFIG_FILE_SUFFIXES } from '../shared/constants'
 
 async function transformConfig(path: string, isTs: boolean) {
   const filename = path
@@ -87,10 +88,9 @@ export async function resolveConfig({
 }): Promise<UserConfig | undefined> {
   let suffix: FileType | undefined
   let configPath = context ?? process.cwd()
-  const configName = 'ikaros.config'
 
-  const configList = ['ts', 'mjs', 'json', 'yaml'].map(
-    (suffix) => `${join(configPath, configName)}.${suffix}`,
+  const configList = CONFIG_FILE_SUFFIXES.map(
+    (suffix) => `${join(configPath, CONFIG_FILE_NAME)}.${suffix}`,
   )
   const results = await Promise.all(
     configList.map((element) => {
@@ -102,7 +102,7 @@ export async function resolveConfig({
 
   suffix = extname(configList[index]) as FileType
 
-  configPath = resolve(configPath, `${configName}${suffix}`)
+  configPath = resolve(configPath, `${CONFIG_FILE_NAME}${suffix}`)
 
   if (configFile) {
     suffix = extname(configFile) as FileType

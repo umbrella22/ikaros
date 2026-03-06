@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
+import type { LibraryOptions } from 'vite'
+
 import { createViteLibraryConfig } from '../src/config/create-vite-library-config'
 import type { CreateConfigParams } from '../src/types'
 
@@ -52,8 +54,12 @@ describe('createViteLibraryConfig', () => {
     )
 
     expect(config.build?.lib).toBeDefined()
-    expect((config.build?.lib as any)?.name).toBe('MyLib')
-    expect((config.build?.lib as any)?.entry).toBe(
+    expect((config.build?.lib as LibraryOptions)?.name).toBe('MyLib')
+    expect((config.build?.lib as LibraryOptions)?.entry).toBe(
+      '/test/project/src/index.ts',
+    )
+  })
+
   it('单入口默认 formats 应为 es + umd', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
@@ -66,7 +72,7 @@ describe('createViteLibraryConfig', () => {
       }),
     )
 
-    const lib = config.build?.lib as any
+    const lib = config.build?.lib as LibraryOptions
     expect(lib.formats).toEqual(['es', 'umd'])
   })
 
@@ -81,7 +87,7 @@ describe('createViteLibraryConfig', () => {
       }),
     )
 
-    const lib = config.build?.lib as any
+    const lib = config.build?.lib as LibraryOptions
     expect(lib.formats).toEqual(['es', 'cjs'])
   })
 
@@ -98,7 +104,7 @@ describe('createViteLibraryConfig', () => {
       }),
     )
 
-    const lib = config.build?.lib as any
+    const lib = config.build?.lib as LibraryOptions
     expect(lib.formats).toEqual(['es', 'cjs', 'umd'])
   })
 
@@ -132,7 +138,9 @@ describe('createViteLibraryConfig', () => {
       }),
     )
 
-    const output = config.build?.rollupOptions?.output as any
+    const output = config.build?.rollupOptions?.output as {
+      globals?: Record<string, string>
+    }
     expect(output?.globals).toEqual({ vue: 'Vue' })
   })
 
@@ -148,7 +156,7 @@ describe('createViteLibraryConfig', () => {
       }),
     )
 
-    const lib = config.build?.lib as any
+    const lib = config.build?.lib as LibraryOptions
     expect(lib.fileName).toBe('my-custom-lib')
   })
 
@@ -167,7 +175,7 @@ describe('createViteLibraryConfig', () => {
       }),
     )
 
-    const lib = config.build?.lib as any
+    const lib = config.build?.lib as LibraryOptions
     expect(typeof lib.fileName).toBe('function')
   })
 
@@ -183,7 +191,7 @@ describe('createViteLibraryConfig', () => {
       }),
     )
 
-    const lib = config.build?.lib as any
+    const lib = config.build?.lib as LibraryOptions
     expect(lib.cssFileName).toBe('my-lib-style')
   })
 
@@ -198,7 +206,7 @@ describe('createViteLibraryConfig', () => {
       }),
     )
 
-    const lib = config.build?.lib as any
+    const lib = config.build?.lib as LibraryOptions
     expect(lib.entry).toEqual({
       main: '/test/project/src/index.ts',
       utils: '/test/project/src/utils.ts',
@@ -264,3 +272,4 @@ describe('createViteLibraryConfig', () => {
       createViteLibraryConfig(createMinimalParams({ userConfig: undefined })),
     ).toThrow('library config is required')
   })
+})

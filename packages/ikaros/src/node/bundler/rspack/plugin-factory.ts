@@ -6,6 +6,7 @@ import { isEmpty, isArray } from 'es-toolkit/compat'
 import type { UserConfig } from '../../config/user-config'
 import type { Command } from '../../compile/compile-context'
 import CdnPlugin from '../../plugins/cdn-plugin'
+import { ASSET_PATHS } from '../../shared/constants'
 
 export interface PluginFactoryOptions {
   command: Command
@@ -43,7 +44,7 @@ export class CreatePluginHelper {
     }
 
     return new rspack.CssExtractRspackPlugin({
-      filename: this.joinAssetsDir('assets/css/[contenthash].css'),
+      filename: this.joinAssetsDir(ASSET_PATHS.cssExtract),
       ignoreOrder: true,
     })
   }

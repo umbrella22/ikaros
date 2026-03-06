@@ -1,5 +1,6 @@
 import type { UserConfig } from '../config/user-config'
 import type { Pages } from './rspack/loader-plugin-helper'
+import type { PreWarning } from '../plugins/pre-warnings-plugin'
 
 // ─── BuildStatus ────────────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ export interface CreateConfigParams {
   isVue: boolean
   isReact: boolean
   resolveContext: (...paths: string[]) => string
+  preWarnings?: PreWarning[]
 }
 
 // ─── Dev / Build Options ────────────────────────────────────────────────────
