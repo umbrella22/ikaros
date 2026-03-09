@@ -8,6 +8,7 @@ import type {
 } from '@rspack/core'
 import { rspack } from '@rspack/core'
 import { RspackDevServer } from '@rspack/dev-server'
+import { registerCleanup } from '../../watchdog/cleanup-registry'
 
 type StatsLike = {
   hasErrors: () => boolean
@@ -29,24 +30,19 @@ export type StartRspackDevServerOptions = {
   onBuildStatus?: (status: BuildStatus) => void
 }
 
-const formatRspackErrors = (stats: StatsLike): string => {
-  let errorMessage = 'Build failed with errors.\n'
-  stats
-    .toString({
-      chunks: false,
-      colors: true,
-    })
+function formatRspackErrors(stats: StatsLike): string {
+  const details = stats
+    .toString({ chunks: false, colors: true })
     .split(/\r?\n/)
-    .forEach((line) => {
-      errorMessage += `    ${line}\n`
-    })
-  return errorMessage
+    .map((line) => `    ${line}`)
+    .join('\n')
+  return `Build failed with errors.\n${details}\n`
 }
 
-export const runRspackBuild = (
+export function runRspackBuild(
   config: Configuration | Configuration[],
   options?: WatchRspackBuildOptions,
-): Promise<string | undefined> => {
+): Promise<string | undefined> {
   const { onBuildStatus } = options ?? {}
 
   return new Promise<string | undefined>((resolve, reject) => {
@@ -94,14 +90,19 @@ export const runRspackBuild = (
   })
 }
 
-export const startRspackDevServer = async (
+export async function startRspackDevServer(
   config: Configuration,
   options?: StartRspackDevServerOptions,
-): Promise<void> => {
+): Promise<void> {
   const { port, onBuildStatus } = options ?? {}
 
   const compiler = rspack(config)
   const server = new RspackDevServer(config.devServer as DevServer, compiler)
+
+  // 注册看门狗清理：重启前关闭 dev server 释放端口
+  registerCleanup(async () => {
+    await server.stop()
+  })
 
   await new Promise<void>((resolve, reject) => {
     server.startCallback((err) => {
@@ -124,10 +125,10 @@ export const startRspackDevServer = async (
   })
 }
 
-export const watchRspackBuild = (
+export function watchRspackBuild(
   config: Configuration | Configuration[],
   options?: WatchRspackBuildOptions,
-): Promise<string | undefined> => {
+): Promise<string | undefined> {
   const { onBuildStatus, ...watchOptions } = options ?? {}
 
   return new Promise<string | undefined>((resolve, reject) => {
@@ -176,8 +177,8 @@ export const watchRspackBuild = (
 
 export type RspackCompiler = ReturnType<typeof rspack>
 
-export const createRspackCompiler = (
+export function createRspackCompiler(
   config: Configuration | Configuration[],
-): RspackCompiler => {
+): RspackCompiler {
   return rspack(config)
 }

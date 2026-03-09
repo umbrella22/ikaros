@@ -4,10 +4,10 @@ import { isObject } from 'es-toolkit/compat'
 import { createRequire } from 'node:module'
 import { join } from 'path'
 
-export const mergeUserConfig = <T extends Record<string, unknown>>(
+export function mergeUserConfig<T extends Record<string, unknown>>(
   target: T,
   source: T,
-): T => {
+): T {
   const result = { ...target } as Record<string, unknown>
   const sourceRecord = source as Record<string, unknown>
 

@@ -13,7 +13,7 @@ export {
   type CompileServeParams,
   type PackageJson,
 } from './compile/compile-context'
-export { runCompile } from './compile/compile-pipeline'
+export { runCompile, runCompileWithWatchdog } from './compile/compile-pipeline'
 
 // ─── PlatformAdapter ────────────────────────────────────────────────────────
 export {
@@ -30,11 +30,20 @@ export {
 } from './compile/web/resolve-web-preconfig'
 
 export { LoggerSystem } from './shared/logger'
-export { assertNodeVersion } from './shared/check-env'
+
+// ─── Watchdog（看门狗） ─────────────────────────────────────────────────────
+export {
+  createWatchdog,
+  registerCleanup,
+  runCleanups,
+  type WatchdogOptions,
+  type WatchdogInstance,
+} from './watchdog'
 export {
   runRspackBuild,
   watchRspackBuild,
 } from './bundler/rspack/rspack-runner'
+export { assertNodeVersion } from './shared/check-env'
 export { extensions, resolveCLI } from './shared/constants'
 export {
   CreateLoader,

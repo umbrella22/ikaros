@@ -128,7 +128,9 @@ const resolveFileName = (
   pkgName?: string,
 ): string => {
   if (typeof fileName === 'function') {
-    return fileName(format, entryName)
+    const result = fileName(format, entryName)
+    if (/\.[cm]?[jt]sx?$/.test(result)) return result
+    return `${result}.js`
   }
 
   const baseName = fileName ?? pkgName ?? 'index'
@@ -189,7 +191,7 @@ const createSingleFormatConfig = (params: {
       extensions: userConfig?.resolve?.extensions || extensions,
     },
     output: {
-      clean: true,
+      clean: false,
       path: outDir,
       filename: fileName,
       ...(isEsm ? { module: true } : {}),

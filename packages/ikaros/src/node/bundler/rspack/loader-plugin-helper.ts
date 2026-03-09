@@ -69,17 +69,6 @@ export class BaseCreate<T extends ListItemType> {
 }
 
 export class CreateLoader extends BaseCreate<RuleSetRule> {
-  constructor({
-    env = 'development',
-    mode = '',
-    context,
-  }: {
-    env: 'development' | 'none' | 'production'
-    mode?: string
-    context?: string
-  }) {
-    super({ env, mode, context })
-  }
   private defaultScriptLoader = (rspackExperiments?: RspackExperiments) => {
     return [
       {
@@ -148,17 +137,6 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
 }
 
 export class CreatePlugins extends BaseCreate<Plugin> {
-  constructor({
-    env = 'development',
-    mode = '',
-    context,
-  }: {
-    env: 'development' | 'none' | 'production'
-    mode?: string
-    context?: string
-  }) {
-    super({ env, mode, context })
-  }
   useDefaultEnvPlugin(otherEnv?: OtherEnv): this {
     const { frameworkEnv = {}, extEnv = {}, env = {} } = otherEnv ?? {}
 
@@ -230,7 +208,8 @@ export class CreateMpaAssets {
   create() {
     const entry: Entry = {}
     const plugins: Plugin[] = []
-    Object.keys(this.pages).forEach((page) => {
+
+    for (const page of Object.keys(this.pages)) {
       entry[page] = {
         import: this.pages[page].entry,
         library: this.pages[page].library,
@@ -244,7 +223,7 @@ export class CreateMpaAssets {
           ...this.pages[page].options,
         }),
       )
-    })
+    }
 
     return {
       entry,
@@ -254,21 +233,23 @@ export class CreateMpaAssets {
   protected getEnablePages() {
     if (!isEmpty(this.pages) && isArray(this.enablePages)) {
       const reMakePage: Pages = {}
-      // 预留未找到的数组，以便后续给出错误提示
       const notFoundPageName: string[] = []
-      this.enablePages.forEach((item) => {
+
+      for (const item of this.enablePages) {
         if (this.pages[item]) {
           reMakePage[item] = this.pages[item]
         } else {
           notFoundPageName.push(item)
         }
-      })
-
-      if (!isEmpty(notFoundPageName)) {
-        this.warnings.push(`当前设置页面${notFoundPageName.join('、')}不存在`)
       }
 
-      // 当出现错误的页面导致没有任何选中时，将使用userConfig中的pages，不做任何处理
+      if (!isEmpty(notFoundPageName)) {
+        this.warnings.push({
+          source: 'enable-pages',
+          message: `当前设置页面${notFoundPageName.join('、')}不存在`,
+        })
+      }
+
       if (isEmpty(reMakePage)) {
         return
       }
@@ -277,20 +258,21 @@ export class CreateMpaAssets {
   }
 }
 
-const createEnvPlugin = ({
+function createEnvPlugin({
   frameworkEnv = {},
-  extEnv = {}, // 扩展的环境变量
-  env = {}, // 环境变量
+  extEnv = {},
+  env = {},
 }: {
   frameworkEnv?: DefinePluginOptions
   extEnv?: DefinePluginOptions
   env?: DefinePluginOptions
-}): RspackPluginInstance => {
-  const baseEnv = Object.assign({}, mergeUserConfig(extEnv, env))
+}): RspackPluginInstance {
+  const baseEnv = mergeUserConfig(extEnv, env)
   const clientEnvs = Object.fromEntries(
-    Object.entries(baseEnv).map(([key, val]) => {
-      return [`import.meta.env.${key}`, JSON.stringify(val)]
-    }),
+    Object.entries(baseEnv).map(([key, val]) => [
+      `import.meta.env.${key}`,
+      JSON.stringify(val),
+    ]),
   )
   return new rspack.DefinePlugin({ ...clientEnvs, ...frameworkEnv })
 }

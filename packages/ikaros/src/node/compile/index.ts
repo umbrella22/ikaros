@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander'
 
-import { runCompile } from './compile-pipeline'
+import { runCompileWithWatchdog } from './compile-pipeline'
 import {
   Command as BuildCommand,
   type CompileOptions,
@@ -29,21 +29,17 @@ const compileOptions = [
  * P3 重构后统一委托给 runCompile() 管线处理，
  * 不再在此处按 platform 手动分发到不同的 CompileService 类。
  */
-export const startCompile = async (
-  params: CompileServeParams,
-): Promise<void> => {
+export async function startCompile(params: CompileServeParams): Promise<void> {
   try {
-    await runCompile(params)
+    await runCompileWithWatchdog(params)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    // 避免未捕获异常导致 Node 打印一整行压缩产物源码
     process.stderr.write(`${message}\n`)
     process.exit(1)
   }
 }
 
-export const commander = (program: Command) => {
-  /** dev */
+export function commander(program: Command): void {
   const dev = program
     .command(BuildCommand.SERVER, { isDefault: true })
     .description('Start local develop serve')
@@ -54,7 +50,6 @@ export const commander = (program: Command) => {
       })
     })
 
-  /** build */
   const build = program
     .command(BuildCommand.BUILD)
     .description('Start build')

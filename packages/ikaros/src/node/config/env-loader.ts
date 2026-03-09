@@ -5,19 +5,27 @@ import { join } from 'path'
 import { config } from 'dotenv'
 import type { PreWarning } from '../plugins/pre-warnings-plugin'
 
-const getEnvPath = (context: string, mode?: string) => {
-  if (!mode) {
-    return join(context, 'env', '.env')
-  }
-  return join(context, 'env', `.env.${mode}`)
+export function getEnvDir(context: string): string {
+  return join(context, 'env')
 }
 
-const checkEnv = async (
+export function getEnvFiles(context: string, mode?: string): string[] {
+  if (!mode) {
+    return [join(context, 'env', '.env')]
+  }
+  return [join(context, 'env', `.env.${mode}`)]
+}
+
+function getEnvPath(context: string, mode?: string): string {
+  return getEnvFiles(context, mode)[0]
+}
+
+async function checkEnv(
   context: string,
   warnings: PreWarning[],
   mode?: string,
-) => {
-  const hasEnvFolder = await fse.pathExists(join(context, 'env'))
+): Promise<boolean> {
+  const hasEnvFolder = await fse.pathExists(getEnvDir(context))
   if (!hasEnvFolder) {
     warnings.push({ source: 'env-loader', message: 'env folder not found' })
     return false
@@ -46,10 +54,10 @@ export type EnvResult = {
  * @param context 工作目录
  * @param mode 模式
  */
-export const getEnv = async (
+export async function getEnv(
   context: string,
   mode?: string,
-): Promise<EnvResult> => {
+): Promise<EnvResult> {
   const warnings: PreWarning[] = []
   const hasEnv = await checkEnv(context, warnings, mode)
   if (!hasEnv) {

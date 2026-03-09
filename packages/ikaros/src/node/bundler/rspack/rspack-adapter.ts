@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises'
+
 import type { Configuration, DefinePluginOptions } from '@rspack/core'
 
 import type {
@@ -63,6 +65,13 @@ export class RspackAdapter implements BundlerAdapter<
     config: Configuration | Configuration[],
     options: BundlerBuildOptions,
   ): Promise<string | undefined> {
+    // 构建前主动清理输出目录，避免 rspack 内部 rmdir 在目录不存在时抛出 ENOENT
+    const configs = Array.isArray(config) ? config : [config]
+    const outDir = configs[0]?.output?.path
+    if (outDir) {
+      await rm(outDir, { recursive: true, force: true })
+    }
+
     return runRspackBuild(config, {
       onBuildStatus: options.onBuildStatus,
     })

@@ -32,15 +32,15 @@ export type ResolveWebPreConfigParams = {
   isElectron?: boolean
 }
 
-const resolveBrowserslist = (target: WebPreConfig['target']): string => {
+function resolveBrowserslist(target: WebPreConfig['target']): string {
   const list = target === 'mobile' ? BROWSERSLIST.mobile : BROWSERSLIST.pc
   return list.join(',')
 }
 
-const resolveDefaultPages = (
+function resolveDefaultPages(
   resolveContext: ResolveWebPreConfigParams['resolveContext'],
   isElectron: boolean,
-): Pages => {
+): Pages {
   if (isElectron) {
     return {
       index: {
@@ -58,9 +58,9 @@ const resolveDefaultPages = (
   }
 }
 
-export const resolveWebPreConfig = async (
+export async function resolveWebPreConfig(
   params: ResolveWebPreConfigParams,
-): Promise<WebPreConfig> => {
+): Promise<WebPreConfig> {
   const { command, context, resolveContext, getUserConfig, isElectron } = params
 
   const userConfig = await getUserConfig()

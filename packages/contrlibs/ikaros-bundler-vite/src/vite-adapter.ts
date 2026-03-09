@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises'
+
 import type { InlineConfig } from 'vite'
 
 import { createViteConfig } from './config/create-vite-config'
@@ -50,6 +52,12 @@ export class ViteBundlerAdapter implements BundlerAdapter<InlineConfig> {
     config: InlineConfig,
     options: BundlerBuildOptions,
   ): Promise<string | undefined> {
+    // 构建前主动清理输出目录，避免 Vite 内部 rmdir 在目录不存在时抛出 ENOENT
+    const outDir = config.build?.outDir
+    if (outDir) {
+      await rm(outDir, { recursive: true, force: true })
+    }
+
     return runViteBuild(config, {
       onBuildStatus: options.onBuildStatus,
     })

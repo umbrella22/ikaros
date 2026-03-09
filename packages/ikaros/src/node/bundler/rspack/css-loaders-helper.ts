@@ -9,12 +9,16 @@ export interface CssLoaderOptions {
   stylus?: Record<string, unknown>
 }
 
-const createLoader = (loader: string, options?: Record<string, unknown>) => ({
-  loader: loader.includes('builtin') ? loader : resolveCliPath.resolve(loader),
-  options,
-})
+function createLoader(loader: string, options?: Record<string, unknown>) {
+  return {
+    loader: loader.includes('builtin')
+      ? loader
+      : resolveCliPath.resolve(loader),
+    options,
+  }
+}
 
-const cssLoaders = (env: string, options?: CssLoaderOptions) => {
+function cssLoaders(env: string, options?: CssLoaderOptions) {
   const { lightningcss, sourceMap } = options ?? {}
   const lightningcssLoader = createLoader('builtin:lightningcss-loader', {
     ...lightningcss,
@@ -25,16 +29,16 @@ const cssLoaders = (env: string, options?: CssLoaderOptions) => {
     loaderOptions?: Record<string, unknown>,
   ) => {
     const loaders = [lightningcssLoader]
-    const rawOptions =
-      options && (options as Record<string, never>)[`${loader}`]
-    if (loader && loader !== 'css') {
+    const rawOptions = options?.[loader as keyof CssLoaderOptions] as
+      | Record<string, unknown>
+      | undefined
+    if (loader !== 'css') {
       loaders.push(
-        createLoader(
-          `${loader}-loader`,
-          Object.assign(rawOptions ?? {}, loaderOptions, {
-            sourceMap,
-          }),
-        ),
+        createLoader(`${loader}-loader`, {
+          ...rawOptions,
+          ...loaderOptions,
+          sourceMap,
+        }),
       )
     }
 
@@ -60,14 +64,12 @@ const cssLoaders = (env: string, options?: CssLoaderOptions) => {
   }
 }
 
-export const buildCssLoaders = (env: string, options?: CssLoaderOptions) => {
+export function buildCssLoaders(env: string, options?: CssLoaderOptions) {
   const loaders = cssLoaders(env, options)
 
-  return Object.entries(loaders).map(([extension, loader]) => {
-    return {
-      test: new RegExp(`\\.${extension}$`),
-      use: loader,
-      type: 'css/auto',
-    }
-  })
+  return Object.entries(loaders).map(([extension, loader]) => ({
+    test: new RegExp(`\\.${extension}$`),
+    use: loader,
+    type: 'css/auto',
+  }))
 }

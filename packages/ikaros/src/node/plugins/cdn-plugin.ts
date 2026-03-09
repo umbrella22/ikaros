@@ -27,7 +27,7 @@ export interface CdnPluginOptions {
 const PLUGIN_NAME = '@rspack/ikaros-cdn-plugin'
 const DEFAULT_PROD_URL = 'https://unpkg.com/:name@:version/:path'
 const DEFAULT_DEV_URL = ':name/:path'
-const PARAM_REGEX = /:([a-z]+)/gi
+const PARAM_REGEX = /:([a-z]+)/i
 
 /**
  * 从 CDN 配置中提取 externals 映射
@@ -89,10 +89,9 @@ export default class CdnPlugin implements RspackPluginInstance {
     const modules = this.options.modules
     const tags: JsHtmlPluginTag[] = []
 
-    // 注入 CSS
-    modules.forEach((module) => {
+    for (const module of modules) {
       const styles = this.getAssets(module, 'style', 'styles')
-      styles.forEach((style) => {
+      for (const style of styles) {
         tags.push({
           tagName: 'link',
           voidTag: true,
@@ -104,27 +103,25 @@ export default class CdnPlugin implements RspackPluginInstance {
             }),
           },
         })
-      })
-    })
+      }
+    }
 
-    // 注入 JS
-    modules
-      .filter((m) => !m.cssOnly)
-      .forEach((module) => {
-        const scripts = this.getAssets(module, 'path', 'paths')
-        scripts.forEach((script) => {
-          tags.push({
-            tagName: 'script',
-            voidTag: true,
-            attributes: {
-              src: script,
-              ...(this.options.crossOrigin && {
-                crossorigin: this.options.crossOrigin,
-              }),
-            },
-          })
+    for (const module of modules) {
+      if (module.cssOnly) continue
+      const scripts = this.getAssets(module, 'path', 'paths')
+      for (const script of scripts) {
+        tags.push({
+          tagName: 'script',
+          voidTag: true,
+          attributes: {
+            src: script,
+            ...(this.options.crossOrigin && {
+              crossorigin: this.options.crossOrigin,
+            }),
+          },
         })
-      })
+      }
+    }
 
     // 将标签插入到现有资源之前
     if (data.assetTags) {
@@ -147,11 +144,8 @@ export default class CdnPlugin implements RspackPluginInstance {
     }
     return items.map((item) => this.generateUrl(module, item))
   }
-  private joinUrl(base: string, path: string): string {
-    // 移除 base 结尾的斜杠和 path 开头的斜杠
-    base = base.replace(/\/+$/, '')
-    path = path.replace(/^\/+/, '')
-    return `${base}/${path}`
+  private joinUrl(base: string, urlPath: string): string {
+    return `${base.replace(/\/+$/, '')}/${urlPath.replace(/^\/+/, '')}`
   }
 
   private generateUrl(module: CdnModule, path: string): string {
@@ -160,11 +154,11 @@ export default class CdnPlugin implements RspackPluginInstance {
       : module.prodUrl || this.options.prodUrl
 
     // 如果URL中没有模板参数，使用 joinUrl 处理拼接
-    if (!url!.match(PARAM_REGEX)) {
+    if (!PARAM_REGEX.test(url!)) {
       return this.joinUrl(url!, path)
     }
 
-    return url!.replace(PARAM_REGEX, (match, param) => {
+    return url!.replace(/:([a-z]+)/gi, (match, param) => {
       switch (param) {
         case 'name':
           return module.name

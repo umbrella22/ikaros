@@ -76,15 +76,10 @@ const createVueOrReactConfig = (params: {
     }
   }
 
-  return {
-    env: undefined,
-    noParse: undefined,
-  }
+  return {}
 }
 
-const createOptimization = (
-  command: Command,
-): Configuration['optimization'] => {
+function createOptimization(command: Command): Configuration['optimization'] {
   if (command === Command.SERVER) {
     return {
       minimize: false,
@@ -124,9 +119,9 @@ const createOptimization = (
   }
 }
 
-const createCacheConfig = (
+function createCacheConfig(
   params: Pick<CreateWebRspackConfigParams, 'command' | 'userConfig'>,
-): Pick<Configuration, 'cache' | 'experiments'> | undefined => {
+): Pick<Configuration, 'cache' | 'experiments'> | undefined {
   if (params.command === Command.SERVER) {
     return
   }
@@ -144,12 +139,12 @@ const createCacheConfig = (
   }
 }
 
-const getOutDirPath = (
+function getOutDirPath(
   params: Pick<
     CreateWebRspackConfigParams,
     'userConfig' | 'isElectron' | 'resolveContext'
   >,
-): string => {
+): string {
   const { userConfig, isElectron, resolveContext } = params
 
   const outDirName = userConfig?.build?.outDirName
@@ -175,13 +170,13 @@ const getOutDirPath = (
   return resolveContext(DEFAULT_OUT_DIR)
 }
 
-const formatAssetsPath = (assetsDir: string, path: string): string => {
+function formatAssetsPath(assetsDir: string, path: string): string {
   return [assetsDir, path].filter(Boolean).join('/').replace(/\/+/g, '/')
 }
 
-export const createWebRspackConfig = (
+export function createWebRspackConfig(
   params: CreateWebRspackConfigParams,
-): Configuration => {
+): Configuration {
   const {
     command,
     mode,

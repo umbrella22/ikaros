@@ -177,8 +177,8 @@ const viteConfigSchema = z
       if (key in record && record[key] !== undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: [key as string],
-          message: `bundler='vite' 时不支持 ${String(key)}，请使用 vite.plugins 或 Vite 原生配置能力`,
+          path: [key],
+          message: `bundler='vite' 时不支持 ${key}，请使用 vite.plugins 或 Vite 原生配置能力`,
         })
       }
     }

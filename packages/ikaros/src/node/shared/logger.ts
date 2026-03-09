@@ -31,20 +31,13 @@ const createLogMethod =
  * 提供统一的格式化日志输出方法。
  */
 export const LoggerSystem = /* @__PURE__ */ (() => {
-  const done = createLogMethod('DONE', console.log)
-  const error = createLogMethod('ERROR', console.error)
-  const okay = createLogMethod('OKAY', console.log)
-  const warning = createLogMethod('WARNING', console.warn)
-  const info = createLogMethod('INFO', console.info)
-
   const instance = {
-    done,
-    error,
-    okay,
-    warning,
-    info,
+    done: createLogMethod('DONE', console.log),
+    error: createLogMethod('ERROR', console.error),
+    okay: createLogMethod('OKAY', console.log),
+    warning: createLogMethod('WARNING', console.warn),
+    info: createLogMethod('INFO', console.info),
   }
 
-  // 返回工厂函数，始终返回同一实例（单例）
   return () => instance
 })()

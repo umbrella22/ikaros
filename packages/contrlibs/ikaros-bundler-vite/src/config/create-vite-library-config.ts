@@ -149,6 +149,7 @@ export const createViteLibraryConfig = (
     },
     build: {
       outDir: getOutDirPath({ userConfig, isElectron, resolveContext }),
+      emptyOutDir: true,
       sourcemap: userConfig?.build?.sourceMap ?? false,
       lib: {
         entry: resolveEntry(library.entry, resolveContext),

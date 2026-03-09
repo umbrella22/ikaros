@@ -2,14 +2,14 @@
 
 import { join } from 'path'
 import { createRequire } from 'node:module'
-import url from 'node:url'
+import { fileURLToPath, URL } from 'node:url'
 
 export const extensions = ['...', '.mjs', '.jsx', '.ts', '.tsx']
 
 /**
  * cli目录
  */
-export const CLI_PATH = url.fileURLToPath(new url.URL('../', import.meta.url))
+export const CLI_PATH = fileURLToPath(new URL('../', import.meta.url))
 
 export const resolveCliPath: NodeJS.Require = createRequire(CLI_PATH)
 
