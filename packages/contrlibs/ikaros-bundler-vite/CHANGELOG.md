@@ -1,5 +1,14 @@
 # @ikaros-cli/ikaros-bundler-vite
 
+## 2.3.0
+
+### Minor Changes
+
+- 新增库模式配置生成支持并补充相关类型导出
+- 适配核心 Watchdog 热重载流程，优化 Vite 适配器联动行为
+- 对齐静默模式输出策略并补充对应测试覆盖
+- 更新依赖并同步版本至 2.3.0
+
 ## 2.2.0
 
 ### Minor Changes

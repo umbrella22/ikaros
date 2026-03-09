@@ -1,5 +1,13 @@
 # @ikaros-cli/ikaros-platform-desktop-client
 
+## 2.3.0
+
+### Minor Changes
+
+- 对齐核心静默模式能力，优化 Electron 平台预警输出处理
+- 同步环境检查与 CDN 相关重构，提升平台运行稳定性
+- 更新依赖并同步版本至 2.3.0
+
 ## 2.2.0
 
 ### Minor Changes
