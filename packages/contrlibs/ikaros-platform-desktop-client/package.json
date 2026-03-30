@@ -27,7 +27,8 @@
   ],
   "scripts": {
     "dev": "tsdown --watch",
-    "build": "tsdown"
+    "build": "tsdown",
+    "test": "vitest run"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -36,9 +37,10 @@
     "@ikaros-cli/ikaros": "^2.2.1"
   },
   "devDependencies": {
-    "@ikaros-cli/ikaros": "workspace:*"
+    "@ikaros-cli/ikaros": "workspace:*",
+    "vitest": "^4.1.2"
   },
   "dependencies": {
-    "@rspack/core": "^1.7.7"
+    "@rspack/core": "^1.7.10"
   }
 }

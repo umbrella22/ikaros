@@ -19,6 +19,7 @@ export type DesktopClientDevParams = {
   }) => Promise<void>
 
   loadContextModule: <T>(id: string) => T
+  registerCleanup?: (cleanup: () => Promise<void> | void) => void
 
   /**
    * true: 仅手动重启（按 r）
@@ -94,6 +95,7 @@ export const runDesktopClientDev = async (
     startMainDev,
     startPreloadDev,
     loadContextModule,
+    registerCleanup,
     controlledRestart = false,
     inspectPort = 5858,
   } = params
@@ -107,7 +109,40 @@ export const runDesktopClientDev = async (
   let electronProcess: ChildProcess | null = null
   let manualStop = false
   let manualRestart = false
+  let isCleaningUp = false
+  let allowAutoRestart = false
   let restartTimer: NodeJS.Timeout | undefined
+  let restartResetTimer: NodeJS.Timeout | undefined
+  let rl: readline.Interface | undefined
+
+  const cleanupRuntime = async () => {
+    isCleaningUp = true
+
+    if (restartTimer) {
+      clearTimeout(restartTimer)
+      restartTimer = undefined
+    }
+    if (restartResetTimer) {
+      clearTimeout(restartResetTimer)
+      restartResetTimer = undefined
+    }
+
+    rl?.close()
+    rl = undefined
+
+    const currentProcess = electronProcess
+    electronProcess = null
+
+    if (currentProcess?.pid) {
+      try {
+        process.kill(currentProcess.pid)
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  registerCleanup?.(() => cleanupRuntime())
 
   const restartElectron = () => {
     if (!electronProcess?.pid) {
@@ -126,13 +161,13 @@ export const runDesktopClientDev = async (
     electronProcess = null
     startElectron()
 
-    setTimeout(() => {
+    restartResetTimer = setTimeout(() => {
       manualRestart = false
     }, 2000)
   }
 
   const requestRestart = () => {
-    if (controlledRestart) return
+    if (!allowAutoRestart || controlledRestart) return
 
     if (restartTimer) clearTimeout(restartTimer)
     restartTimer = setTimeout(() => {
@@ -161,10 +196,16 @@ export const runDesktopClientDev = async (
       if (cleaned) process.stderr.write(cleaned)
     })
 
-    electronProcess.on('close', () => {
+    electronProcess.on('close', (code, signal) => {
       if (manualStop) return
       if (manualRestart) return
-      process.exit(0)
+      if (isCleaningUp) return
+
+      if (signal) {
+        process.exit(1)
+      }
+
+      process.exit(code ?? 0)
     })
   }
 
@@ -183,8 +224,9 @@ export const runDesktopClientDev = async (
   ])
 
   startElectron()
+  allowAutoRestart = true
 
-  const rl = readline.createInterface({
+  rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   })
@@ -201,7 +243,7 @@ export const runDesktopClientDev = async (
       } catch {
         // ignore
       }
-      rl.close()
+      rl?.close()
       process.exit(0)
     }
 

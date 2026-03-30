@@ -1,7 +1,3 @@
-import { program } from 'commander'
-import { version } from '../../package.json'
-
-import * as compile from './compile/index'
 export * from './config/user-config'
 
 // ─── CompileContext + Pipeline ──────────────────────────────────────────────
@@ -62,14 +58,3 @@ export type {
   BundlerBuildOptions,
   BuildStatus,
 } from './bundler/types'
-
-import { assertNodeVersion } from './shared/check-env'
-
-/** 识别版本 */
-assertNodeVersion(22)
-
-program.version(version, '-v, --version')
-
-compile.commander(program)
-
-program.parse()

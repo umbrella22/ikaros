@@ -19,9 +19,9 @@
     "@changesets/cli": "^2.30.0",
     "@ikaros-cli/eslint-plugin": "workspace:*",
     "@ikaros-cli/prettier-config": "workspace:*",
-    "@types/node": "^25.2.2",
+    "@types/node": "^25.5.0",
     "dotenv": "^17.3.1",
-    "tsdown": "^0.21.0",
-    "typescript": "^5.9.3"
+    "tsdown": "^0.21.7",
+    "typescript": "^6.0.2"
   }
 }

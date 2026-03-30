@@ -26,7 +26,9 @@ export async function runCompile(params: CompileServeParams): Promise<void> {
   const ctx = await createCompileContext(params)
 
   // 2. 获取平台适配器
-  const platform = createPlatformAdapter(ctx.options.platform)
+  const platform = createPlatformAdapter(ctx.options.platform, {
+    context: ctx.context,
+  })
 
   // 3. 解析平台预配置
   const preConfig = await platform.resolvePreConfig(ctx)
@@ -41,6 +43,7 @@ export async function runCompile(params: CompileServeParams): Promise<void> {
   const bundler = createBundlerAdapter({
     bundler: updatedCtx.userConfig?.bundler ?? 'rspack',
     loadContextModule: updatedCtx.loadContextModule,
+    resolveContextModule: updatedCtx.resolveContextModule,
   })
 
   // 6. 通过平台适配器执行编译

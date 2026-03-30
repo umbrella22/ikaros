@@ -7,6 +7,8 @@ export interface CreateBundlerAdapterParams {
   bundler: 'rspack' | 'vite'
   /** 基于工作目录加载模块的能力（ViteAdapterLoader 需要） */
   loadContextModule: <T>(id: string) => T
+  /** 基于工作目录解析模块路径的能力（用于区分缺依赖与加载失败） */
+  resolveContextModule: (id: string) => string | undefined
 }
 
 /**
@@ -18,11 +20,14 @@ export interface CreateBundlerAdapterParams {
 export function createBundlerAdapter(
   params: CreateBundlerAdapterParams,
 ): BundlerAdapter {
-  const { bundler, loadContextModule } = params
+  const { bundler, loadContextModule, resolveContextModule } = params
 
   switch (bundler) {
     case 'vite':
-      return new ViteAdapterLoader({ loadContextModule })
+      return new ViteAdapterLoader({
+        loadContextModule,
+        resolveContextModule,
+      })
 
     case 'rspack':
     default:

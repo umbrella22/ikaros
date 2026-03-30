@@ -66,6 +66,7 @@ export interface BundlerAdapter<TConfig = unknown> {
 export interface BundlerDevOptions {
   port?: number
   onBuildStatus?: (status: BuildStatus) => void
+  registerCleanup?: (cleanup: () => Promise<void> | void) => void
 }
 
 export interface BundlerBuildOptions {

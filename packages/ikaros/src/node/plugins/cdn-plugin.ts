@@ -24,6 +24,10 @@ export interface CdnPluginOptions {
   crossOrigin?: boolean | string
 }
 
+type InternalCdnPluginOptions = CdnPluginOptions & {
+  context?: string
+}
+
 const PLUGIN_NAME = '@rspack/ikaros-cdn-plugin'
 const DEFAULT_PROD_URL = 'https://unpkg.com/:name@:version/:path'
 const DEFAULT_DEV_URL = ':name/:path'
@@ -56,8 +60,10 @@ export default class CdnPlugin implements RspackPluginInstance {
   private options: CdnPluginOptions
   private isDev: boolean = false
   private versionCache = new Map<string, string>()
+  private readonly context: string
 
-  constructor(options: CdnPluginOptions) {
+  constructor(options: InternalCdnPluginOptions) {
+    this.context = options.context ?? process.cwd()
     this.options = {
       prodUrl: DEFAULT_PROD_URL,
       devUrl: DEFAULT_DEV_URL,
@@ -177,7 +183,7 @@ export default class CdnPlugin implements RspackPluginInstance {
     if (cached) return cached
 
     try {
-      const version = createRequire(path.join(process.cwd(), 'node_modules'))(
+      const version = createRequire(path.join(this.context, './'))(
         path.join(name, 'package.json'),
       ).version as string
       this.versionCache.set(name, version)

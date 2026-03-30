@@ -24,6 +24,12 @@ ikaros --platform desktopClient --mode development
 ikaros build --platform desktopClient --mode release
 ```
 
+默认情况下，desktopClient 的构建产物会拆分到独立目录：
+
+- main: `dist/electron/main`
+- preload: `dist/electron/preload`
+- renderer: `dist/electron/renderer`
+
 如果缺少该可选依赖，ikaros 会在运行时提示你安装它。
 
 ### bundler=vite（可选依赖）

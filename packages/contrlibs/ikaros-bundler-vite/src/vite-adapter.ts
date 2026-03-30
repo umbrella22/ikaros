@@ -45,6 +45,7 @@ export class ViteBundlerAdapter implements BundlerAdapter<InlineConfig> {
     await startViteDevServer(config, {
       port: options.port,
       onBuildStatus: options.onBuildStatus,
+      registerCleanup: options.registerCleanup,
     })
   }
 

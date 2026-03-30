@@ -7,6 +7,10 @@ import { pathToFileURL } from 'node:url'
 import type { PlatformAdapter } from './types'
 import { WebPlatformAdapter } from './web/web-platform'
 
+export interface CreatePlatformAdapterOptions {
+  context?: string
+}
+
 /**
  * 动态类型：外部 desktop-client 包导出的 PlatformAdapter
  */
@@ -24,10 +28,13 @@ type ExternalPlatformAdapterModule = {
  * - 'web': 直接实例化内部的 WebPlatformAdapter
  * - 'desktopClient': 懒加载 @ikaros-cli/ikaros-platform-desktop-client 包
  */
-export function createPlatformAdapter(platform: string): PlatformAdapter {
+export function createPlatformAdapter(
+  platform: string,
+  options: CreatePlatformAdapterOptions = {},
+): PlatformAdapter {
   switch (platform) {
     case 'desktopClient':
-      return createDesktopPlatformProxy()
+      return createDesktopPlatformProxy(options.context)
 
     case 'web':
     default:
@@ -44,12 +51,12 @@ export function createPlatformAdapter(platform: string): PlatformAdapter {
  * 1. 首次调用方法时才触发 import
  * 2. 加载失败时给出明确的安装提示
  */
-function createDesktopPlatformProxy(): PlatformAdapter {
+function createDesktopPlatformProxy(context?: string): PlatformAdapter {
   let cached: PlatformAdapter | undefined
 
   const ensureAdapter = async (): Promise<PlatformAdapter> => {
     if (cached) return cached
-    cached = await loadDesktopPlatformAdapter()
+    cached = await loadDesktopPlatformAdapter(context ?? process.cwd())
     return cached
   }
 
@@ -75,7 +82,9 @@ function createDesktopPlatformProxy(): PlatformAdapter {
  * 1. 模块无法解析/加载 → 提示安装可选依赖
  * 2. 模块已加载但导出不符 → 提示已安装但加载失败
  */
-async function loadDesktopPlatformAdapter(): Promise<PlatformAdapter> {
+async function loadDesktopPlatformAdapter(
+  context: string,
+): Promise<PlatformAdapter> {
   const pkg = '@ikaros-cli/ikaros-platform-desktop-client'
 
   const createMissingError = (cause?: unknown): Error => {
@@ -94,7 +103,6 @@ async function loadDesktopPlatformAdapter(): Promise<PlatformAdapter> {
 
   let mod: unknown
   try {
-    const context = process.cwd()
     const contextRequire = createRequire(join(context, './'))
     const resolved = contextRequire.resolve(pkg)
     mod = await import(pathToFileURL(resolved).href)

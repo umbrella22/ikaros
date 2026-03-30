@@ -112,7 +112,7 @@ export const createElectronMainRspackConfig = async (
       ],
     },
     output: {
-      // 开发/监听时不要清理目录：main 与 preload 默认共用 dist/electron/main，清理会导致 preload 丢失
+      // main 默认输出到独立目录，构建时可安全清理自身产物
       clean: command === Command.BUILD,
       path: resolveMainOutputDir(userConfig, resolveContext),
       filename: 'main.js',

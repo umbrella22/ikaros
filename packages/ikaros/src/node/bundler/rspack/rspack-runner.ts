@@ -134,7 +134,7 @@ export function watchRspackBuild(
   return new Promise<string | undefined>((resolve, reject) => {
     const compiler = rspack(config)
 
-    compiler.watch(
+    const watching = compiler.watch(
       {
         ignored: /node_modules/,
         aggregateTimeout: 300,
@@ -171,6 +171,19 @@ export function watchRspackBuild(
 
         return resolve(buildResult)
       },
+    )
+
+    registerCleanup(
+      () =>
+        new Promise<void>((resolveClose, rejectClose) => {
+          watching.close((closeError) => {
+            if (closeError) {
+              rejectClose(closeError)
+              return
+            }
+            resolveClose()
+          })
+        }),
     )
   })
 }

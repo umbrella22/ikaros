@@ -13,6 +13,7 @@ import {
   type BuildStatus,
   resolveWebPreConfig,
   LoggerSystem,
+  registerCleanup,
   runRspackBuild,
   watchRspackBuild,
 } from '@ikaros-cli/ikaros'
@@ -64,6 +65,15 @@ const extractOutputPath = (config: Configuration): string | undefined => {
     'path' in config.output
     ? (config.output.path as string | undefined)
     : undefined
+}
+
+const collectOutputDirs = (configs: Configuration[]): string[] => {
+  return [...new Set(configs.map(extractOutputPath).filter(Boolean))]
+}
+
+const cleanOutputDirs = async (configs: Configuration[]): Promise<void> => {
+  const outputDirs = collectOutputDirs(configs)
+  await Promise.all(outputDirs.map((dir) => tryCleanDir(dir)))
 }
 
 /**
@@ -167,6 +177,7 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
       await runDesktopClientDev({
         entryFile: this.resolveMainOutputFile(mainConfig, ctx),
         loadContextModule: ctx.loadContextModule,
+        registerCleanup,
 
         startRendererDev: () => {
           return new Promise<number>((resolve, reject) => {
@@ -180,6 +191,7 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
                     reject(new Error(status.message))
                   }
                 },
+                registerCleanup,
               })
               .catch(reject)
           })
@@ -247,18 +259,22 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
 
     await runDesktopClientBuild({
       buildMain: async () => {
+        const safeMainConfig = disableOutputClean(mainConfig)
+        const safePreloadConfigs = preloadConfigs.map(disableOutputClean)
+
         if (bundler.name === 'rspack') {
           // 三合一：main + preload + renderer 一次 rspack 多配置构建
-          const safeMainConfig = disableOutputClean(mainConfig)
-          const safePreloadConfigs = preloadConfigs.map(disableOutputClean)
-          await tryCleanDir(extractOutputPath(safeMainConfig))
+          const safeRendererConfig = disableOutputClean(
+            rendererConfig as Configuration,
+          )
+          await cleanOutputDirs([
+            safeMainConfig,
+            ...safePreloadConfigs,
+            safeRendererConfig,
+          ])
 
           await runRspackBuild(
-            [
-              safeMainConfig,
-              ...safePreloadConfigs,
-              rendererConfig as Configuration,
-            ],
+            [safeMainConfig, ...safePreloadConfigs, safeRendererConfig],
             { onBuildStatus: ctx.onBuildStatus },
           )
           unionBuild = true
@@ -266,8 +282,9 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
         }
 
         // rspack 只构建 main + preload（renderer 在 buildRenderer 中执行）
-        const safeMainConfig = disableOutputClean(mainConfig)
-        await runRspackBuild([safeMainConfig, ...preloadConfigs], {
+        await cleanOutputDirs([safeMainConfig, ...safePreloadConfigs])
+
+        await runRspackBuild([safeMainConfig, ...safePreloadConfigs], {
           onBuildStatus: ctx.onBuildStatus,
         })
       },

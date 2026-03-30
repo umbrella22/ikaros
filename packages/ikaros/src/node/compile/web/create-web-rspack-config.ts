@@ -234,6 +234,7 @@ export function createWebRspackConfig(
     userConfig,
     isDev,
     assetsDir,
+    context,
   })
 
   const plugins = pluginHelper

@@ -13,6 +13,7 @@ export interface PluginFactoryOptions {
   userConfig?: UserConfig
   isDev: boolean
   assetsDir: string
+  context: string
 }
 
 export class CreatePluginHelper {
@@ -75,7 +76,10 @@ export class CreatePluginHelper {
     if (!cdnOptions || isEmpty(cdnOptions.modules)) {
       return
     }
-    return new CdnPlugin(cdnOptions)
+    return new CdnPlugin({
+      ...cdnOptions,
+      context: this.options.context,
+    })
   }
 
   /** 创建模块联邦插件 */

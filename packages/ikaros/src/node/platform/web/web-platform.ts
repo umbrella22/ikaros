@@ -2,6 +2,7 @@
 
 import type { BundlerAdapter } from '../../bundler/types'
 import type { CompileContext } from '../../compile/compile-context'
+import { registerCleanup } from '../../watchdog/cleanup-registry'
 import type {
   PlatformAdapter,
   PlatformCompileParams,
@@ -59,6 +60,7 @@ export class WebPlatformAdapter implements PlatformAdapter {
       await bundler.runDev(config, {
         port: preConfig.port,
         onBuildStatus: ctx.onBuildStatus,
+        registerCleanup,
       })
     } else {
       await bundler.runBuild(config, {

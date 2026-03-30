@@ -11,6 +11,7 @@ export type RunViteBuildOptions = {
 export type StartViteDevServerOptions = {
   port?: number
   onBuildStatus?: (status: BuildStatus) => void
+  registerCleanup?: (cleanup: () => Promise<void> | void) => void
 }
 
 const toErrorMessage = (err: unknown): string => {
@@ -55,7 +56,7 @@ export const startViteDevServer = async (
   config: InlineConfig,
   options?: StartViteDevServerOptions,
 ): Promise<ViteDevServer> => {
-  const { port, onBuildStatus } = options ?? {}
+  const { port, onBuildStatus, registerCleanup } = options ?? {}
 
   try {
     const server = await createServer({
@@ -69,6 +70,10 @@ export const startViteDevServer = async (
     })
 
     await server.listen()
+
+    registerCleanup?.(async () => {
+      await server.close()
+    })
 
     const resolvedPort = server.config.server.port
 

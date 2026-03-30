@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createCdnExternals } from '../../src/node/plugins/cdn-plugin'
 
 describe('createCdnExternals', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('应从模块列表生成 externals 映射', () => {
     const modules = [
       { name: 'react', var: 'React' },
@@ -57,5 +64,29 @@ describe('CdnPlugin', () => {
     })
     expect(plugin).toBeDefined()
     expect(typeof plugin.apply).toBe('function')
+  })
+
+  it('应基于传入的 context 解析模块版本', async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), 'ikaros-cdn-'))
+    const packageRoot = join(fixtureRoot, 'node_modules', 'react')
+
+    await mkdir(packageRoot, { recursive: true })
+    await writeFile(
+      join(packageRoot, 'package.json'),
+      JSON.stringify({ name: 'react', version: '9.9.9' }),
+    )
+
+    const mod = await import('../../src/node/plugins/cdn-plugin')
+    const CdnPlugin = mod.default
+    const plugin = new CdnPlugin({
+      context: fixtureRoot,
+      modules: [{ name: 'react', var: 'React' }],
+    }) as unknown as {
+      getModuleVersion: (name: string) => string
+    }
+
+    expect(plugin.getModuleVersion('react')).toBe('9.9.9')
+
+    await rm(fixtureRoot, { recursive: true, force: true })
   })
 })

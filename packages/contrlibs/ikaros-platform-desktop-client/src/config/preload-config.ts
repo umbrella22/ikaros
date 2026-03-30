@@ -69,10 +69,10 @@ const resolvePreloadOutputDir = (
   resolveContext: (...paths: string[]) => string,
 ): string => {
   const electronConfig = userConfig?.electron
-  const defaultOutput = resolveContext('dist/electron/main')
+  const defaultOutput = resolveContext('dist/electron/preload')
 
   if (electronConfig?.build?.outDir) {
-    return join(resolveContext(electronConfig.build.outDir), 'main')
+    return join(resolveContext(electronConfig.build.outDir), 'preload')
   }
 
   if (electronConfig?.preload?.output) {
@@ -152,7 +152,7 @@ export const createElectronPreloadRspackConfigs = async (
         ],
       },
       output: {
-        clean: false,
+        clean: command === Command.BUILD,
         path: outputDir,
         filename: `${name}.js`,
         pathinfo: false,

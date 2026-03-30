@@ -17,8 +17,8 @@ type LoadedViteAdapter = BundlerAdapter<unknown>
  * 自定义错误类，用于标识 Vite 适配器加载阶段的已知错误
  */
 class ViteAdapterError extends Error {
-  constructor(message: string) {
-    super(message)
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options)
     this.name = 'ViteAdapterError'
   }
 }
@@ -34,6 +34,30 @@ const createMissingViteError = (): ViteAdapterError => {
   return new ViteAdapterError(lines.join('\n'))
 }
 
+const createLoadFailedViteError = (cause: unknown): ViteAdapterError => {
+  const pkg = '@ikaros-cli/ikaros-bundler-vite'
+  const message = cause instanceof Error ? cause.message : String(cause)
+  return new ViteAdapterError(
+    [
+      `${pkg} 已安装但加载失败。`,
+      '请确认依赖版本与当前 Node.js 版本兼容。',
+      '',
+      `原始错误: ${message}`,
+    ].join('\n'),
+    { cause },
+  )
+}
+
+const createInvalidViteExportError = (): ViteAdapterError => {
+  const pkg = '@ikaros-cli/ikaros-bundler-vite'
+  return new ViteAdapterError(
+    [
+      `${pkg} 已安装但加载失败：未找到 ViteBundlerAdapter 导出。`,
+      '请确认安装的版本与 @ikaros-cli/ikaros 兼容。',
+    ].join('\n'),
+  )
+}
+
 /**
  * Vite 编译器适配器（懒加载代理）
  *
@@ -47,9 +71,14 @@ export class ViteAdapterLoader implements BundlerAdapter<unknown> {
 
   private adapter: LoadedViteAdapter | undefined
   private readonly loadContextModule: <T>(id: string) => T
+  private readonly resolveContextModule: (id: string) => string | undefined
 
-  constructor(params: { loadContextModule: <T>(id: string) => T }) {
+  constructor(params: {
+    loadContextModule: <T>(id: string) => T
+    resolveContextModule: (id: string) => string | undefined
+  }) {
     this.loadContextModule = params.loadContextModule
+    this.resolveContextModule = params.resolveContextModule
   }
 
   private ensureAdapter(): LoadedViteAdapter {
@@ -58,35 +87,41 @@ export class ViteAdapterLoader implements BundlerAdapter<unknown> {
     // 使用共享的版本检查（Vite 7 需要 Node.js >= 22）
     assertNodeVersion(22)
 
-    try {
-      const mod = this.loadContextModule<
-        | { ViteBundlerAdapter: new () => LoadedViteAdapter }
-        | { default?: { ViteBundlerAdapter: new () => LoadedViteAdapter } }
-      >('@ikaros-cli/ikaros-bundler-vite')
-
-      const exports =
-        (
-          mod as {
-            default?: { ViteBundlerAdapter: new () => LoadedViteAdapter }
-          }
-        ).default ?? mod
-
-      const AdapterClass = (
-        exports as { ViteBundlerAdapter: new () => LoadedViteAdapter }
-      ).ViteBundlerAdapter
-
-      if (typeof AdapterClass !== 'function') {
-        throw createMissingViteError()
-      }
-
-      this.adapter = new AdapterClass()
-      return this.adapter
-    } catch (err) {
-      if (err instanceof ViteAdapterError) {
-        throw err
-      }
+    const pkg = '@ikaros-cli/ikaros-bundler-vite'
+    if (!this.resolveContextModule(pkg)) {
       throw createMissingViteError()
     }
+
+    let mod:
+      | { ViteBundlerAdapter: new () => LoadedViteAdapter }
+      | { default?: { ViteBundlerAdapter: new () => LoadedViteAdapter } }
+
+    try {
+      mod = this.loadContextModule<
+        | { ViteBundlerAdapter: new () => LoadedViteAdapter }
+        | { default?: { ViteBundlerAdapter: new () => LoadedViteAdapter } }
+      >(pkg)
+    } catch (err) {
+      throw createLoadFailedViteError(err)
+    }
+
+    const exports =
+      (
+        mod as {
+          default?: { ViteBundlerAdapter: new () => LoadedViteAdapter }
+        }
+      ).default ?? mod
+
+    const AdapterClass = (
+      exports as { ViteBundlerAdapter: new () => LoadedViteAdapter }
+    ).ViteBundlerAdapter
+
+    if (typeof AdapterClass !== 'function') {
+      throw createInvalidViteExportError()
+    }
+
+    this.adapter = new AdapterClass()
+    return this.adapter
   }
 
   createConfig(params: CreateConfigParams): unknown | Promise<unknown> {

@@ -3,8 +3,7 @@ import { PreWarningsPlugin } from '../../src/node/plugins/pre-warnings-plugin'
 
 describe('PreWarningsPlugin', () => {
   const createMockCompiler = () => {
-    const warnFn = vi.fn()
-    const loggerMap = new Map<string, { warn: typeof warnFn }>()
+    const loggerMap = new Map<string, { warn: ReturnType<typeof vi.fn> }>()
 
     const getLogger = (source: string) => {
       if (!loggerMap.has(source)) {

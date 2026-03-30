@@ -13,7 +13,7 @@ export default defineConfig(({ watch }) => {
   return [
     {
       ...commonOptions,
-      entry: ['src/node/index.ts'],
+      entry: ['src/node/index.ts', 'src/node/cli.ts'],
       outDir: 'dist',
       sourcemap: isWatch,
       minify: !isWatch,

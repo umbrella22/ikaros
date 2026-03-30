@@ -19,6 +19,16 @@ ikaros --platform desktopClient --mode development
 ikaros build --platform desktopClient --mode release
 ```
 
+## 默认输出目录
+
+desktopClient 模式下，Electron 各目标默认输出到独立目录：
+
+- main: `dist/electron/main`
+- preload: `dist/electron/preload`
+- renderer: `dist/electron/renderer`
+
+这样可以避免 main 与 preload 共享目录时的清理竞态。
+
 ## 导出
 
 - `startDesktopClientCompile(parame)`：供 ikaros 在运行时动态加载并调用的入口。
