@@ -31,7 +31,7 @@ export class ViteBundlerAdapter implements BundlerAdapter<InlineConfig> {
 
   createConfig(params: CreateConfigParams): InlineConfig {
     // 库模式：build 命令 + 配置了 library
-    if (params.command === 'build' && params.userConfig?.library) {
+    if (params.command === 'build' && params.config.library) {
       return createViteLibraryConfig(params)
     }
 

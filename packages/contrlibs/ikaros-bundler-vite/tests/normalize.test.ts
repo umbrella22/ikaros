@@ -9,6 +9,7 @@ import {
   toViteHttps,
   toViteProxy,
 } from '../src/config/normalize'
+import { createNormalizedConfig, resolveTestContext } from './test-utils'
 
 // ─── normalizeDefine ────────────────────────────────────────────────────────
 
@@ -108,32 +109,41 @@ describe('getOutDirPath', () => {
   const resolveContext = (...paths: string[]) => `/root/${paths.join('/')}`
 
   it('should default to "dist"', () => {
-    expect(getOutDirPath({ isElectron: false, resolveContext })).toBe(
-      '/root/dist',
-    )
+    expect(
+      getOutDirPath({
+        config: createNormalizedConfig(),
+        resolveContext,
+      }),
+    ).toBe('/root/dist')
   })
 
   it('should use custom outDirName', () => {
     expect(
       getOutDirPath({
-        userConfig: { build: { outDirName: 'output' } },
-        isElectron: false,
+        config: createNormalizedConfig({
+          build: { outDirName: 'output' },
+        }),
         resolveContext,
       }),
     ).toBe('/root/output')
   })
 
   it('should use electron renderer path when isElectron', () => {
-    expect(getOutDirPath({ isElectron: true, resolveContext })).toBe(
-      '/root/dist/electron/renderer',
-    )
+    expect(
+      getOutDirPath({
+        config: createNormalizedConfig({ isElectron: true }),
+        resolveContext,
+      }),
+    ).toBe('/root/dist/electron/renderer')
   })
 
   it('should prefer electron path over custom outDirName', () => {
     expect(
       getOutDirPath({
-        userConfig: { build: { outDirName: 'output' } },
-        isElectron: true,
+        config: createNormalizedConfig({
+          build: { outDirName: 'output' },
+          isElectron: true,
+        }),
         resolveContext,
       }),
     ).toBe('/root/dist/electron/renderer')
@@ -142,8 +152,9 @@ describe('getOutDirPath', () => {
   it('should ignore empty outDirName', () => {
     expect(
       getOutDirPath({
-        userConfig: { build: { outDirName: '' } },
-        isElectron: false,
+        config: createNormalizedConfig({
+          build: { outDirName: '' },
+        }),
         resolveContext,
       }),
     ).toBe('/root/dist')

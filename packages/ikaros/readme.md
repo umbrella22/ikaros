@@ -68,7 +68,18 @@ pnpm add -D @ikaros-cli/ikaros-bundler-vite
   }
   ```
 
-## moduleFederation
+## framework plugins
+
+框架级插件。
+
+- 类型: `IkarosPlugin[]`
+- 说明: 这里是 ikaros 的框架插件，不是 rspack 或 vite 的原生插件。
+
+## rspack
+
+Rspack 专属配置命名空间，仅在 `bundler='rspack'` 时消费。
+
+### moduleFederation
 
 模块联邦。
 
@@ -76,21 +87,21 @@ pnpm add -D @ikaros-cli/ikaros-bundler-vite
 - 默认值: `undefined`
 - 参考: [Module Federation](https://module-federation.io/zh/blog/announcement.html)
 
-## plugins
+### plugins
 
 插件。
 
 - 类型: `Plugin | Plugin[]`
 - 参考: [Rspack Plugins](https://rspack.dev/zh/guide/features/plugin)
 
-## loaders
+### loaders
 
 loader。
 
 - 类型: `Loader[]`
 - 参考: [Rspack Loaders](https://rspack.dev/zh/guide/features/loader)
 
-## experiments
+### experiments
 
 RspackExperiments。
 
@@ -112,25 +123,25 @@ RspackExperiments。
 import { defineConfig } from '@ikaros-cli/ikaros'
 
 export default defineConfig({
-  cdnOptions: {
-    modules: [
-      {
-        name: 'vue', // 模块名称
-        var: 'Vue', // 全局变量名
-        path: 'dist/vue.runtime.min.js', // JS 文件路径
-      },
-      {
-        name: 'element-plus',
-        var: 'ElementPlus',
-        path: 'dist/index.full.min.js',
-        style: 'dist/index.css', // CSS 文件路径
-      },
-    ],
-    // 可选：自定义 CDN URL 模板
-    prodUrl: 'https://unpkg.com/:name@:version/:path',
-    devUrl: ':name/:path',
-    // 可选：启用跨域配置
-    crossOrigin: 'anonymous',
+  rspack: {
+    cdnOptions: {
+      modules: [
+        {
+          name: 'vue',
+          var: 'Vue',
+          path: 'dist/vue.runtime.min.js',
+        },
+        {
+          name: 'element-plus',
+          var: 'ElementPlus',
+          path: 'dist/index.full.min.js',
+          style: 'dist/index.css',
+        },
+      ],
+      prodUrl: 'https://unpkg.com/:name@:version/:path',
+      devUrl: ':name/:path',
+      crossOrigin: 'anonymous',
+    },
   },
 })
 ```
@@ -174,61 +185,68 @@ export default defineConfig({
 ##### 基础用法
 
 ```typescript
-cdnOptions: {
-  modules: [
-    {
-      name: 'vue',
-      var: 'Vue',
-      path: 'dist/vue.runtime.min.js',
-    },
-  ]
+rspack: {
+  cdnOptions: {
+    modules: [
+      {
+        name: 'vue',
+        var: 'Vue',
+        path: 'dist/vue.runtime.min.js',
+      },
+    ],
+  },
 }
 ```
 
 ##### 使用自定义 CDN
 
 ```typescript
-cdnOptions: {
-  modules: [
-    {
-      name: "vue",
-      var: "Vue",
-      path: "dist/vue.runtime.min.js",
-    },
-  ];
-  // 仅在生产环境时生效
-  prodUrl: "https://cdn.jsdelivr.net/npm/:name@:version/:path",
+rspack: {
+  cdnOptions: {
+    modules: [
+      {
+        name: 'vue',
+        var: 'Vue',
+        path: 'dist/vue.runtime.min.js',
+      },
+    ],
+    prodUrl: 'https://cdn.jsdelivr.net/npm/:name@:version/:path',
+  },
 }
 ```
 
 ##### 加载多个资源
 
 ```typescript
-cdnOptions: {
-  modules: [
-    {
-      name: 'element-plus',
-      var: 'ElementPlus',
-      path: 'dist/index.full.min.js',
-      paths: ['dist/locale/zh-cn.min.js'],
-      style: 'dist/index.css',
-      styles: ['dist/theme-chalk/dark.css'],
-    },
-  ]
+rspack: {
+  cdnOptions: {
+    modules: [
+      {
+        name: 'element-plus',
+        var: 'ElementPlus',
+        path: 'dist/index.full.min.js',
+        paths: ['dist/locale/zh-cn.min.js'],
+        style: 'dist/index.css',
+        styles: ['dist/theme-chalk/dark.css'],
+      },
+    ],
+  },
 }
 ```
 
 ##### 仅加载样式
 
 ```typescript
-cdnOptions: {
-  modules: [
-    {
-      name: 'normalize.css',
-      style: 'normalize.css',
-      cssOnly: true,
-    },
-  ]
+rspack: {
+  cdnOptions: {
+    modules: [
+      {
+        name: 'normalize.css',
+        style: 'normalize.css',
+        cssOnly: true,
+      },
+    ],
+  },
 }
 ```
 
@@ -256,7 +274,7 @@ dev 服务相关，该对象下的值不影响生产环境。
     - 默认值: `false`
     - 参考: [DevServer HTTPS](https://webpack.js.org/configuration/dev-server/#devserverhttps)
 
-## css
+### css
 
 css loader 配置。
 

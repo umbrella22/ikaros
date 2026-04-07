@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const entrypointMocks = vi.hoisted(() => {
   const parseSpy = vi.fn()
   const versionSpy = vi.fn()
-  const commanderSpy = vi.fn()
+  const compileCommanderSpy = vi.fn()
+  const inspectCommanderSpy = vi.fn()
   const assertNodeVersionSpy = vi.fn()
   const program = {
     parse: parseSpy,
@@ -14,7 +15,8 @@ const entrypointMocks = vi.hoisted(() => {
 
   return {
     assertNodeVersionSpy,
-    commanderSpy,
+    compileCommanderSpy,
+    inspectCommanderSpy,
     parseSpy,
     program,
     versionSpy,
@@ -26,7 +28,11 @@ vi.mock('commander', () => ({
 }))
 
 vi.mock('../../src/node/compile/index', () => ({
-  commander: entrypointMocks.commanderSpy,
+  commander: entrypointMocks.compileCommanderSpy,
+}))
+
+vi.mock('../../src/node/inspect', () => ({
+  commander: entrypointMocks.inspectCommanderSpy,
 }))
 
 vi.mock('../../src/node/shared/check-env', () => ({
@@ -44,7 +50,8 @@ describe('node entrypoints', () => {
     await import('../../src/node/index')
 
     expect(entrypointMocks.assertNodeVersionSpy).not.toHaveBeenCalled()
-    expect(entrypointMocks.commanderSpy).not.toHaveBeenCalled()
+    expect(entrypointMocks.compileCommanderSpy).not.toHaveBeenCalled()
+    expect(entrypointMocks.inspectCommanderSpy).not.toHaveBeenCalled()
     expect(entrypointMocks.parseSpy).not.toHaveBeenCalled()
     expect(entrypointMocks.versionSpy).not.toHaveBeenCalled()
   })
@@ -57,7 +64,10 @@ describe('node entrypoints', () => {
       expect.any(String),
       '-v, --version',
     )
-    expect(entrypointMocks.commanderSpy).toHaveBeenCalledWith(
+    expect(entrypointMocks.compileCommanderSpy).toHaveBeenCalledWith(
+      entrypointMocks.program,
+    )
+    expect(entrypointMocks.inspectCommanderSpy).toHaveBeenCalledWith(
       entrypointMocks.program,
     )
     expect(entrypointMocks.parseSpy).toHaveBeenCalledOnce()

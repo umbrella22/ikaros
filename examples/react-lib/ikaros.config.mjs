@@ -4,28 +4,30 @@ import ReactRefreshPlugin from '@rspack/plugin-react-refresh'
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
   return {
-    loaders: [
-      {
-        test: /\.[jt]sx?$/,
-        loader: 'builtin:swc-loader',
-        options: {
-          jsc: {
-            parser: {
-              syntax: 'ecmascript',
-              jsx: true,
-            },
-            transform: {
-              react: {
-                runtime: 'automatic',
-                development: isDev,
-                refresh: isDev,
+    rspack: {
+      loaders: [
+        {
+          test: /\.[jt]sx?$/,
+          loader: 'builtin:swc-loader',
+          options: {
+            jsc: {
+              parser: {
+                syntax: 'ecmascript',
+                jsx: true,
+              },
+              transform: {
+                react: {
+                  runtime: 'automatic',
+                  development: isDev,
+                  refresh: isDev,
+                },
               },
             },
           },
         },
-      },
-    ],
-    plugins: [isDev && new ReactRefreshPlugin()],
+      ],
+      plugins: [isDev && new ReactRefreshPlugin()],
+    },
     // ── 库模式配置 ──────────────────────────────────────────
     library: {
       entry: 'src/index.jsx',

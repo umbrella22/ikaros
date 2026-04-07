@@ -104,21 +104,14 @@ const resolveViteFileName = (
 export const createViteLibraryConfig = (
   params: CreateConfigParams,
 ): InlineConfig => {
-  const {
-    mode,
-    env: envVars,
-    context,
-    userConfig,
-    isElectron,
-    resolveContext,
-  } = params
+  const { mode, env: envVars, context, config, resolveContext } = params
 
-  const library = userConfig?.library
+  const library = config.library
   if (!library) {
     throw new Error('[ikaros] library config is required for library mode')
   }
 
-  const userVitePlugins = userConfig?.vite?.plugins
+  const userVitePlugins = config.vite?.plugins
   const plugins = toPluginsArray(userVitePlugins)
 
   const multi = isMultiEntry(library.entry)
@@ -126,31 +119,28 @@ export const createViteLibraryConfig = (
     library.formats ?? (multi ? ['es', 'cjs'] : ['es', 'umd'])
   ).map(mapFormatToViteFormat)
 
-  const alias = {
-    '@': resolveContext('src'),
-    ...(userConfig?.resolve?.alias ?? {}),
-  }
+  const alias = config.resolve.alias
 
   const external = resolveViteExternals(library.externals)
   const globals = resolveViteGlobals(library.globals)
 
   return {
     root: context,
-    base: userConfig?.build?.base ?? '/',
+    base: config.build.base,
     mode,
     plugins,
     define: {
       ...normalizeDefine(envVars),
-      ...normalizeDefine(userConfig?.define),
+      ...normalizeDefine(config.define),
     },
     resolve: {
       alias,
-      extensions: sanitizeViteExtensions(userConfig?.resolve?.extensions),
+      extensions: sanitizeViteExtensions(config.resolve.extensions),
     },
     build: {
-      outDir: getOutDirPath({ userConfig, isElectron, resolveContext }),
+      outDir: getOutDirPath({ config, resolveContext }),
       emptyOutDir: true,
-      sourcemap: userConfig?.build?.sourceMap ?? false,
+      sourcemap: config.build.sourceMap,
       lib: {
         entry: resolveEntry(library.entry, resolveContext),
         name: library.name,

@@ -15,7 +15,7 @@ import cliCursor from 'cli-cursor'
 import path from 'node:path'
 import process from 'node:process'
 import { isArray } from 'es-toolkit/compat'
-import type { UserConfig } from '../config/user-config'
+import type { NormalizedConfig } from '../config/normalize-config'
 import { name, version } from '../../../package.json'
 
 const cliPackageJson = { name, version }
@@ -26,15 +26,15 @@ const black = chalk.hex('#222222')
 export default class StatsPlugin implements RspackPluginInstance {
   private compiler!: Compiler
 
-  private userConfig?: UserConfig
+  private config?: NormalizedConfig
 
   private startCompileHrtime: ReturnType<typeof process.hrtime> | undefined =
     undefined
 
   private isDev?: boolean
 
-  constructor(config?: UserConfig) {
-    this.userConfig = config
+  constructor(config?: NormalizedConfig) {
+    this.config = config
   }
 
   public apply(compiler: Compiler): void {
@@ -141,7 +141,7 @@ export default class StatsPlugin implements RspackPluginInstance {
     if (!assets || assets.length === 0) return
 
     const table = new EasyTable()
-    const isGzip = this.userConfig?.build?.gzip ?? false
+    const isGzip = this.config?.build.gzip ?? false
 
     let sizeTotal = 0
     let gzipTotal = 0
@@ -193,7 +193,7 @@ export default class StatsPlugin implements RspackPluginInstance {
    * 获取ip
    */
   private getHostList() {
-    const { userConfig, compiler } = this
+    const { config, compiler } = this
     const { devServer } = compiler.options
 
     const userHttps =
@@ -204,13 +204,13 @@ export default class StatsPlugin implements RspackPluginInstance {
     let urlPath = ''
     const networks = Object.values(os.networkInterfaces())
 
-    if (userConfig) {
-      urlPath = userConfig.build?.base ?? ''
+    if (config) {
+      urlPath = config.build.base
       if (!urlPath || urlPath === 'auto') {
         urlPath = '/'
       }
 
-      const firstPage = Object.keys(userConfig?.pages || {})[0]
+      const firstPage = Object.keys(config.pages)[0]
       if (firstPage && firstPage !== 'index') {
         urlPath = path.join(urlPath, `${firstPage}.html`)
       } else if (!urlPath.endsWith('/')) {
@@ -302,7 +302,7 @@ export default class StatsPlugin implements RspackPluginInstance {
             console.log()
           }
 
-          const infraWarnings = this.userConfig?.quiet
+          const infraWarnings = this.config?.quiet
             ? undefined
             : this.getInfraWarnings(statsJson)
           if (infraWarnings) {
@@ -369,7 +369,7 @@ export default class StatsPlugin implements RspackPluginInstance {
             console.log()
           }
 
-          const infraWarnings = this.userConfig?.quiet
+          const infraWarnings = this.config?.quiet
             ? undefined
             : this.getInfraWarnings(statsJson)
           if (infraWarnings) {

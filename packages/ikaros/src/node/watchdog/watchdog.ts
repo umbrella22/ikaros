@@ -5,7 +5,7 @@ import { isAbsolute, join, relative, resolve } from 'node:path'
 import chokidar from 'chokidar'
 
 import { resolveConfigWatchFiles } from '../config/config-loader'
-import { getEnvFiles } from '../config/env-loader'
+import { getEnvDir, getEnvFiles } from '../config/env-loader'
 import { LoggerSystem } from '../shared/logger'
 import { CONFIG_FILE_NAME, CONFIG_FILE_SUFFIXES } from '../shared/constants'
 
@@ -23,6 +23,23 @@ type ChokidarWatchOptions = Parameters<typeof chokidar.watch>[1]
 export type WatchdogRestartReason = {
   file: string
   event: WatchdogEvent
+}
+
+export type WatchdogTrackedFileKind = 'config' | 'env'
+
+export type ResolveWatchdogWatchPlanOptions = Pick<
+  WatchdogOptions,
+  'context' | 'configFile' | 'mode'
+>
+
+export type WatchdogWatchPlan = {
+  envDir: string
+  envFiles: string[]
+  configEntryFiles: string[]
+  configDependencyFiles: string[]
+  trackedFiles: string[]
+  watchedPaths: string[]
+  fileCategories: Record<string, WatchdogTrackedFileKind>
 }
 
 export type WatchdogOptions = {
@@ -45,6 +62,97 @@ export type WatchdogInstance = {
   close: () => Promise<void>
 }
 
+function resolveConfigEntryFiles(
+  options: ResolveWatchdogWatchPlanOptions,
+): string[] {
+  const { context, configFile } = options
+
+  if (configFile) {
+    return [resolveWatchPath(context, configFile)]
+  }
+
+  return CONFIG_FILE_SUFFIXES.map((suffix) =>
+    resolveWatchPath(context, join(context, `${CONFIG_FILE_NAME}.${suffix}`)),
+  )
+}
+
+function createFileCategories(params: {
+  envFiles: string[]
+  configEntryFiles: string[]
+  configDependencyFiles: string[]
+}): Record<string, WatchdogTrackedFileKind> {
+  const { envFiles, configEntryFiles, configDependencyFiles } = params
+  const fileCategories: Record<string, WatchdogTrackedFileKind> = {}
+
+  for (const filePath of envFiles) {
+    fileCategories[filePath] = 'env'
+  }
+
+  for (const filePath of [...configEntryFiles, ...configDependencyFiles]) {
+    fileCategories[filePath] = 'config'
+  }
+
+  return fileCategories
+}
+
+function buildWatchdogWatchPlan(
+  options: ResolveWatchdogWatchPlanOptions & {
+    configDependencyFiles: string[]
+  },
+): WatchdogWatchPlan {
+  const { context, mode, configDependencyFiles } = options
+  const envDir = resolveWatchPath(context, getEnvDir(context))
+  const envFiles = getEnvFiles(context, mode).map((filePath) =>
+    resolveWatchPath(context, filePath),
+  )
+  const configEntryFiles = resolveConfigEntryFiles(options)
+  const resolvedConfigDependencyFiles = configDependencyFiles.map((filePath) =>
+    resolveWatchPath(context, filePath),
+  )
+  const trackedFiles = [
+    ...new Set([
+      ...configEntryFiles,
+      ...envFiles,
+      ...resolvedConfigDependencyFiles,
+    ]),
+  ]
+
+  return {
+    envDir,
+    envFiles,
+    configEntryFiles,
+    configDependencyFiles: resolvedConfigDependencyFiles,
+    trackedFiles,
+    watchedPaths: [...new Set([...trackedFiles, envDir])],
+    fileCategories: createFileCategories({
+      envFiles,
+      configEntryFiles,
+      configDependencyFiles: resolvedConfigDependencyFiles,
+    }),
+  }
+}
+
+export async function resolveWatchdogWatchPlan(
+  options: ResolveWatchdogWatchPlanOptions,
+): Promise<WatchdogWatchPlan> {
+  const configDependencyFiles = await resolveConfigWatchFiles({
+    context: options.context,
+    configFile: options.configFile,
+  })
+
+  return buildWatchdogWatchPlan({
+    ...options,
+    configDependencyFiles,
+  })
+}
+
+export function classifyWatchdogRestartReason(
+  reason: WatchdogRestartReason,
+  plan: Pick<WatchdogWatchPlan, 'fileCategories'>,
+): WatchdogTrackedFileKind | undefined {
+  return plan.fileCategories[reason.file]
+}
+
 /**
  * 创建看门狗实例
  *
@@ -64,24 +172,20 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
     watchOptions,
   } = options
 
-  const envFiles = getEnvFiles(context, mode)
-  const configEntryFiles = configFile
-    ? [resolveWatchPath(context, configFile)]
-    : CONFIG_FILE_SUFFIXES.map((suffix) =>
-        join(context, `${CONFIG_FILE_NAME}.${suffix}`),
-      )
-  const baseTrackedFiles = new Set(
-    [...configEntryFiles, ...envFiles].map((filePath) =>
-      resolveWatchPath(context, filePath),
-    ),
-  )
+  const baseWatchPlan = buildWatchdogWatchPlan({
+    context,
+    configFile,
+    mode,
+    configDependencyFiles: [],
+  })
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let isClosed = false
   let isRestarting = false
   let pendingRestart: WatchdogRestartReason | null = null
-  let trackedFiles = new Set(baseTrackedFiles)
-  let watchedPaths = new Set(trackedFiles)
+  let currentWatchPlan = baseWatchPlan
+  let trackedFiles = new Set(baseWatchPlan.trackedFiles)
+  let watchedPaths = new Set(baseWatchPlan.watchedPaths)
 
   const { awaitWriteFinish, ...otherWatchOptions } = watchOptions ?? {}
 
@@ -93,15 +197,13 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
   })
 
   const refreshWatchTargets = async () => {
-    const dependencyFiles = await resolveConfigWatchFiles({
+    const nextWatchPlan = await resolveWatchdogWatchPlan({
       context,
       configFile,
+      mode,
     })
-    const nextTrackedFiles = new Set([
-      ...baseTrackedFiles,
-      ...dependencyFiles.map((filePath) => resolveWatchPath(context, filePath)),
-    ])
-    const nextWatchedPaths = new Set(nextTrackedFiles)
+    const nextTrackedFiles = new Set(nextWatchPlan.trackedFiles)
+    const nextWatchedPaths = new Set(nextWatchPlan.watchedPaths)
 
     const addedPaths = [...nextWatchedPaths].filter(
       (filePath) => !watchedPaths.has(filePath),
@@ -110,6 +212,7 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
       (filePath) => !nextWatchedPaths.has(filePath),
     )
 
+    currentWatchPlan = nextWatchPlan
     trackedFiles = nextTrackedFiles
     watchedPaths = nextWatchedPaths
 
@@ -125,9 +228,15 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
   }
 
   const triggerRestart = (reason: WatchdogRestartReason) => {
+    const formattedReason = formatRestartReason(
+      context,
+      reason,
+      currentWatchPlan,
+    )
+
     if (isClosed) {
       logger.info({
-        text: `看门狗已关闭，忽略变更事件: ${formatRestartReason(context, reason)}`,
+        text: `看门狗已关闭，忽略变更事件: ${formattedReason}`,
       })
       return
     }
@@ -144,18 +253,18 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
       debounceTimer = null
       isRestarting = true
       logger.info({
-        text: `检测到 ${formatRestartReason(context, reason)}，正在重启整个服务...`,
+        text: `检测到 ${formattedReason}，正在重启整个服务...`,
       })
 
       try {
         await onRestart(reason)
         logger.done({
-          text: `服务已重启，原因: ${formatRestartReason(context, reason)}`,
+          text: `服务已重启，原因: ${formattedReason}`,
         })
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         logger.error({
-          text: `重启失败 (${formatRestartReason(context, reason)}): ${message}`,
+          text: `重启失败 (${formattedReason}): ${message}`,
         })
       } finally {
         try {
@@ -173,7 +282,7 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
         if (isClosed) {
           if (pendingRestart) {
             logger.info({
-              text: `看门狗已关闭，丢弃挂起重启: ${formatRestartReason(context, pendingRestart)}`,
+              text: `看门狗已关闭，丢弃挂起重启: ${formatRestartReason(context, pendingRestart, currentWatchPlan)}`,
             })
           }
           pendingRestart = null
@@ -243,7 +352,14 @@ function resolveWatchPath(context: string, filePath: string): string {
 function formatRestartReason(
   context: string,
   reason: WatchdogRestartReason,
+  plan?: Pick<WatchdogWatchPlan, 'fileCategories'>,
 ): string {
   const displayPath = relative(context, reason.file) || reason.file
-  return `${displayPath} (${reason.event})`
+  const category = plan
+    ? classifyWatchdogRestartReason(reason, plan)
+    : undefined
+
+  return category
+    ? `${displayPath} (${reason.event}, ${category})`
+    : `${displayPath} (${reason.event})`
 }

@@ -24,6 +24,16 @@ describe('configSchema', () => {
       bundler: 'rspack',
       target: 'mobile',
       quiet: true,
+      rspack: {
+        plugins: [{}],
+        loaders: [{}],
+        experiments: {},
+        cdnOptions: { modules: [] },
+        moduleFederation: {},
+        css: {
+          sourceMap: true,
+        },
+      },
       build: {
         sourceMap: true,
         gzip: true,
@@ -40,6 +50,19 @@ describe('configSchema', () => {
         port: 3000,
       },
     })
+    expect(result.success).toBe(true)
+  })
+
+  it('应接受顶层框架插件配置', () => {
+    const result = configSchema.safeParse({
+      plugins: [
+        {
+          name: 'demo-plugin',
+          setup() {},
+        },
+      ],
+    })
+
     expect(result.success).toBe(true)
   })
 
@@ -132,34 +155,52 @@ describe('configSchema', () => {
 
   // ─── Vite 限制 ─────────────────────────────────────────────────────────
 
-  it('vite 模式下不应允许 rspack-only 字段 plugins', () => {
+  it('顶层 plugins 不再接受旧的 bundler 插件写法', () => {
     const result = configSchema.safeParse({
-      bundler: 'vite',
+      bundler: 'rspack',
       plugins: [{}],
     })
     expect(result.success).toBe(false)
   })
 
-  it('vite 模式下不应允许 loaders', () => {
+  it('顶层不应再允许旧 loaders 字段', () => {
     const result = configSchema.safeParse({
-      bundler: 'vite',
+      bundler: 'rspack',
       loaders: [{}],
     })
     expect(result.success).toBe(false)
   })
 
-  it('vite 模式下不应允许 experiments', () => {
+  it('顶层不应再允许旧 experiments 字段', () => {
     const result = configSchema.safeParse({
-      bundler: 'vite',
+      bundler: 'rspack',
       experiments: {},
     })
     expect(result.success).toBe(false)
   })
 
-  it('vite 模式下不应允许 cdnOptions', () => {
+  it('顶层不应再允许旧 cdnOptions 字段', () => {
     const result = configSchema.safeParse({
-      bundler: 'vite',
+      bundler: 'rspack',
       cdnOptions: { modules: [] },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('顶层不应再允许旧 moduleFederation 字段', () => {
+    const result = configSchema.safeParse({
+      bundler: 'rspack',
+      moduleFederation: {},
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('顶层不应再允许旧 css 字段', () => {
+    const result = configSchema.safeParse({
+      bundler: 'rspack',
+      css: {
+        sourceMap: true,
+      },
     })
     expect(result.success).toBe(false)
   })

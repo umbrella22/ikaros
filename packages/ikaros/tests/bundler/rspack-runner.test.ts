@@ -17,19 +17,24 @@ vi.mock('@rspack/core', () => ({
   })),
 }))
 
-import { runCleanups } from '../../src/node/watchdog/cleanup-registry'
 import { watchRspackBuild } from '../../src/node/bundler/rspack/rspack-runner'
+import { createCleanupRegistry } from '../../src/node/watchdog/cleanup-registry'
 
 describe('watchRspackBuild', () => {
   afterEach(async () => {
-    await runCleanups()
     vi.clearAllMocks()
   })
 
   it('应注册 cleanup 并在清理时关闭 watching', async () => {
-    await expect(watchRspackBuild({} as never)).resolves.toBe('watch ok')
+    const cleanupRegistry = createCleanupRegistry()
 
-    await runCleanups()
+    await expect(
+      watchRspackBuild({} as never, {
+        registerCleanup: cleanupRegistry.register,
+      }),
+    ).resolves.toBe('watch ok')
+
+    await cleanupRegistry.run()
 
     expect(watchSpy).toHaveBeenCalledOnce()
     expect(closeSpy).toHaveBeenCalledOnce()

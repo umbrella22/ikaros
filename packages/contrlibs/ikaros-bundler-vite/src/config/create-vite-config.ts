@@ -23,64 +23,57 @@ export const createViteConfig = (params: CreateConfigParams): InlineConfig => {
     mode,
     env: envVars,
     context,
-    userConfig,
-    pages,
-    base,
-    port,
-    isElectron,
+    config,
     resolveContext,
   } = params
 
   const isDev = command === 'server'
 
-  const userVitePlugins = userConfig?.vite?.plugins
+  const userVitePlugins = config.vite?.plugins
   const plugins = toPluginsArray(userVitePlugins)
 
   const ikarosBuildPlugin =
     command === 'build'
       ? createIkarosViteBuildPlugin({
-          gzip: userConfig?.build?.gzip,
-          outReport: userConfig?.build?.outReport,
-          dependencyCycleCheck: userConfig?.build?.dependencyCycleCheck,
+          gzip: config.build.gzip,
+          outReport: config.build.outReport,
+          dependencyCycleCheck: config.build.dependencyCycleCheck,
         })
       : undefined
 
   const rollupInput = resolveRollupInput({
-    pages,
-    enablePages: userConfig?.enablePages,
+    pages: config.pages,
+    enablePages: config.enablePages,
   })
 
-  const alias = {
-    '@': resolveContext('src'),
-    ...(userConfig?.resolve?.alias ?? {}),
-  }
+  const alias = config.resolve.alias
 
   return {
     root: context,
-    base,
+    base: config.base,
     mode,
     appType: rollupInput ? 'mpa' : 'spa',
     plugins: [...plugins, ...(ikarosBuildPlugin ? [ikarosBuildPlugin] : [])],
     define: {
       ...normalizeDefine(envVars),
-      ...normalizeDefine(userConfig?.define),
+      ...normalizeDefine(config.define),
     },
     resolve: {
       alias,
-      extensions: sanitizeViteExtensions(userConfig?.resolve?.extensions),
+      extensions: sanitizeViteExtensions(config.resolve.extensions),
     },
     server: isDev
       ? {
-          port,
+          port: config.port,
           strictPort: true,
-          proxy: toViteProxy(userConfig?.server?.proxy),
-          https: toViteHttps(userConfig?.server?.https),
+          proxy: toViteProxy(config.server.proxy),
+          https: toViteHttps(config.server.https),
         }
       : undefined,
     build: {
-      outDir: getOutDirPath({ userConfig, isElectron, resolveContext }),
-      sourcemap: userConfig?.build?.sourceMap ?? false,
-      assetsDir: userConfig?.build?.assetsDir,
+      outDir: getOutDirPath({ config, resolveContext }),
+      sourcemap: config.build.sourceMap,
+      assetsDir: config.build.assetsDir || undefined,
       rollupOptions: rollupInput
         ? {
             input: rollupInput,

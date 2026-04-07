@@ -8,7 +8,6 @@ import type {
 } from '@rspack/core'
 import { rspack } from '@rspack/core'
 import { RspackDevServer } from '@rspack/dev-server'
-import { registerCleanup } from '../../watchdog/cleanup-registry'
 
 type StatsLike = {
   hasErrors: () => boolean
@@ -16,6 +15,7 @@ type StatsLike = {
 }
 
 import type { BuildStatus } from '../types'
+import type { CleanupFn } from '../../watchdog/cleanup-registry'
 
 export type RunRspackBuildOptions = {
   onBuildStatus?: (status: BuildStatus) => void
@@ -23,11 +23,13 @@ export type RunRspackBuildOptions = {
 
 export type WatchRspackBuildOptions = WatchOptions & {
   onBuildStatus?: (status: BuildStatus) => void
+  registerCleanup?: (cleanup: CleanupFn) => void
 }
 
 export type StartRspackDevServerOptions = {
   port?: number
   onBuildStatus?: (status: BuildStatus) => void
+  registerCleanup?: (cleanup: CleanupFn) => void
 }
 
 function formatRspackErrors(stats: StatsLike): string {
@@ -94,13 +96,12 @@ export async function startRspackDevServer(
   config: Configuration,
   options?: StartRspackDevServerOptions,
 ): Promise<void> {
-  const { port, onBuildStatus } = options ?? {}
+  const { port, onBuildStatus, registerCleanup } = options ?? {}
 
   const compiler = rspack(config)
   const server = new RspackDevServer(config.devServer as DevServer, compiler)
 
-  // 注册看门狗清理：重启前关闭 dev server 释放端口
-  registerCleanup(async () => {
+  registerCleanup?.(async () => {
     await server.stop()
   })
 
@@ -129,7 +130,7 @@ export function watchRspackBuild(
   config: Configuration | Configuration[],
   options?: WatchRspackBuildOptions,
 ): Promise<string | undefined> {
-  const { onBuildStatus, ...watchOptions } = options ?? {}
+  const { onBuildStatus, registerCleanup, ...watchOptions } = options ?? {}
 
   return new Promise<string | undefined>((resolve, reject) => {
     const compiler = rspack(config)
@@ -173,7 +174,7 @@ export function watchRspackBuild(
       },
     )
 
-    registerCleanup(
+    registerCleanup?.(
       () =>
         new Promise<void>((resolveClose, rejectClose) => {
           watching.close((closeError) => {

@@ -9,12 +9,17 @@ import { isFunction } from 'es-toolkit'
 import { isObject } from 'es-toolkit/compat'
 
 import type { ImportMetaBaseEnv } from '../../types/env'
-import type { ConfigEnvPre, UserConfig } from '../config/user-config'
+import type {
+  ConfigEnvPre,
+  ResolvedUserConfig,
+  UserConfig,
+} from '../config/user-config'
 import { configSchema } from '../config/config-schema'
-import { getEnv } from '../config/env-loader'
+import { getEnv, type EnvDiagnostics } from '../config/env-loader'
 import { resolveConfig } from '../config/config-loader'
 import type { BuildStatus } from '../bundler/types'
 import type { PreWarning } from '../plugins/pre-warnings-plugin'
+import type { CleanupFn } from '../watchdog/cleanup-registry'
 
 // ─── 公共类型 ─────────────────────────────────────────────────────────────
 
@@ -22,6 +27,8 @@ export type PackageJson = {
   name: string
   version: string
 }
+
+export interface CompileEnvInfo extends EnvDiagnostics {}
 
 /** 命令 */
 export enum Command {
@@ -44,6 +51,8 @@ export type CompileServeParams = {
   /** 工作目录，默认 process.cwd() */
   context?: string
   onBuildStatus?: (status: BuildStatus) => void
+  /** dev 生命周期中用于注册清理函数 */
+  registerCleanup?: (cleanup: CleanupFn) => void
 }
 
 // ─── CompileContext 接口 ────────────────────────────────────────────────────
@@ -62,8 +71,8 @@ export interface CompileContext {
   readonly options: CompileOptions
   /** 环境变量 */
   readonly env: Record<string, unknown>
-  /** 用户配置（可在 resolvePreConfig 阶段被更新） */
-  userConfig?: UserConfig
+  /** 用户配置（可在 modifyIkarosConfig 阶段被插件更新为 ResolvedUserConfig） */
+  userConfig?: UserConfig | ResolvedUserConfig
   /** 工作目录 package.json */
   readonly contextPkg?: PackageJson
   /** 基于工作目录的路径解析 */
@@ -80,8 +89,14 @@ export interface CompileContext {
   readonly configFile?: string
   /** 构建状态回调 */
   onBuildStatus?: (status: BuildStatus) => void
+  /** 实例级清理函数注册能力 */
+  readonly registerCleanup?: (cleanup: CleanupFn) => void
   /** 编译器创建前收集的警告，会通过 PreWarningsPlugin 注入 rspack logger */
   readonly preWarnings: PreWarning[]
+  /** env 文件链与最终 key 来源信息 */
+  readonly envInfo?: CompileEnvInfo
+  /** 当前编译轮次注入的 env 清理函数 */
+  readonly envCleanup: () => void
 }
 
 // ─── 工厂函数 ───────────────────────────────────────────────────────────────
@@ -98,7 +113,8 @@ export interface CompileContext {
 export async function createCompileContext(
   params: CompileServeParams,
 ): Promise<CompileContext> {
-  const { command, options, configFile, onBuildStatus } = params
+  const { command, options, configFile, onBuildStatus, registerCleanup } =
+    params
   const context = params.context ?? process.cwd()
   const contextRequire = createRequire(join(context, './'))
 
@@ -118,16 +134,31 @@ export async function createCompileContext(
   const contextPkg = await loadContextPkg(resolveContext)
 
   // 2. 加载环境变量
-  const { env, preWarnings } = await loadEnv(options, context)
-
-  // 3. 加载并验证用户配置
-  const userConfig = await loadUserConfig({
-    configFile,
-    context,
-    options,
+  const {
     env,
-    command,
-  })
+    preWarnings,
+    envInfo,
+    cleanup: envCleanup,
+  } = await loadEnv(options, context)
+
+  let userConfig: UserConfig | undefined
+  try {
+    // 3. 加载并验证用户配置
+    userConfig = await loadUserConfig({
+      configFile,
+      context,
+      options,
+      env,
+      command,
+    })
+  } catch (error) {
+    envCleanup()
+    throw error
+  }
+
+  if (command === Command.SERVER) {
+    registerCleanup?.(envCleanup)
+  }
 
   return {
     context,
@@ -143,7 +174,10 @@ export async function createCompileContext(
     isElectron: options.platform === 'desktopClient',
     configFile,
     onBuildStatus,
+    registerCleanup,
     preWarnings,
+    envInfo,
+    envCleanup,
   }
 }
 
@@ -166,19 +200,38 @@ async function loadContextPkg(
 async function loadEnv(
   options: CompileOptions,
   context: string,
-): Promise<{ env: Record<string, unknown>; preWarnings: PreWarning[] }> {
+): Promise<{
+  env: Record<string, unknown>
+  preWarnings: PreWarning[]
+  envInfo: CompileEnvInfo
+  cleanup: () => void
+}> {
   const { platform, mode } = options
   const retain: ConfigEnvPre['env'] = {
     PLATFORM: platform,
     MODE: mode,
   }
-  const { env: envData, warnings } = await getEnv(context, mode)
+  const {
+    env: envData,
+    warnings,
+    filePaths,
+    loadedFiles,
+    keySources,
+    cleanup,
+  } = await getEnv(context, mode)
+
   return {
     env: {
       ...retain,
       ...envData,
     },
     preWarnings: warnings,
+    envInfo: {
+      filePaths,
+      loadedFiles,
+      keySources,
+    },
+    cleanup,
   }
 }
 

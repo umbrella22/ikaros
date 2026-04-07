@@ -1,6 +1,6 @@
-import type { UserConfig } from '../config/user-config'
-import type { Pages } from './rspack/loader-plugin-helper'
+import type { NormalizedConfig } from '../config/normalize-config'
 import type { PreWarning } from '../plugins/pre-warnings-plugin'
+import type { CleanupFn } from '../watchdog/cleanup-registry'
 
 // ─── BuildStatus ────────────────────────────────────────────────────────────
 
@@ -52,14 +52,7 @@ export interface CreateConfigParams {
   env: Record<string, unknown>
   context: string
   contextPkg?: { name: string; version: string }
-  userConfig?: UserConfig
-  pages: Pages
-  base: string
-  port: number
-  browserslist: string
-  isElectron: boolean
-  isVue: boolean
-  isReact: boolean
+  config: NormalizedConfig
   resolveContext: (...paths: string[]) => string
   preWarnings?: PreWarning[]
 }
@@ -69,7 +62,7 @@ export interface CreateConfigParams {
 export interface BundlerDevOptions {
   port?: number
   onBuildStatus?: (status: BuildStatus) => void
-  registerCleanup?: (cleanup: () => Promise<void> | void) => void
+  registerCleanup?: (cleanup: CleanupFn) => void
 }
 
 export interface BundlerBuildOptions {

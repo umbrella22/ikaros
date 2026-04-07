@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander'
 
-import { runCompileWithWatchdog } from './compile-pipeline'
+import { createIkaros } from '../core/create-ikaros'
 import {
   Command as BuildCommand,
   type CompileOptions,
@@ -15,13 +15,25 @@ const Platform: Record<string, ImportMetaBaseEnv['PLATFORM']> = {
   ELECTRON: 'desktopClient', // 别名，与文档保持一致
 }
 
-/** 编译选项 */
-const compileOptions = [
-  new Option('-m, --mode <name>', 'Environment variable'),
-  new Option('-p, --platform <type>', 'build platform type')
-    .default(Platform.WEB)
-    .choices(Object.values(Platform)),
-]
+export type CompileCliOptions = CompileOptions & {
+  config?: string
+}
+
+function createCommonCompileOptions(): Option[] {
+  return [
+    new Option('-m, --mode <name>', 'Environment variable'),
+    new Option('-p, --platform <type>', 'build platform type')
+      .default(Platform.WEB)
+      .choices(Object.values(Platform)),
+    new Option('-c, --config <file>', 'config file path'),
+  ]
+}
+
+export function addCommonCompileOptions(command: Command): void {
+  for (const option of createCommonCompileOptions()) {
+    command.addOption(option)
+  }
+}
 
 /**
  * 启动编译
@@ -31,7 +43,19 @@ const compileOptions = [
  */
 export async function startCompile(params: CompileServeParams): Promise<void> {
   try {
-    await runCompileWithWatchdog(params)
+    const ikaros = await createIkaros({
+      options: params.options,
+      configFile: params.configFile,
+      context: params.context,
+      onBuildStatus: params.onBuildStatus,
+    })
+
+    if (params.command === BuildCommand.SERVER) {
+      await ikaros.dev()
+      return
+    }
+
+    await ikaros.build()
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     process.stderr.write(`${message}\n`)
@@ -43,25 +67,31 @@ export function commander(program: Command): void {
   const dev = program
     .command(BuildCommand.SERVER, { isDefault: true })
     .description('Start local develop serve')
-    .action(async (options: CompileOptions) => {
+    .action(async (options: CompileCliOptions) => {
       await startCompile({
         command: BuildCommand.SERVER,
-        options,
+        options: {
+          mode: options.mode,
+          platform: options.platform,
+        },
+        configFile: options.config,
       })
     })
 
   const build = program
     .command(BuildCommand.BUILD)
     .description('Start build')
-    .action(async (options: CompileOptions) => {
+    .action(async (options: CompileCliOptions) => {
       await startCompile({
         command: BuildCommand.BUILD,
-        options,
+        options: {
+          mode: options.mode,
+          platform: options.platform,
+        },
+        configFile: options.config,
       })
     })
 
-  for (const option of compileOptions) {
-    dev.addOption(option)
-    build.addOption(option)
-  }
+  addCommonCompileOptions(dev)
+  addCommonCompileOptions(build)
 }

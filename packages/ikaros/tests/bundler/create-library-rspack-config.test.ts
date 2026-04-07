@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { createLibraryRspackConfigs } from '../../src/node/bundler/rspack/create-library-rspack-config'
 import type { CreateConfigParams } from '../../src/node/bundler/types'
+import type { NormalizedConfig } from '../../src/node/config/normalize-config'
 
 interface TestCfg {
   output: {
@@ -13,39 +14,146 @@ interface TestCfg {
   }
   entry: string | Record<string, string>
   experiments?: { outputModule?: boolean }
-  externals: Record<string, Record<string, string>>
+  externals: unknown
   resolve: { alias: Record<string, string> }
   devtool: string | false
+  plugins?: Array<{ name?: string }>
+}
+
+const resolveTestContext = (...paths: string[]) =>
+  ['/test/project', ...paths].join('/')
+
+const createMinimalConfig = (
+  overrides?: Partial<NormalizedConfig>,
+): NormalizedConfig => {
+  const base: NormalizedConfig = {
+    bundler: 'rspack',
+    plugins: [],
+    quiet: false,
+    target: 'pc',
+    pages: {
+      index: {
+        html: '/test/project/index.html',
+        entry: '/test/project/src/index.ts',
+      },
+    },
+    enablePages: false,
+    define: {},
+    rspack: {
+      plugins: [],
+      loaders: [],
+      experiments: { import: [] },
+      moduleFederation: [],
+      cdnOptions: { modules: [] },
+      css: {},
+    },
+    vite: {
+      plugins: [],
+    },
+    server: {
+      port: 3000,
+      proxy: undefined,
+      https: false,
+    },
+    build: {
+      base: '/',
+      assetsDir: '',
+      gzip: false,
+      sourceMap: false,
+      outDirName: 'dist',
+      outReport: false,
+      cache: false,
+      dependencyCycleCheck: false,
+    },
+    resolve: {
+      alias: {
+        '@': '/test/project/src',
+      },
+      extensions: ['.ts', '.tsx', '.js', '.jsx'],
+    },
+    library: null,
+    electron: {},
+    base: '/',
+    port: 3000,
+    browserslist: 'defaults',
+    isVue: false,
+    isReact: false,
+    isElectron: false,
+  }
+
+  return {
+    ...base,
+    ...overrides,
+    pages: {
+      ...base.pages,
+      ...(overrides?.pages ?? {}),
+    },
+    rspack: {
+      ...base.rspack,
+      ...(overrides?.rspack ?? {}),
+      plugins: overrides?.rspack?.plugins ?? base.rspack.plugins,
+      loaders: overrides?.rspack?.loaders ?? base.rspack.loaders,
+      experiments: {
+        ...base.rspack.experiments,
+        ...(overrides?.rspack?.experiments ?? {}),
+      },
+      moduleFederation:
+        overrides?.rspack?.moduleFederation ?? base.rspack.moduleFederation,
+      cdnOptions: {
+        ...base.rspack.cdnOptions,
+        ...(overrides?.rspack?.cdnOptions ?? {}),
+      },
+      css: {
+        ...base.rspack.css,
+        ...(overrides?.rspack?.css ?? {}),
+      },
+    },
+    vite: {
+      ...base.vite,
+      ...(overrides?.vite ?? {}),
+    },
+    server: {
+      ...base.server,
+      ...(overrides?.server ?? {}),
+    },
+    build: {
+      ...base.build,
+      ...(overrides?.build ?? {}),
+    },
+    resolve: {
+      ...base.resolve,
+      ...(overrides?.resolve ?? {}),
+      alias: {
+        ...base.resolve.alias,
+        ...(overrides?.resolve?.alias ?? {}),
+      },
+      extensions: overrides?.resolve?.extensions ?? base.resolve.extensions,
+    },
+  }
 }
 
 const createMinimalParams = (
   overrides?: Partial<CreateConfigParams>,
-): CreateConfigParams => ({
-  command: 'build',
-  env: {},
-  context: '/test/project',
-  contextPkg: { name: 'my-lib', version: '1.0.0' },
-  pages: {
-    index: {
-      html: '/test/project/index.html',
-      entry: '/test/project/src/index.ts',
-    },
-  },
-  base: '/',
-  port: 3000,
-  browserslist: 'defaults',
-  isElectron: false,
-  isVue: false,
-  isReact: false,
-  resolveContext: (...paths: string[]) => `/test/project/${paths.join('/')}`,
-  ...overrides,
-})
+): CreateConfigParams => {
+  const config = createMinimalConfig(overrides?.config)
+
+  return {
+    command: 'build',
+    env: {},
+    context: '/test/project',
+    contextPkg: { name: 'my-lib', version: '1.0.0' },
+    config,
+    resolveContext: resolveTestContext,
+    ...overrides,
+    config,
+  }
+}
 
 describe('createLibraryRspackConfigs', () => {
   it('应该为单入口生成默认 es + umd 两个配置', () => {
     const configs = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             name: 'MyLib',
@@ -57,12 +165,8 @@ describe('createLibraryRspackConfigs', () => {
     expect(Array.isArray(configs)).toBe(true)
     const arr = configs as TestCfg[]
     expect(arr).toHaveLength(2)
-
-    // ES 格式
     expect(arr[0].output.library.type).toBe('module')
     expect(arr[0].experiments?.outputModule).toBe(true)
-
-    // UMD 格式
     expect(arr[1].output.library.type).toBe('umd')
     expect(arr[1].output.library.name).toBe('MyLib')
   })
@@ -70,7 +174,7 @@ describe('createLibraryRspackConfigs', () => {
   it('应该为多入口生成默认 es + cjs 两个配置', () => {
     const configs = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: { main: 'src/index.ts', utils: 'src/utils.ts' },
           },
@@ -81,7 +185,6 @@ describe('createLibraryRspackConfigs', () => {
     expect(Array.isArray(configs)).toBe(true)
     const arr = configs as TestCfg[]
     expect(arr).toHaveLength(2)
-
     expect(arr[0].output.library.type).toBe('module')
     expect(arr[1].output.library.type).toBe('commonjs2')
   })
@@ -89,7 +192,7 @@ describe('createLibraryRspackConfigs', () => {
   it('自定义 formats 应只生成指定格式', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['cjs'],
@@ -98,7 +201,6 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    // 单一格式返回单个 Configuration
     expect(Array.isArray(config)).toBe(false)
     expect((config as TestCfg).output.library.type).toBe('commonjs2')
   })
@@ -106,7 +208,7 @@ describe('createLibraryRspackConfigs', () => {
   it('es 格式应启用 outputModule', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['es'],
@@ -117,14 +219,14 @@ describe('createLibraryRspackConfigs', () => {
 
     const cfg = config as TestCfg
     expect(cfg.experiments?.outputModule).toBe(true)
-    expect(cfg.output?.module).toBe(true)
-    expect(cfg.output?.library?.type).toBe('module')
+    expect(cfg.output.module).toBe(true)
+    expect(cfg.output.library.type).toBe('module')
   })
 
   it('umd 格式应设置 library.name', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             name: 'MyLib',
@@ -143,7 +245,7 @@ describe('createLibraryRspackConfigs', () => {
   it('应正确处理 externals', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['es'],
@@ -160,7 +262,7 @@ describe('createLibraryRspackConfigs', () => {
   it('umd 格式应处理 externals + globals 映射', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             name: 'MyLib',
@@ -172,8 +274,9 @@ describe('createLibraryRspackConfigs', () => {
       }),
     )
 
-    const cfg = config as TestCfg
-    expect(cfg.externals).toBeDefined()
+    const cfg = config as TestCfg & {
+      externals: Record<string, { root?: string }>
+    }
     expect(cfg.externals).toHaveProperty('vue')
     expect(cfg.externals.vue.root).toBe('Vue')
   })
@@ -181,7 +284,7 @@ describe('createLibraryRspackConfigs', () => {
   it('应使用自定义 fileName', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['cjs'],
@@ -198,7 +301,7 @@ describe('createLibraryRspackConfigs', () => {
   it('应使用 fileName 函数', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['es'],
@@ -215,7 +318,7 @@ describe('createLibraryRspackConfigs', () => {
   it('应解析 entry 路径', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['es'],
@@ -231,7 +334,7 @@ describe('createLibraryRspackConfigs', () => {
   it('应保留 resolve.alias 配置', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['es'],
@@ -251,7 +354,7 @@ describe('createLibraryRspackConfigs', () => {
   it('应使用自定义 outDirName', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['es'],
@@ -270,7 +373,7 @@ describe('createLibraryRspackConfigs', () => {
   it('应该在 build.sourceMap 为 true 时启用 source-map', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             formats: ['es'],
@@ -286,10 +389,35 @@ describe('createLibraryRspackConfigs', () => {
     expect(cfg.devtool).toBe('source-map')
   })
 
+  it('应读取 rspack 命名空间中的 plugins', () => {
+    const config = createLibraryRspackConfigs(
+      createMinimalParams({
+        config: {
+          library: {
+            entry: 'src/index.ts',
+            formats: ['cjs'],
+          },
+          rspack: {
+            plugins: [{ name: 'custom-rspack-plugin' } as never],
+          },
+        },
+      }),
+    )
+
+    const cfg = config as TestCfg
+    expect(
+      cfg.plugins?.some((plugin) => plugin.name === 'custom-rspack-plugin'),
+    ).toBe(true)
+  })
+
   it('没有 library 配置应该抛出错误', () => {
     expect(() =>
       createLibraryRspackConfigs(
-        createMinimalParams({ userConfig: undefined }),
+        createMinimalParams({
+          config: {
+            library: null,
+          },
+        }),
       ),
     ).toThrow('library config is required')
   })

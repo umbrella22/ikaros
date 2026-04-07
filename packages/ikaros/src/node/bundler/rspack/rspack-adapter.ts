@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises'
 
-import type { Configuration, DefinePluginOptions } from '@rspack/core'
+import type { Configuration } from '@rspack/core'
 
 import type {
   BundlerAdapter,
@@ -26,26 +26,17 @@ export class RspackAdapter implements BundlerAdapter<
 
   createConfig(params: CreateConfigParams): Configuration | Configuration[] {
     // 库模式：build 命令 + 配置了 library
-    if (params.command === 'build' && params.userConfig?.library) {
+    if (params.command === 'build' && params.config.library) {
       return createLibraryRspackConfigs(params)
     }
 
     return createWebRspackConfig({
       command: params.command === 'server' ? Command.SERVER : Command.BUILD,
       mode: params.mode,
-      env: params.env as DefinePluginOptions,
       context: params.context,
       contextPkg: params.contextPkg,
-      userConfig: params.userConfig,
-      pages: params.pages,
-      browserslist: params.browserslist,
-      base: params.base,
-      port: params.port,
-      isElectron: params.isElectron,
-      isVue: params.isVue,
-      isReact: params.isReact,
+      config: params.config,
       resolveContext: params.resolveContext,
-      preWarnings: params.preWarnings,
     })
   }
 
@@ -58,6 +49,7 @@ export class RspackAdapter implements BundlerAdapter<
     await startRspackDevServer(singleConfig, {
       port: options.port,
       onBuildStatus: options.onBuildStatus,
+      registerCleanup: options.registerCleanup,
     })
   }
 

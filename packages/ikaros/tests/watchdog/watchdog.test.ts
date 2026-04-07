@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { createWatchdog } from '../../src/node/watchdog/watchdog'
+import {
+  classifyWatchdogRestartReason,
+  createWatchdog,
+  resolveWatchdogWatchPlan,
+} from '../../src/node/watchdog/watchdog'
 
 // 用于等待文件系统事件传播 + 防抖
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -119,6 +123,50 @@ describe('Watchdog', () => {
     }
   })
 
+  it('应导出 watch plan 与重启分类信息', async () => {
+    writeFileSync(
+      join(tempDir, 'ikaros.config.mjs'),
+      'import shared from "./config.shared.mjs"\nexport default shared',
+    )
+    writeFileSync(join(tempDir, 'config.shared.mjs'), 'export default { a: 1 }')
+
+    const plan = await resolveWatchdogWatchPlan({
+      context: tempDir,
+      mode: 'production',
+    })
+
+    expect(plan.envDir).toBe(join(tempDir, 'env'))
+    expect(plan.envFiles).toEqual([
+      join(tempDir, 'env', '.env'),
+      join(tempDir, 'env', '.env.local'),
+      join(tempDir, 'env', '.env.production'),
+      join(tempDir, 'env', '.env.production.local'),
+    ])
+    expect(plan.configEntryFiles).toContain(join(tempDir, 'ikaros.config.mjs'))
+    expect(plan.configDependencyFiles).toContain(
+      join(tempDir, 'config.shared.mjs'),
+    )
+    expect(plan.watchedPaths).toContain(join(tempDir, 'env'))
+    expect(
+      classifyWatchdogRestartReason(
+        {
+          file: join(tempDir, 'env', '.env'),
+          event: 'change',
+        },
+        plan,
+      ),
+    ).toBe('env')
+    expect(
+      classifyWatchdogRestartReason(
+        {
+          file: join(tempDir, 'config.shared.mjs'),
+          event: 'change',
+        },
+        plan,
+      ),
+    ).toBe('config')
+  })
+
   it('非配置文件变更不应触发 onRestart', async () => {
     // 使用独立的临时目录，不含 env 目录，避免干扰
     const isolatedDir = mkdtempSync(join(tmpdir(), 'watchdog-isolated-'))
@@ -189,12 +237,16 @@ describe('Watchdog', () => {
     rmSync(noEnvDir, { recursive: true, force: true })
   })
 
-  it('非当前生效的 env 文件变更不应触发 onRestart', async () => {
-    writeFileSync(join(tempDir, 'env', '.env.local'), 'FOO=local')
+  it('非当前 mode 的 env 文件变更不应触发 onRestart', async () => {
+    const isolatedDir = mkdtempSync(join(tmpdir(), 'watchdog-env-mode-'))
+    mkdirSync(join(isolatedDir, 'env'))
+    writeFileSync(join(isolatedDir, 'ikaros.config.mjs'), 'export default {}')
+    writeFileSync(join(isolatedDir, 'env', '.env.staging'), 'FOO=staging')
 
     const onRestart = vi.fn().mockResolvedValue(undefined)
     const watchdog = createWatchdog({
-      context: tempDir,
+      context: isolatedDir,
+      mode: 'development',
       onRestart,
       debounceMs: 100,
     })
@@ -203,13 +255,17 @@ describe('Watchdog', () => {
       await wait(300)
       onRestart.mockClear()
 
-      writeFileSync(join(tempDir, 'env', '.env.local'), 'FOO=updated-local')
+      writeFileSync(
+        join(isolatedDir, 'env', '.env.staging'),
+        'FOO=updated-staging',
+      )
 
       await wait(500)
 
       expect(onRestart).not.toHaveBeenCalled()
     } finally {
       await watchdog.close()
+      rmSync(isolatedDir, { recursive: true, force: true })
     }
   })
 

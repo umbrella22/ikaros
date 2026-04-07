@@ -1,83 +1,75 @@
 // config/config-loader.ts — 配置文件发现与加载
 
 import { dirname, extname, isAbsolute, join, resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
-import { parse } from 'yaml'
+
 import fsp from 'node:fs/promises'
 import fse from 'fs-extra'
-import { type OxcError, transform } from 'oxc-transform'
+import { createJiti } from 'jiti'
+import { parse } from 'yaml'
+
 import type { UserConfig } from './user-config'
 import { CONFIG_FILE_NAME, CONFIG_FILE_SUFFIXES } from '../shared/constants'
 
-async function transformConfig(path: string, isTs: boolean) {
-  const filename = path
-  const rawCode = await fsp.readFile(path, 'utf-8')
-  const { code, errors } = await transform(filename, rawCode, {
-    lang: isTs ? 'ts' : 'js',
-  })
-  if (errors.length > 0) {
-    throw new Error(
-      'Transformation failed: ' +
-        errors.map((e: OxcError) => e.message).join(', '),
-    )
-  }
-  return {
-    code,
-  }
-}
+type FileType =
+  | '.mjs'
+  | '.js'
+  | '.cjs'
+  | '.ts'
+  | '.mts'
+  | '.cts'
+  | '.json'
+  | '.yaml'
 
-async function requireConfig(fileName: string, code: string) {
-  const fileBase = `${fileName}.timestamp-${Date.now()}-${Math.random()
-    .toString(16)
-    .slice(2)}`
-  const fileNameTmp = `${fileBase}.mjs`
-  const fileUrl = `${pathToFileURL(fileBase)}.mjs`
-  await fsp.writeFile(fileNameTmp, code)
-  try {
-    const module = await import(fileUrl)
-    return module.default
-  } finally {
-    await fsp.unlink(fileNameTmp).catch(() => {})
-  }
-}
+const EXECUTABLE_CONFIG_SUFFIXES = new Set<FileType>([
+  '.mjs',
+  '.js',
+  '.cjs',
+  '.ts',
+  '.mts',
+  '.cts',
+])
 
-async function loadConfigAsTsOrMjs(filePath: string, isTs = false) {
-  const { code } = await transformConfig(filePath, isTs)
-  return requireConfig(filePath, code)
-}
-
-type FileType = '.mjs' | '.ts' | '.json' | '.yaml'
-
-const CONFIG_DEPENDENCY_SUFFIXES = ['.mjs', '.js', '.ts', '.json', '.yaml']
+const CONFIG_DEPENDENCY_SUFFIXES: FileType[] = [
+  '.mjs',
+  '.js',
+  '.cjs',
+  '.ts',
+  '.mts',
+  '.cts',
+  '.json',
+  '.yaml',
+]
 const CONFIG_IMPORT_PATTERNS = [
   /(?:import|export)\s+(?:[^'"`]*?\s+from\s+)?['"]([^'"`]+)['"]/g,
   /import\s*\(\s*['"]([^'"`]+)['"]\s*\)/g,
   /require\(\s*['"]([^'"`]+)['"]\s*\)/g,
 ]
 
-const fileType = new Map<
-  FileType,
-  (filePath: string) => Promise<UserConfig | undefined>
->()
-
-fileType.set('.mjs', async (filePath) => {
-  const fileUrl = pathToFileURL(filePath)
-  const importedModule = await import(fileUrl.href)
-  return importedModule.default
+const configLoader = createJiti(import.meta.url, {
+  moduleCache: false,
+  interopDefault: true,
+  nativeModules: ['@rspack/core', 'typescript'],
+  tryNative: false,
 })
 
-fileType.set('.ts', async (filePath) => {
-  return await loadConfigAsTsOrMjs(filePath, true)
-})
+async function loadConfigAsExecutable(
+  filePath: string,
+): Promise<UserConfig | undefined> {
+  const loadedModule = configLoader(filePath) as
+    | UserConfig
+    | { default?: UserConfig }
+    | undefined
 
-fileType.set('.json', async (filePath) => {
-  return await fse.readJson(filePath)
-})
+  if (
+    loadedModule &&
+    typeof loadedModule === 'object' &&
+    'default' in loadedModule
+  ) {
+    return loadedModule.default
+  }
 
-fileType.set('.yaml', async (filePath) => {
-  const text = await fsp.readFile(filePath, 'utf8')
-  return parse(text)
-})
+  return loadedModule
+}
 
 function resolveConfigInputPath(context: string, filePath: string): string {
   return isAbsolute(filePath) ? filePath : resolve(context, filePath)
@@ -212,6 +204,16 @@ export async function resolveConfig({
   if (!configPath) return undefined
 
   const suffix = extname(configPath) as FileType
-  if (!fileType.has(suffix)) throw new Error('No configuration file ! ')
-  return fileType.get(suffix)!(configPath)
+  if (EXECUTABLE_CONFIG_SUFFIXES.has(suffix)) {
+    return loadConfigAsExecutable(configPath)
+  }
+  if (suffix === '.json') {
+    return await fse.readJson(configPath)
+  }
+  if (suffix === '.yaml') {
+    const text = await fsp.readFile(configPath, 'utf8')
+    return parse(text)
+  }
+
+  throw new Error('No configuration file ! ')
 }

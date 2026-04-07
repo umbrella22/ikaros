@@ -3,14 +3,14 @@ import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
 import CompressionPlugin from 'compression-webpack-plugin'
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack'
 import { isEmpty, isArray } from 'es-toolkit/compat'
-import type { UserConfig } from '../../config/user-config'
+import type { NormalizedConfig } from '../../config/normalize-config'
 import type { Command } from '../../compile/compile-context'
 import CdnPlugin from '../../plugins/cdn-plugin'
 import { ASSET_PATHS } from '../../shared/constants'
 
 export interface PluginFactoryOptions {
   command: Command
-  userConfig?: UserConfig
+  config: NormalizedConfig
   isDev: boolean
   assetsDir: string
   context: string
@@ -19,9 +19,13 @@ export interface PluginFactoryOptions {
 export class CreatePluginHelper {
   constructor(private options: PluginFactoryOptions) {}
 
+  private getRspackConfig() {
+    return this.options.config.rspack
+  }
+
   /** 创建源映射插件 */
   createSourceMapPlugin(): Plugin | undefined {
-    const { isDev, userConfig } = this.options
+    const { isDev, config } = this.options
 
     if (isDev) {
       return new rspack.EvalSourceMapDevToolPlugin({
@@ -30,7 +34,7 @@ export class CreatePluginHelper {
       })
     }
 
-    if (userConfig?.build?.sourceMap ?? false) {
+    if (config.build.sourceMap) {
       return new rspack.SourceMapDevToolPlugin({
         test: [/.js/, /.mjs/],
         filename: '[file].map[query]',
@@ -52,8 +56,8 @@ export class CreatePluginHelper {
 
   /** 创建Doctor插件 */
   createDoctorPlugin(): Plugin | undefined {
-    const { isDev, userConfig } = this.options
-    if (isDev || !userConfig?.build?.outReport) {
+    const { isDev, config } = this.options
+    if (isDev || !config.build.outReport) {
       return
     }
 
@@ -62,8 +66,8 @@ export class CreatePluginHelper {
 
   /** 创建Gzip插件 */
   createGzipPlugin(): Plugin | undefined {
-    const { isDev, userConfig } = this.options
-    if (isDev || !userConfig?.build?.gzip) {
+    const { isDev, config } = this.options
+    if (isDev || !config.build.gzip) {
       return
     }
 
@@ -72,8 +76,8 @@ export class CreatePluginHelper {
 
   /** 创建CDN插件 */
   createCdnPlugin(): Plugin | undefined {
-    const { cdnOptions } = this.options.userConfig ?? {}
-    if (!cdnOptions || isEmpty(cdnOptions.modules)) {
+    const { cdnOptions } = this.getRspackConfig()
+    if (isEmpty(cdnOptions.modules)) {
       return
     }
     return new CdnPlugin({
@@ -84,8 +88,8 @@ export class CreatePluginHelper {
 
   /** 创建模块联邦插件 */
   createModuleFederationPlugin(): Plugin | Plugin[] | undefined {
-    const moduleFederation = this.options.userConfig?.moduleFederation
-    if (!moduleFederation) return
+    const moduleFederation = this.getRspackConfig().moduleFederation
+    if (moduleFederation.length === 0) return
 
     if (isArray(moduleFederation)) {
       return moduleFederation.map((item) => new ModuleFederationPlugin(item))
@@ -95,8 +99,8 @@ export class CreatePluginHelper {
 
   /** 创建依赖循环检查插件 */
   createDependencyCyclePlugin(): Plugin | undefined {
-    const { isDev, userConfig } = this.options
-    if (isDev || !userConfig?.build?.dependencyCycleCheck) {
+    const { isDev, config } = this.options
+    if (isDev || !config.build.dependencyCycleCheck) {
       return
     }
 

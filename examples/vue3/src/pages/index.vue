@@ -17,7 +17,7 @@ defineComponent({
   name: 'page-index',
 })
 
-const { present, runing } = useScroll('Hi, welcome to Vue3 Template')
+const { present, runing } = useScroll('Hi, welcome to Vue3 Template dsaaasds')
 </script>
 
 <style lang="scss" scoped>

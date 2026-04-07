@@ -1,376 +1,82 @@
-import type { Configuration, DefinePluginOptions } from '@rspack/core'
-import { rspack } from '@rspack/core'
-import { isString, escapeRegExp } from 'es-toolkit'
-import { join } from 'node:path'
+import type { Configuration } from '@rspack/core'
 
-import type { Pages } from '../../bundler/rspack/loader-plugin-helper'
 import {
   CreateLoader,
   CreateMpaAssets,
-  CreatePlugins,
 } from '../../bundler/rspack/loader-plugin-helper'
 import {
-  ASSET_PATHS,
-  DEFAULT_HTML_TEMPLATE,
-  DEFAULT_OUT_DIR,
-  DEFAULT_PUBLIC_DIR,
-  ELECTRON_DEFAULT_OUTPUT,
-  ELECTRON_RENDERER_SUBDIR,
-  extensions,
-  resolveCLI,
-} from '../../shared/constants'
-import StatsPlugin from '../../plugins/stats-plugin'
-import {
-  PreWarningsPlugin,
-  type PreWarning,
-} from '../../plugins/pre-warnings-plugin'
-import { CreatePluginHelper } from '../../bundler/rspack/plugin-factory'
-import { createCdnExternals } from '../../plugins/cdn-plugin'
-import type { UserConfig } from '../../config/user-config'
+  createRspackDevServerConfig,
+  createRspackOutputConfig,
+  createRspackResolveConfig,
+  createRspackTarget,
+  createRspackWatchOptions,
+} from './rspack-config-sections'
+import { createVueOrReactConfig } from './rspack-framework-config'
+import type { NormalizedConfig } from '../../config/normalize-config'
 import type { PackageJson } from '../compile-context'
 import { Command } from '../compile-context'
 
 export type CreateWebRspackConfigParams = {
   command: Command
   mode?: string
-  env: DefinePluginOptions
   context: string
   contextPkg?: PackageJson
-  userConfig?: UserConfig
-  pages: Pages
-  browserslist: string
-  base: string
-  port: number
-  isElectron: boolean
-  isVue: boolean
-  isReact: boolean
+  config: NormalizedConfig
   resolveContext: (...paths: string[]) => string
-  preWarnings?: PreWarning[]
-}
-
-type VueOrReactConfig = {
-  noParse?: NonNullable<NonNullable<Configuration['module']>['noParse']>
-  env?: DefinePluginOptions
-}
-
-const createVueOrReactConfig = (params: {
-  isVue: boolean
-  isReact: boolean
-}): VueOrReactConfig => {
-  const { isVue, isReact } = params
-
-  if (isVue) {
-    return {
-      noParse: /^(vue|vue-router|vuex|vuex-router-sync)$/,
-    }
-  }
-
-  if (isReact) {
-    return {
-      noParse: (content: string) => {
-        return /(react|react-dom|react-is)\.production\.min\.js$/.test(content)
-      },
-      env: {
-        REACT_APP_ENABLE_DEVTOOLS: false,
-      },
-    }
-  }
-
-  return {}
-}
-
-function createOptimization(command: Command): Configuration['optimization'] {
-  if (command === Command.SERVER) {
-    return {
-      minimize: false,
-      removeAvailableModules: false,
-      removeEmptyChunks: false,
-      splitChunks: false,
-    }
-  }
-
-  return {
-    minimize: true,
-    minimizer: [
-      new rspack.LightningCssMinimizerRspackPlugin(),
-      new rspack.SwcJsMinimizerRspackPlugin(),
-    ],
-    splitChunks: {
-      chunks: 'all',
-      minSize: 30000,
-      minChunks: 1,
-      maxAsyncRequests: 5,
-      maxInitialRequests: 3,
-      cacheGroups: {
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          priority: 10,
-          chunks: 'all',
-        },
-        common: {
-          name: 'common',
-          minChunks: 2,
-          priority: 5,
-          reuseExistingChunk: true,
-        },
-      },
-    },
-  }
-}
-
-function createCacheConfig(
-  params: Pick<CreateWebRspackConfigParams, 'command' | 'userConfig'>,
-): Pick<Configuration, 'cache' | 'experiments'> | undefined {
-  if (params.command === Command.SERVER) {
-    return
-  }
-  if (!params.userConfig?.build?.cache) {
-    return
-  }
-
-  return {
-    cache: true,
-    experiments: {
-      cache: {
-        type: 'persistent',
-      },
-    },
-  }
-}
-
-function getOutDirPath(
-  params: Pick<
-    CreateWebRspackConfigParams,
-    'userConfig' | 'isElectron' | 'resolveContext'
-  >,
-): string {
-  const { userConfig, isElectron, resolveContext } = params
-
-  const outDirName = userConfig?.build?.outDirName
-
-  if (isElectron) {
-    const electronConfig = userConfig?.electron
-    const defaultOutput = resolveContext(ELECTRON_DEFAULT_OUTPUT)
-
-    if (electronConfig?.build?.outDir) {
-      return join(
-        resolveContext(electronConfig.build.outDir),
-        ELECTRON_RENDERER_SUBDIR,
-      )
-    }
-
-    return defaultOutput
-  }
-
-  if (isString(outDirName)) {
-    return resolveContext(outDirName)
-  }
-
-  return resolveContext(DEFAULT_OUT_DIR)
-}
-
-function formatAssetsPath(assetsDir: string, path: string): string {
-  return [assetsDir, path].filter(Boolean).join('/').replace(/\/+/g, '/')
 }
 
 export function createWebRspackConfig(
   params: CreateWebRspackConfigParams,
 ): Configuration {
-  const {
-    command,
-    mode,
-    env: envVars,
-    context,
-    contextPkg,
-    userConfig,
-    pages,
-    browserslist,
-    base,
-    port,
-    isElectron,
-    resolveContext,
-  } = params
+  const { command, mode, context, contextPkg, config, resolveContext } = params
 
   const isDev = command === Command.SERVER
   const env = isDev ? 'development' : 'production'
+  const rspackConfig = config.rspack
 
   const loaderHelper = new CreateLoader({
     env,
     mode,
     context,
   })
-  const pluginHelper = new CreatePlugins({
-    env,
-    mode,
-    context,
-  })
 
   const mpaAssetsHelper = new CreateMpaAssets({
-    pages,
-    enablePages: userConfig?.enablePages,
+    pages: config.pages,
+    enablePages: config.enablePages,
   })
 
-  const { entry, plugins: mpaPlugins } = mpaAssetsHelper.create()
-  const allPreWarnings = [
-    ...(params.preWarnings ?? []),
-    ...mpaAssetsHelper.warnings,
-  ]
-  const { env: frameworkEnv, noParse } = createVueOrReactConfig({
-    isVue: params.isVue,
-    isReact: params.isReact,
+  const { entry } = mpaAssetsHelper.create()
+  const { noParse } = createVueOrReactConfig({
+    isVue: config.isVue,
+    isReact: config.isReact,
   })
 
   const rules = loaderHelper
     .useDefaultResourceLoader()
-    .useDefaultScriptLoader(userConfig?.experiments)
-    .useDefaultCssLoader(userConfig?.css)
-    .add(userConfig?.loaders)
-    .end()
-
-  const assetsDir = userConfig?.build?.assetsDir ?? ''
-  const createPluginHelper = new CreatePluginHelper({
-    command,
-    userConfig,
-    isDev,
-    assetsDir,
-    context,
-  })
-
-  const plugins = pluginHelper
-    .useDefaultEnvPlugin({
-      extEnv: {
-        ...userConfig?.define,
-      },
-      frameworkEnv,
-      env: envVars,
-    })
-    .useCopyPlugin()
-    .add(mpaPlugins)
-    .add(new StatsPlugin(userConfig))
-    .add(new PreWarningsPlugin(allPreWarnings, userConfig?.quiet))
-    .add(createPluginHelper.createSourceMapPlugin())
-    .add(createPluginHelper.createCssExtractPlugin())
-    .add(createPluginHelper.createDoctorPlugin())
-    .add(createPluginHelper.createGzipPlugin())
-    .add(createPluginHelper.createCdnPlugin())
-    .add(createPluginHelper.createModuleFederationPlugin())
-    .add(createPluginHelper.createDependencyCyclePlugin())
-    .add(userConfig?.plugins)
+    .useDefaultScriptLoader(rspackConfig?.experiments)
+    .useDefaultCssLoader(rspackConfig?.css)
+    .add(rspackConfig?.loaders)
     .end()
 
   return {
     mode: env,
     context,
     entry,
-    target: isElectron
-      ? 'electron-renderer'
-      : ['web', 'es2015', `browserslist:${browserslist}`],
-    externals: userConfig?.cdnOptions?.modules
-      ? createCdnExternals(userConfig.cdnOptions.modules)
-      : undefined,
-    resolve: {
-      alias: {
-        '@': resolveContext('src'),
-        ...userConfig?.resolve?.alias,
-      },
-
-      extensions: userConfig?.resolve?.extensions || extensions,
-
-      modules: [
-        'node_modules',
-        resolveContext('node_modules'),
-        resolveCLI('node_modules'),
-      ],
-    },
-    output: {
-      clean: !isDev,
-      path: getOutDirPath({ userConfig, isElectron, resolveContext }),
-      publicPath: isElectron && !isDev ? './' : base,
-      filename: isDev
-        ? '[name].js'
-        : formatAssetsPath(assetsDir, ASSET_PATHS.js),
-      chunkFilename: isDev
-        ? '[name].chunk.js'
-        : formatAssetsPath(assetsDir, ASSET_PATHS.jsChunk),
-      cssFilename: isDev
-        ? '[name].css'
-        : formatAssetsPath(assetsDir, ASSET_PATHS.css),
-      cssChunkFilename: isDev
-        ? '[name].chunk.css'
-        : formatAssetsPath(assetsDir, ASSET_PATHS.cssChunk),
-      chunkLoadingGlobal: `${contextPkg?.name || 'ikaros'}_chunk`,
-      pathinfo: false,
-    },
-    optimization: createOptimization(command),
+    target: createRspackTarget(config),
+    resolve: createRspackResolveConfig({ config, resolveContext }),
+    output: createRspackOutputConfig({
+      command,
+      contextPkg,
+      config,
+      resolveContext,
+    }),
     stats: 'none',
-    watchOptions: {
-      aggregateTimeout: 500,
-      ignored: /node_modules/,
-    },
+    watchOptions: createRspackWatchOptions(),
     module: {
       rules,
       noParse,
     },
-    plugins,
-    devServer: {
-      hot: true,
-      port,
-      server: (() => {
-        const https = userConfig?.server?.https
-
-        if (!https) {
-          return 'http'
-        }
-
-        if (https === true) {
-          return 'https'
-        }
-
-        return {
-          type: 'https',
-          options: https,
-        }
-      })(),
-      allowedHosts: 'all',
-      proxy: userConfig?.server?.proxy,
-
-      historyApiFallback: {
-        rewrites: [
-          {
-            from: /\.(js|css|json|png|jpe?g|gif|svg|ico|woff2?|eot|ttf|otf|mp4|webm|ogg|mp3|wav|flac|aac|map)(\?.*)?$/,
-            to: (context: { parsedUrl: { pathname: string | null } }) =>
-              context.parsedUrl.pathname ?? '',
-          },
-          {
-            from: new RegExp(`^${escapeRegExp(base)}`),
-            to: join(base, DEFAULT_HTML_TEMPLATE),
-          },
-        ],
-      },
-
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-      },
-
-      static: {
-        directory: resolveContext(DEFAULT_PUBLIC_DIR),
-        publicPath: base,
-      },
-
-      client: {
-        logging: 'none',
-        overlay: {
-          errors: true,
-          warnings: false,
-          runtimeErrors: false,
-        },
-        webSocketURL: `auto://0.0.0.0:${port}/ws`,
-      },
-    },
-    experiments: {
-      css: true,
-    },
-    ...createCacheConfig({ command, userConfig }),
+    plugins: [],
+    devServer: createRspackDevServerConfig({ config, resolveContext }),
   } satisfies Configuration
 }

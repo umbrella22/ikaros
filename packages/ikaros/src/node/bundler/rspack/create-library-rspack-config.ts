@@ -141,10 +141,10 @@ const resolveFileName = (
 // ─── Output Path ────────────────────────────────────────────────────────────
 
 const getOutDirPath = (
-  params: Pick<CreateConfigParams, 'userConfig' | 'resolveContext'>,
+  params: Pick<CreateConfigParams, 'config' | 'resolveContext'>,
 ): string => {
-  const { userConfig, resolveContext } = params
-  const outDirName = userConfig?.build?.outDirName
+  const { config, resolveContext } = params
+  const outDirName = config.build.outDirName
 
   if (typeof outDirName === 'string' && outDirName) {
     return resolveContext(outDirName)
@@ -161,12 +161,12 @@ const createSingleFormatConfig = (params: {
   configParams: CreateConfigParams
 }): Configuration => {
   const { format, library, configParams } = params
-  const { context, contextPkg, userConfig, browserslist, resolveContext } =
-    configParams
+  const { context, contextPkg, config, resolveContext } = configParams
+  const rspackConfig = config.rspack
 
   const isEsm = format === 'es'
   const entry = resolveEntry(library.entry, resolveContext)
-  const outDir = getOutDirPath({ userConfig, resolveContext })
+  const outDir = getOutDirPath({ config, resolveContext })
   const needsName = format === 'umd' || format === 'iife'
 
   const fileName = resolveFileName(
@@ -182,13 +182,12 @@ const createSingleFormatConfig = (params: {
     entry,
     target: isEsm
       ? ['web', 'es2015']
-      : ['web', 'es2015', `browserslist:${browserslist}`],
+      : ['web', 'es2015', `browserslist:${config.browserslist}`],
     resolve: {
       alias: {
-        '@': resolveContext('src'),
-        ...userConfig?.resolve?.alias,
+        ...config.resolve.alias,
       },
-      extensions: userConfig?.resolve?.extensions || extensions,
+      extensions: config.resolve.extensions || extensions,
     },
     output: {
       clean: false,
@@ -211,13 +210,13 @@ const createSingleFormatConfig = (params: {
       ],
     },
     plugins: [
-      ...(userConfig?.define
-        ? [new rspack.DefinePlugin(userConfig.define as Record<string, string>)]
+      ...(Object.keys(config.define).length > 0
+        ? [new rspack.DefinePlugin(config.define as Record<string, string>)]
         : []),
-      ...(userConfig?.plugins
-        ? Array.isArray(userConfig.plugins)
-          ? userConfig.plugins
-          : [userConfig.plugins]
+      ...(rspackConfig?.plugins
+        ? Array.isArray(rspackConfig.plugins)
+          ? rspackConfig.plugins
+          : [rspackConfig.plugins]
         : []),
     ],
     module: {
@@ -245,7 +244,7 @@ const createSingleFormatConfig = (params: {
       ...(isEsm ? { outputModule: true } : {}),
       css: true,
     },
-    devtool: userConfig?.build?.sourceMap ? 'source-map' : false,
+    devtool: config.build.sourceMap ? 'source-map' : false,
     stats: 'none',
   } as Configuration
 }
@@ -260,7 +259,7 @@ const createSingleFormatConfig = (params: {
 export const createLibraryRspackConfigs = (
   params: CreateConfigParams,
 ): Configuration | Configuration[] => {
-  const library = params.userConfig?.library
+  const library = params.config.library
   if (!library) {
     throw new Error('[ikaros] library config is required for library mode')
   }

@@ -73,6 +73,40 @@ export interface BundlerBuildOptions {
   onBuildStatus?: (status: BuildStatus) => void
 }
 
+export interface NormalizedConfig {
+  bundler: 'rspack' | 'vite'
+  quiet: boolean
+  pages: Pages
+  enablePages?: string[] | false
+  define: Record<string, unknown>
+  resolve: {
+    alias: Record<string, string>
+    extensions: string[]
+  }
+  server: {
+    port: number
+    proxy?: Record<string, string | ProxyOptions>
+    https: boolean | HttpsServerOptions
+  }
+  build: {
+    base: string
+    assetsDir: string
+    gzip: boolean
+    sourceMap: boolean
+    outDirName: string
+    outReport: boolean
+    cache: boolean
+    dependencyCycleCheck: boolean
+  }
+  vite?: {
+    plugins?: PluginOption | PluginOption[]
+  }
+  library: LibraryConfig | null
+  base: string
+  port: number
+  isElectron: boolean
+}
+
 // ─── CreateConfigParams（与主包 CreateConfigParams 对齐）─────────────────
 
 export interface CreateConfigParams {
@@ -81,45 +115,10 @@ export interface CreateConfigParams {
   env: Record<string, unknown>
   context: string
   contextPkg?: { name: string; version: string }
-  userConfig?: ViteUserConfigSubset
-  pages: Pages
-  base: string
-  port: number
-  /** browserslist 查询字符串（预留，Vite 7+ 可原生支持） */
-  browserslist?: string
-  isElectron: boolean
-  isVue?: boolean
-  isReact?: boolean
+  config: NormalizedConfig
   resolveContext: (...paths: string[]) => string
 }
 
-// ─── 用户配置子集（Vite bundler 关心的字段）──────────────────────────────
+// ─── 兼容导出（保留给内部工具使用）────────────────────────────────────────
 
-export type ViteUserConfigSubset = {
-  enablePages?: string[] | false
-  define?: Record<string, unknown>
-  resolve?: {
-    alias?: Record<string, string>
-    extensions?: string[]
-  }
-  server?: {
-    port?: number
-    proxy?: Record<string, string | ProxyOptions>
-    https?: boolean | HttpsServerOptions
-  }
-  build?: {
-    base?: string
-    assetsDir?: string
-    gzip?: boolean
-    sourceMap?: boolean
-    outDirName?: string
-    outReport?: boolean
-    /** 编译缓存（预留，与主包 UserConfig 对齐） */
-    cache?: boolean
-    dependencyCycleCheck?: boolean
-  }
-  vite?: {
-    plugins?: PluginOption | PluginOption[]
-  }
-  library?: LibraryConfig
-}
+export type ViteUserConfigSubset = NormalizedConfig

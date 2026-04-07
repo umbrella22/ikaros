@@ -1,5 +1,4 @@
-// config/user-config.ts — UserConfig 类型定义（bundler-agnostic 方向的过渡版本）
-// 当前保持与旧 user-config.ts 完全一致，仅迁移位置
+// config/user-config.ts — UserConfig 类型定义
 
 import type {
   Plugin,
@@ -7,6 +6,7 @@ import type {
   ModuleFederationPluginOptions,
   DefinePluginOptions,
 } from '@rspack/core'
+import type { IkarosPluginAPI } from '../core/plugin-api'
 import type { Command } from '../compile/compile-context'
 import type {
   Pages,
@@ -17,6 +17,11 @@ import type { ImportMeta } from '../../types/env'
 import type { CdnPluginOptions } from '../plugins/cdn-plugin'
 
 export type Bundler = 'rspack' | 'vite'
+
+export interface IkarosPlugin {
+  name: string
+  setup: (api: IkarosPluginAPI) => void | Promise<void>
+}
 
 // ─── Library Mode ────────────────────────────────────────────────────────────
 
@@ -141,6 +146,50 @@ export interface ModuleFederationOptions extends Omit<
     | 'node-commonjs'
 }
 
+export interface RspackConfig {
+  /**
+   * Rspack 插件
+   * @see {@link https://rspack.dev/zh/guide/features/plugin}
+   */
+  plugins?: Plugin | Plugin[]
+
+  /**
+   * Rspack loader
+   * @see {@link https://rspack.dev/zh/guide/features/loader}
+   */
+  loaders?: Loader[]
+
+  /**
+   * RspackExperiments
+   * @see {@link https://rspack.dev/zh/guide/features/builtin-swc-loader#rspackexperimentsimport}
+   */
+  experiments?: RspackExperiments
+
+  /**
+   * 模块联邦
+   * @see {@link https://module-federation.io/zh/blog/announcement.html}
+   */
+  moduleFederation?: ModuleFederationOptions | ModuleFederationOptions[]
+
+  /**
+   * CDN 配置
+   */
+  cdnOptions?: CdnPluginOptions
+
+  /**
+   * css loader 配置
+   */
+  css?: CssLoaderOptions
+}
+
+export interface ViteConfig {
+  /**
+   * Vite 插件
+   * @see {@link https://vite.dev/guide/api-plugin}
+   */
+  plugins?: unknown
+}
+
 export interface UserConfig {
   /**
    * 底层打包器
@@ -149,6 +198,13 @@ export interface UserConfig {
    * @default 'rspack'
    */
   bundler?: Bundler
+
+  /**
+   * 框架级插件。
+   * 注意：这里不是 bundler 原生插件；rspack/vite 原生插件分别放在 rspack/vite 命名空间中。
+   */
+  plugins?: IkarosPlugin[]
+
   /**
    * 静默模式，抑制非关键警告（如缺少 env 文件、页面配置等）
    * @default false
@@ -184,48 +240,17 @@ export interface UserConfig {
    * @default {}
    */
   define?: DefinePluginOptions
-  /**
-   * 模块联邦
-   * @see {@link https://module-federation.io/zh/blog/announcement.html}
-   * @default undefined
-   */
-  moduleFederation?: ModuleFederationOptions | ModuleFederationOptions[]
-  /**
-   * Rspack 插件（仅 bundler = 'rspack' 时生效）
-   * @see {@link https://rspack.dev/zh/guide/features/plugin}
-   */
-  plugins?: Plugin | Plugin[]
-  /**
-   * Rspack loader（仅 bundler = 'rspack' 时生效）
-   * @see {@link https://rspack.dev/zh/guide/features/loader}
-   */
-  loaders?: Loader[]
 
   /**
-   * Vite 配置（仅 bundler = 'vite' 时生效）
-   * - 注意：Vite 没有 loader 概念；请通过插件/原生配置实现
+   * Rspack 配置（仅 bundler = 'rspack' 时消费）
    */
-  vite?: {
-    /**
-     * Vite 插件（仅 bundler = 'vite' 时生效）
-     * @see {@link https://vite.dev/guide/api-plugin}
-     */
-    // 方案A：core 不依赖 vite 类型，交给可选 bundler 包提供强类型
-    plugins?: unknown
-  }
+  rspack?: RspackConfig
+
   /**
-   * RspackExperiments
-   * @default undefined
-   * @see {@link https://rspack.dev/zh/guide/features/builtin-swc-loader#rspackexperimentsimport}
-   * @see {@link rules https://www.npmjs.com/package/babel-plugin-import}
+   * Vite 配置（仅 bundler = 'vite' 时消费）
    */
-  experiments?: RspackExperiments
-  /**
-   * cdn配置
-   * @default undefined
-   * @see {@link https://www.npmjs.com/package/webpack-cdn-plugin}
-   */
-  cdnOptions?: CdnPluginOptions
+  vite?: ViteConfig
+
   /**
    * dev 服务相关 该对象下的值不影响 生产环境
    */
@@ -251,14 +276,6 @@ export interface UserConfig {
      */
     https?: boolean | import('https').ServerOptions
   }
-  /**
-   * css loader 配置
-   * @see {@link lightningcssOptions https://rspack.dev/zh/guide/features/builtin-lightningcss-loader#%E9%80%89%E9%A1%B9}
-   * @see {@link stylusOptions https://webpack.js.org/loaders/stylus-loader/#options}
-   * @see {@link lessOptions https://webpack.js.org/loaders/less-loader/#options}
-   * @see {@link sassOptions https://webpack.js.org/loaders/sass-loader/#options}
-   */
-  css?: CssLoaderOptions
   /**
    * 构建配置
    */
@@ -354,6 +371,14 @@ export interface UserConfig {
    */
   electron?: ElectronConfig
 }
+
+/**
+ * 经过插件 modifyIkarosConfig 修改后的用户配置。
+ *
+ * 结构与 UserConfig 相同，但语义上代表「已被插件处理过」的中间状态。
+ * 对齐 rsbuild 三阶段模型：RawUserConfig → ResolvedUserConfig → NormalizedConfig。
+ */
+export type ResolvedUserConfig = UserConfig
 
 export type ConfigEnvPre = Readonly<{
   mode: string

@@ -1,26 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ViteBundlerAdapter } from '../src/vite-adapter'
-import type { CreateConfigParams } from '../src/types'
-
-const createMinimalParams = (
-  overrides?: Partial<CreateConfigParams>,
-): CreateConfigParams => ({
-  command: 'server',
-  env: {},
-  context: '/test/project',
-  pages: {
-    index: {
-      html: '/test/project/index.html',
-      entry: '/test/project/src/index.ts',
-    },
-  },
-  base: '/',
-  port: 3000,
-  isElectron: false,
-  resolveContext: (...paths: string[]) => `/test/project/${paths.join('/')}`,
-  ...overrides,
-})
+import { createMinimalParams } from './test-utils'
 
 describe('ViteBundlerAdapter', () => {
   it('should have name = "vite"', () => {
@@ -49,11 +30,8 @@ describe('ViteBundlerAdapter', () => {
     const config = adapter.createConfig(
       createMinimalParams({
         mode: 'production',
-        browserslist: 'defaults',
-        isVue: true,
-        isReact: false,
         contextPkg: { name: 'my-app', version: '2.0.0' },
-        userConfig: {
+        config: {
           define: { __APP__: 'test' },
           resolve: { alias: { '~': '/custom' } },
           build: { sourceMap: true, cache: true },

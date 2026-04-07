@@ -2,7 +2,6 @@
 
 import type { BundlerAdapter } from '../../bundler/types'
 import type { CompileContext } from '../../compile/compile-context'
-import { registerCleanup } from '../../watchdog/cleanup-registry'
 import type {
   PlatformAdapter,
   PlatformCompileParams,
@@ -34,7 +33,9 @@ export class WebPlatformAdapter implements PlatformAdapter {
     bundler: BundlerAdapter,
     params: PlatformCompileParams,
   ): Promise<void> {
-    const { command, preConfig, compileContext: ctx } = params
+    const { command, preConfig, compileContext: ctx, pluginManager } = params
+
+    await pluginManager.callBeforeCreateCompiler()
 
     // 生成编译配置
     const config = await bundler.createConfig({
@@ -43,29 +44,40 @@ export class WebPlatformAdapter implements PlatformAdapter {
       env: ctx.env,
       context: ctx.context,
       contextPkg: ctx.contextPkg,
-      userConfig: preConfig.userConfig,
-      pages: preConfig.pages,
-      base: preConfig.base,
-      port: preConfig.port,
-      browserslist: preConfig.browserslist,
-      isElectron: ctx.isElectron,
-      isVue: preConfig.isVue,
-      isReact: preConfig.isReact,
+      config: preConfig,
       resolveContext: ctx.resolveContext,
       preWarnings: ctx.preWarnings,
     })
 
+    const finalConfig = await pluginManager.applyBundlerConfig(
+      bundler.name,
+      config,
+    )
+
     // 根据命令执行 dev 或 build
     if (command === 'server') {
-      await bundler.runDev(config, {
+      await pluginManager.callBeforeStartDevServer()
+
+      await bundler.runDev(finalConfig, {
         port: preConfig.port,
         onBuildStatus: ctx.onBuildStatus,
-        registerCleanup,
+        registerCleanup: ctx.registerCleanup,
       })
+
+      await pluginManager.callAfterStartDevServer()
+      ctx.registerCleanup?.(() => pluginManager.callOnCloseDevServer())
     } else {
-      await bundler.runBuild(config, {
-        onBuildStatus: ctx.onBuildStatus,
-      })
+      await pluginManager.callBeforeBuild()
+
+      try {
+        const result = await bundler.runBuild(finalConfig, {
+          onBuildStatus: ctx.onBuildStatus,
+        })
+
+        await pluginManager.callAfterBuild(result)
+      } finally {
+        await pluginManager.callOnCloseBuild()
+      }
     }
   }
 }

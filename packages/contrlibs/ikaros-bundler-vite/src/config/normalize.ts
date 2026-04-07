@@ -1,7 +1,7 @@
 import type { ServerOptions as HttpsServerOptions } from 'node:https'
 import type { PluginOption, ProxyOptions } from 'vite'
 
-import type { CreateConfigParams, ViteUserConfigSubset } from '../types'
+import type { NormalizedConfig } from '../types'
 
 /**
  * 将 define 值统一序列化为 Vite 可接受的格式
@@ -61,14 +61,13 @@ export const sanitizeViteExtensions = (
  * 解析输出目录路径
  */
 export const getOutDirPath = (params: {
-  userConfig?: ViteUserConfigSubset
-  isElectron: boolean
+  config: NormalizedConfig
   resolveContext: (...paths: string[]) => string
 }): string => {
-  const { userConfig, isElectron, resolveContext } = params
-  const outDirName = userConfig?.build?.outDirName
+  const { config, resolveContext } = params
+  const outDirName = config.build.outDirName
 
-  if (isElectron) {
+  if (config.isElectron) {
     return resolveContext('dist/electron/renderer')
   }
 
@@ -83,8 +82,8 @@ export const getOutDirPath = (params: {
  * 解析多页应用的 Rollup input 配置
  */
 export const resolveRollupInput = (params: {
-  pages: CreateConfigParams['pages']
-  enablePages: ViteUserConfigSubset['enablePages']
+  pages: NormalizedConfig['pages']
+  enablePages: NormalizedConfig['enablePages']
 }): Record<string, string> | undefined => {
   const { pages, enablePages } = params
 

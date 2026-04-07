@@ -3,34 +3,15 @@ import { describe, it, expect } from 'vitest'
 import type { LibraryOptions } from 'vite'
 
 import { createViteLibraryConfig } from '../src/config/create-vite-library-config'
-import type { CreateConfigParams } from '../src/types'
-
-const createMinimalParams = (
-  overrides?: Partial<CreateConfigParams>,
-): CreateConfigParams => ({
-  command: 'build',
-  env: {},
-  context: '/test/project',
-  contextPkg: { name: 'my-lib', version: '1.0.0' },
-  pages: {
-    index: {
-      html: '/test/project/index.html',
-      entry: '/test/project/src/index.ts',
-    },
-  },
-  base: '/',
-  port: 3000,
-  isElectron: false,
-  resolveContext: (...paths: string[]) => `/test/project/${paths.join('/')}`,
-  ...overrides,
-})
+import { createMinimalParams } from './test-utils'
 
 describe('createViteLibraryConfig', () => {
   it('应该不抛异常', () => {
     expect(() =>
       createViteLibraryConfig(
         createMinimalParams({
-          userConfig: {
+          contextPkg: { name: 'my-lib', version: '1.0.0' },
+          config: {
             library: {
               entry: 'src/index.ts',
               name: 'MyLib',
@@ -44,7 +25,8 @@ describe('createViteLibraryConfig', () => {
   it('应该设置 build.lib', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        contextPkg: { name: 'my-lib', version: '1.0.0' },
+        config: {
           library: {
             entry: 'src/index.ts',
             name: 'MyLib',
@@ -63,7 +45,7 @@ describe('createViteLibraryConfig', () => {
   it('单入口默认 formats 应为 es + umd', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             name: 'MyLib',
@@ -79,7 +61,7 @@ describe('createViteLibraryConfig', () => {
   it('多入口默认 formats 应为 es + cjs', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: { main: 'src/index.ts', utils: 'src/utils.ts' },
           },
@@ -94,7 +76,7 @@ describe('createViteLibraryConfig', () => {
   it('应支持自定义 formats', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             name: 'MyLib',
@@ -111,7 +93,7 @@ describe('createViteLibraryConfig', () => {
   it('应处理 externals', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             externals: ['vue', 'react'],
@@ -126,7 +108,7 @@ describe('createViteLibraryConfig', () => {
   it('应处理 globals', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             name: 'MyLib',
@@ -147,7 +129,7 @@ describe('createViteLibraryConfig', () => {
   it('应使用自定义 fileName', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             fileName: 'my-custom-lib',
@@ -166,7 +148,7 @@ describe('createViteLibraryConfig', () => {
 
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             fileName: fileNameFn,
@@ -182,7 +164,7 @@ describe('createViteLibraryConfig', () => {
   it('应设置 cssFileName', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: 'src/index.ts',
             cssFileName: 'my-lib-style',
@@ -198,7 +180,7 @@ describe('createViteLibraryConfig', () => {
   it('应正确解析多入口 entry', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: {
             entry: { main: 'src/index.ts', utils: 'src/utils.ts' },
           },
@@ -216,7 +198,7 @@ describe('createViteLibraryConfig', () => {
   it('应保留 resolve.alias 配置', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: { entry: 'src/index.ts' },
           resolve: { alias: { '~': '/custom/path' } },
         },
@@ -230,7 +212,7 @@ describe('createViteLibraryConfig', () => {
   it('应使用自定义 outDirName', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: { entry: 'src/index.ts' },
           build: { outDirName: 'output' },
         },
@@ -243,7 +225,7 @@ describe('createViteLibraryConfig', () => {
   it('应设置 sourcemap', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: { entry: 'src/index.ts' },
           build: { sourceMap: true },
         },
@@ -256,7 +238,7 @@ describe('createViteLibraryConfig', () => {
   it('应正确处理 define', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
-        userConfig: {
+        config: {
           library: { entry: 'src/index.ts' },
           define: { __VERSION__: '1.0.0' },
         },
@@ -269,7 +251,13 @@ describe('createViteLibraryConfig', () => {
 
   it('没有 library 配置应该抛出错误', () => {
     expect(() =>
-      createViteLibraryConfig(createMinimalParams({ userConfig: undefined })),
+      createViteLibraryConfig(
+        createMinimalParams({
+          config: {
+            library: null,
+          },
+        }),
+      ),
     ).toThrow('library config is required')
   })
 })
