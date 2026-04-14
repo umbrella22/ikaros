@@ -33,10 +33,10 @@ export type InspectHookDiagnostics = {
   [K in keyof IkarosPluginHooks]: string[]
 }
 
-export interface InspectEnvDiagnostics extends CompileEnvInfo {}
-export interface InspectWatchDiagnostics extends WatchdogWatchPlan {}
+export type InspectEnvDiagnostics = CompileEnvInfo
+export type InspectWatchDiagnostics = WatchdogWatchPlan
 
-export interface InspectResolutionDiagnostics extends NormalizeConfigDiagnostics {}
+export type InspectResolutionDiagnostics = NormalizeConfigDiagnostics
 
 export interface InspectConfigParams {
   options: CompileOptions

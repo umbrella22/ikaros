@@ -9,7 +9,7 @@ import {
   toViteHttps,
   toViteProxy,
 } from '../src/config/normalize'
-import { createNormalizedConfig, resolveTestContext } from './test-utils'
+import { createNormalizedConfig } from './test-utils'
 
 // ─── normalizeDefine ────────────────────────────────────────────────────────
 

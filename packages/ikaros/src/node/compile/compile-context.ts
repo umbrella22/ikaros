@@ -28,7 +28,7 @@ export type PackageJson = {
   version: string
 }
 
-export interface CompileEnvInfo extends EnvDiagnostics {}
+export type CompileEnvInfo = EnvDiagnostics
 
 /** 命令 */
 export enum Command {
@@ -257,11 +257,11 @@ async function loadUserConfig(params: {
       },
       command,
     }
-    return configSchema.parse(await tempConfig(opts))
+    return configSchema.parse(await tempConfig(opts)) as UserConfig
   }
 
   if (isObject(tempConfig)) {
-    return configSchema.parse(tempConfig as UserConfig)
+    return configSchema.parse(tempConfig as UserConfig) as UserConfig
   }
 
   return undefined

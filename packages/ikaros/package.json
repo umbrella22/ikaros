@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/ikaros",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "",
   "type": "module",
   "publishConfig": {
@@ -62,7 +62,7 @@
     "less-loader": "^12.3.2",
     "listr2": "^10.2.1",
     "ora": "^9.3.0",
-    "oxc-transform": "^0.124.0",
+    "oxc-transform": "^0.125.0",
     "picocolors": "^1.1.1",
     "pretty-bytes": "^7.1.0",
     "sass-loader": "^16.0.7",

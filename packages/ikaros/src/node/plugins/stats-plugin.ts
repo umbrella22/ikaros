@@ -150,12 +150,13 @@ export default class StatsPlugin implements RspackPluginInstance {
     for (let i = 0; i < assets.length; i++) {
       const { name, size, related, info } = assets[i]
 
-      if (info.development) continue
+      if (info?.development) continue
 
-      const gzip =
+      const gzipAsset =
         isGzip && isArray(related)
-          ? related!.find((item) => item.type === 'gzipped')!.size
-          : 0
+          ? related.find((item) => item.type === 'gzipped')
+          : undefined
+      const gzip = gzipAsset?.size ?? 0
 
       sizeTotal += size
       gzipTotal += gzip
