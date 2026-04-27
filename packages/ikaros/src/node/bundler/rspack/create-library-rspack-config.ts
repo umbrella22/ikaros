@@ -3,9 +3,11 @@
 import type { Configuration, ExternalItemValue } from '@rspack/core'
 import { rspack } from '@rspack/core'
 
+import { createVueOrReactConfig } from '../../compile/web/rspack-framework-config'
 import type { LibraryConfig, LibraryFormat } from '../../config/user-config'
 import type { CreateConfigParams } from '../types'
 import { DEFAULT_OUT_DIR, extensions } from '../../shared/constants'
+import { CreateLoader } from './loader-plugin-helper'
 
 // ─── Format Mapping ─────────────────────────────────────────────────────────
 
@@ -86,27 +88,24 @@ const resolveExternals = (
   // 对于 UMD/IIFE 格式，需要映射到全局变量
   if ((format === 'umd' || format === 'iife') && globals) {
     const result: Record<string, ExternalItemValue> = {}
+    const regexExternals: RegExp[] = []
+
     for (const ext of externals) {
-      if (typeof ext === 'string') {
-        const globalName = globals[ext]
-        if (globalName) {
-          result[ext] = {
+      if (ext instanceof RegExp) {
+        regexExternals.push(ext)
+        continue
+      }
+
+      const globalName = globals[ext]
+      result[ext] = globalName
+        ? {
             root: globalName,
             commonjs: ext,
             commonjs2: ext,
             amd: ext,
           }
-        } else {
-          result[ext] = ext
-        }
-      }
-      // RegExp externals 通过另一种方式处理
+        : ext
     }
-
-    // 收集 RegExp externals
-    const regexExternals = externals.filter(
-      (ext): ext is RegExp => ext instanceof RegExp,
-    )
 
     if (regexExternals.length > 0) {
       return [result, ...regexExternals]
@@ -116,7 +115,7 @@ const resolveExternals = (
   }
 
   // 对于 ES/CJS 格式，直接使用字符串和正则
-  return externals.map((ext) => (typeof ext === 'string' ? ext : ext))
+  return [...externals]
 }
 
 // ─── File Name Resolution ───────────────────────────────────────────────────
@@ -161,13 +160,35 @@ const createSingleFormatConfig = (params: {
   configParams: CreateConfigParams
 }): Configuration => {
   const { format, library, configParams } = params
-  const { context, contextPkg, config, resolveContext } = configParams
+  const { mode, context, contextPkg, config, resolveContext } = configParams
   const rspackConfig = config.rspack
 
   const isEsm = format === 'es'
   const entry = resolveEntry(library.entry, resolveContext)
   const outDir = getOutDirPath({ config, resolveContext })
   const needsName = format === 'umd' || format === 'iife'
+  const loaderHelper = new CreateLoader({
+    env: 'production',
+    mode,
+    context,
+  })
+  const { noParse } = createVueOrReactConfig({
+    isVue: config.isVue,
+    isReact: config.isReact,
+  })
+
+  const rules = loaderHelper
+    .useDefaultResourceLoader()
+    .useDefaultScriptLoader(rspackConfig?.experiments)
+    .useDefaultCssLoader({
+      ...rspackConfig?.css,
+      lightningcss: {
+        targets: config.browserslist,
+        ...rspackConfig?.css?.lightningcss,
+      },
+    })
+    .add(rspackConfig?.loaders)
+    .end()
 
   const fileName = resolveFileName(
     library.fileName,
@@ -205,7 +226,11 @@ const createSingleFormatConfig = (params: {
     optimization: {
       minimize: true,
       minimizer: [
-        new rspack.LightningCssMinimizerRspackPlugin(),
+        new rspack.LightningCssMinimizerRspackPlugin({
+          minimizerOptions: {
+            targets: config.browserslist,
+          },
+        }),
         new rspack.SwcJsMinimizerRspackPlugin(),
       ],
     },
@@ -220,29 +245,8 @@ const createSingleFormatConfig = (params: {
         : []),
     ],
     module: {
-      rules: [
-        {
-          test: /\.(j|t)sx?$/,
-          use: [
-            {
-              loader: 'builtin:swc-loader',
-              options: {
-                jsc: {
-                  parser: {
-                    syntax: 'typescript',
-                    tsx: true,
-                  },
-                },
-              },
-            },
-          ],
-          type: 'javascript/auto',
-        },
-      ],
-    },
-    experiments: {
-      ...(isEsm ? { outputModule: true } : {}),
-      css: true,
+      rules,
+      noParse,
     },
     devtool: config.build.sourceMap ? 'source-map' : false,
     stats: 'none',

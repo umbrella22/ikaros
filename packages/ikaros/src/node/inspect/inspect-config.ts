@@ -191,7 +191,6 @@ export async function inspectConfig(
 
     const bundler = createBundlerAdapter({
       bundler: normalizedConfig.bundler,
-      loadContextModule: compileContext.loadContextModule,
       resolveContextModule: compileContext.resolveContextModule,
     })
 

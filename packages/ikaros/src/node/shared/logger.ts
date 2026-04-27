@@ -25,19 +25,19 @@ const createLogMethod =
     consoleFn(formatted)
   }
 
+const loggerInstance = {
+  done: createLogMethod('DONE', console.log),
+  error: createLogMethod('ERROR', console.error),
+  okay: createLogMethod('OKAY', console.log),
+  warning: createLogMethod('WARNING', console.warn),
+  info: createLogMethod('INFO', console.info),
+}
+
 /**
  * 日志系统
  *
- * 提供统一的格式化日志输出方法。
+ * 提供统一的格式化日志输出方法。在调用侧以 `LoggerSystem()` 返回单例。
  */
-export const LoggerSystem = /* @__PURE__ */ (() => {
-  const instance = {
-    done: createLogMethod('DONE', console.log),
-    error: createLogMethod('ERROR', console.error),
-    okay: createLogMethod('OKAY', console.log),
-    warning: createLogMethod('WARNING', console.warn),
-    info: createLogMethod('INFO', console.info),
-  }
-
-  return () => instance
-})()
+export function LoggerSystem(): typeof loggerInstance {
+  return loggerInstance
+}

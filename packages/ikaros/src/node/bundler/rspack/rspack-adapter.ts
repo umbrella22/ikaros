@@ -44,7 +44,12 @@ export class RspackAdapter implements BundlerAdapter<
     config: Configuration | Configuration[],
     options: BundlerDevOptions,
   ): Promise<void> {
-    // Dev 模式始终使用单一配置
+    if (Array.isArray(config) && config.length > 1) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[ikaros] Rspack dev server 仅支持单个 Configuration，已选择首个。',
+      )
+    }
     const singleConfig = Array.isArray(config) ? config[0] : config
     await startRspackDevServer(singleConfig, {
       port: options.port,

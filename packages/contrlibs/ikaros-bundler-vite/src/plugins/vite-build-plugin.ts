@@ -71,21 +71,37 @@ export const detectCycles = (ctx: DetectCyclesContext): string[][] => {
 
   const visited = new Set<string>()
   const stack = new Set<string>()
-  const path: string[] = []
   const cycles: string[][] = []
   const seen = new Set<string>()
 
-  const dfs = (node: string) => {
-    visited.add(node)
-    stack.add(node)
-    path.push(node)
+  type Frame = { node: string; depIndex: number; deps: string[] }
 
-    const deps = graph.get(node) ?? []
-    for (const dep of deps) {
+  const iterativeDfs = (start: string): void => {
+    const path: string[] = [start]
+    const frames: Frame[] = [
+      { node: start, depIndex: 0, deps: graph.get(start) ?? [] },
+    ]
+    visited.add(start)
+    stack.add(start)
+
+    while (frames.length > 0) {
+      const frame = frames[frames.length - 1]
+
+      if (frame.depIndex >= frame.deps.length) {
+        stack.delete(frame.node)
+        path.pop()
+        frames.pop()
+        continue
+      }
+
+      const dep = frame.deps[frame.depIndex++]
       if (!graph.has(dep)) continue
 
       if (!visited.has(dep)) {
-        dfs(dep)
+        visited.add(dep)
+        stack.add(dep)
+        path.push(dep)
+        frames.push({ node: dep, depIndex: 0, deps: graph.get(dep) ?? [] })
         continue
       }
 
@@ -101,13 +117,10 @@ export const detectCycles = (ctx: DetectCyclesContext): string[][] => {
         }
       }
     }
-
-    path.pop()
-    stack.delete(node)
   }
 
   for (const node of graph.keys()) {
-    if (!visited.has(node)) dfs(node)
+    if (!visited.has(node)) iterativeDfs(node)
   }
 
   return cycles

@@ -10,6 +10,9 @@
     "build:release": "ikaros build -m release",
     "build:master": "ikaros build -m master"
   },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
     "axios": "^1.14.0",

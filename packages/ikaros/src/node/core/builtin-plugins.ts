@@ -44,25 +44,28 @@ function mergeRspackConfig(
   bundlerConfig: Configuration,
   overrides: Partial<Configuration>,
 ): Configuration {
-  const nextPlugins =
-    overrides.plugins === undefined
-      ? bundlerConfig.plugins
-      : [
-          ...(bundlerConfig.plugins ?? []),
-          ...toPluginList(overrides.plugins as Plugin | Plugin[] | undefined),
-        ]
-
-  return {
+  const {
+    plugins: overridePlugins,
+    experiments: overrideExperiments,
+    ...rest
+  } = plugins: overridePlugins,
+    experiments: overrideExperiments,
+    ...rest
+  } = overrides
+  const merged: Configuration = {
     ...bundlerConfig,
-    ...overrides,
-    plugins: nextPlugins,
-    experiments: overrides.experiments
+    ...rest,
+    experiments: overrideExperiments
       ? {
           ...(bundlerConfig.experiments ?? {}),
-          ...overrides.experiments,
+          ...overrideExperiments,
         }
       : bundlerConfig.experiments,
   }
+
+  return overridePlugins === undefined
+    ? merged
+    : appendRspackPlugins(merged, [overridePlugins as Plugin | Plugin[]])
 }
 
 function createPluginHelper(
@@ -78,6 +81,13 @@ function createPluginHelper(
   })
 }
 
+function isLibraryBuild(
+  compileContext: CompileContext,
+  config: NormalizedConfig,
+): boolean {
+  return compileContext.command === 'build' && config.library !== null
+}
+
 function createRspackCoreFrameworkPlugin(
   compileContext: CompileContext,
 ): IkarosPlugin {
@@ -87,38 +97,41 @@ function createRspackCoreFrameworkPlugin(
       api.modifyRspackConfig((bundlerConfig, { config }) => {
         const isDev = compileContext.command === 'server'
         const env = isDev ? 'development' : 'production'
+        const libraryBuild = isLibraryBuild(compileContext, config)
         const pluginHelper = new CreatePlugins({
           env,
           mode: compileContext.options.mode,
           context: compileContext.context,
         })
-        const mpaAssetsHelper = new CreateMpaAssets({
-          pages: config.pages,
-          enablePages: config.enablePages,
-        })
-        const { plugins: mpaPlugins } = mpaAssetsHelper.create()
         const { env: frameworkEnv } = createVueOrReactConfig({
           isVue: config.isVue,
           isReact: config.isReact,
         })
-        const warnings = [
-          ...compileContext.preWarnings,
-          ...mpaAssetsHelper.warnings,
-        ]
+        const warnings = [...compileContext.preWarnings]
+
+        pluginHelper.useDefaultEnvPlugin({
+          extEnv: {
+            ...config.define,
+          },
+          frameworkEnv,
+          env: compileContext.env as DefinePluginOptions,
+        })
+
+        if (!libraryBuild) {
+          const mpaAssetsHelper = new CreateMpaAssets({
+            pages: config.pages,
+            enablePages: config.enablePages,
+          })
+          const { plugins: mpaPlugins } = mpaAssetsHelper.create()
+
+          warnings.push(...mpaAssetsHelper.warnings)
+          pluginHelper.useCopyPlugin().add(mpaPlugins)
+        }
+
+        pluginHelper.add(new PreWarningsPlugin(warnings, config.quiet))
 
         return appendRspackPlugins(bundlerConfig as Configuration, [
-          pluginHelper
-            .useDefaultEnvPlugin({
-              extEnv: {
-                ...config.define,
-              },
-              frameworkEnv,
-              env: compileContext.env as DefinePluginOptions,
-            })
-            .useCopyPlugin()
-            .add(mpaPlugins)
-            .add(new PreWarningsPlugin(warnings, config.quiet))
-            .end(),
+          pluginHelper.end(),
         ])
       })
     },
@@ -132,6 +145,10 @@ function createRspackPerformanceFrameworkPlugin(
     name: 'ikaros:rspack-performance',
     setup(api) {
       api.modifyRspackConfig((bundlerConfig, { config }) => {
+        if (isLibraryBuild(compileContext, config)) {
+          return bundlerConfig
+        }
+
         return mergeRspackConfig(
           bundlerConfig as Configuration,
           createRspackPerformanceConfig({
@@ -184,6 +201,10 @@ function createRspackCdnFrameworkPlugin(
     name: 'ikaros:rspack-cdn',
     setup(api) {
       api.modifyRspackConfig((bundlerConfig, { config }) => {
+        if (isLibraryBuild(compileContext, config)) {
+          return bundlerConfig
+        }
+
         const helper = createPluginHelper(compileContext, config)
         const cdnModules = config.rspack.cdnOptions.modules
         const nextConfig = appendRspackPlugins(bundlerConfig as Configuration, [
@@ -211,6 +232,12 @@ function createRspackEcosystemFrameworkPlugin(
     setup(api) {
       api.modifyRspackConfig((bundlerConfig, { config }) => {
         const helper = createPluginHelper(compileContext, config)
+
+        if (isLibraryBuild(compileContext, config)) {
+          return appendRspackPlugins(bundlerConfig as Configuration, [
+            helper.createDependencyCyclePlugin(),
+          ])
+        }
 
         return appendRspackPlugins(bundlerConfig as Configuration, [
           helper.createModuleFederationPlugin(),

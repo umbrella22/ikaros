@@ -1,6 +1,5 @@
 // compile/compile-context.ts — 编译上下文
 
-import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
@@ -188,13 +187,14 @@ async function loadContextPkg(
 ): Promise<PackageJson | undefined> {
   const filePath = resolveContext('package.json')
   try {
-    await fsp.access(filePath, fs.constants.F_OK)
-  } catch {
-    return undefined
+    const content = await fsp.readFile(filePath, 'utf8')
+    return JSON.parse(content) as PackageJson
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return undefined
+    }
+    throw err
   }
-  return JSON.parse(
-    await fsp.readFile(filePath, { encoding: 'utf8' }),
-  ) as PackageJson
 }
 
 async function loadEnv(
@@ -221,9 +221,10 @@ async function loadEnv(
   } = await getEnv(context, mode)
 
   return {
+    // CLI 实际传入的 PLATFORM/MODE 优先级高于 .env 文件，避免被用户配置覆盖
     env: {
-      ...retain,
       ...envData,
+      ...retain,
     },
     preWarnings: warnings,
     envInfo: {

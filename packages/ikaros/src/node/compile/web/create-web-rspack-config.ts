@@ -54,7 +54,13 @@ export function createWebRspackConfig(
   const rules = loaderHelper
     .useDefaultResourceLoader()
     .useDefaultScriptLoader(rspackConfig?.experiments)
-    .useDefaultCssLoader(rspackConfig?.css)
+    .useDefaultCssLoader({
+      ...rspackConfig?.css,
+      lightningcss: {
+        targets: config.browserslist,
+        ...rspackConfig?.css?.lightningcss,
+      },
+    })
     .add(rspackConfig?.loaders)
     .end()
 

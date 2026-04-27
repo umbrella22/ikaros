@@ -37,11 +37,11 @@ export function createVueOrReactConfig(params: {
 
 function createRspackOptimization(
   command: Command,
+  config: NormalizedConfig,
 ): Configuration['optimization'] {
   if (command === Command.SERVER) {
     return {
       minimize: false,
-      removeAvailableModules: false,
       removeEmptyChunks: false,
       splitChunks: false,
     }
@@ -50,7 +50,11 @@ function createRspackOptimization(
   return {
     minimize: true,
     minimizer: [
-      new rspack.LightningCssMinimizerRspackPlugin(),
+      new rspack.LightningCssMinimizerRspackPlugin({
+        minimizerOptions: {
+          targets: config.browserslist,
+        },
+      }),
       new rspack.SwcJsMinimizerRspackPlugin(),
     ],
     splitChunks: {
@@ -80,23 +84,19 @@ function createRspackOptimization(
 export function createRspackPerformanceConfig(params: {
   command: Command
   config: NormalizedConfig
-}): Pick<Configuration, 'optimization' | 'experiments' | 'cache'> {
+}): Pick<Configuration, 'optimization'> &
+  Partial<Pick<Configuration, 'cache'>> {
   const { command, config } = params
+  const usePersistentCache = command !== Command.SERVER && config.build.cache
 
   return {
-    optimization: createRspackOptimization(command),
-    experiments: {
-      css: true,
-      ...(command !== Command.SERVER && config.build.cache
-        ? {
-            cache: {
-              type: 'persistent',
-            },
-          }
-        : {}),
-    },
-    ...(command !== Command.SERVER && config.build.cache
-      ? { cache: true }
+    optimization: createRspackOptimization(command, config),
+    ...(usePersistentCache
+      ? {
+          cache: {
+            type: 'persistent',
+          },
+        }
       : {}),
   }
 }

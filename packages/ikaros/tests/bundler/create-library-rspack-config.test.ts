@@ -13,9 +13,17 @@ interface TestCfg {
     globalObject?: string
   }
   entry: string | Record<string, string>
-  experiments?: { outputModule?: boolean }
   externals: unknown
   resolve: { alias: Record<string, string> }
+  module?: {
+    rules?: Array<{
+      test?: RegExp
+      loader?: string
+      use?: Array<{
+        loader: string
+      }>
+    }>
+  }
   devtool: string | false
   plugins?: Array<{ name?: string }>
 }
@@ -166,7 +174,7 @@ describe('createLibraryRspackConfigs', () => {
     const arr = configs as TestCfg[]
     expect(arr).toHaveLength(2)
     expect(arr[0].output.library.type).toBe('module')
-    expect(arr[0].experiments?.outputModule).toBe(true)
+    expect(arr[0].output.module).toBe(true)
     expect(arr[1].output.library.type).toBe('umd')
     expect(arr[1].output.library.name).toBe('MyLib')
   })
@@ -205,7 +213,7 @@ describe('createLibraryRspackConfigs', () => {
     expect((config as TestCfg).output.library.type).toBe('commonjs2')
   })
 
-  it('es 格式应启用 outputModule', () => {
+  it('es 格式应输出 ESM 模块', () => {
     const config = createLibraryRspackConfigs(
       createMinimalParams({
         config: {
@@ -218,7 +226,6 @@ describe('createLibraryRspackConfigs', () => {
     )
 
     const cfg = config as TestCfg
-    expect(cfg.experiments?.outputModule).toBe(true)
     expect(cfg.output.module).toBe(true)
     expect(cfg.output.library.type).toBe('module')
   })
@@ -408,6 +415,38 @@ describe('createLibraryRspackConfigs', () => {
     expect(
       cfg.plugins?.some((plugin) => plugin.name === 'custom-rspack-plugin'),
     ).toBe(true)
+  })
+
+  it('应将自定义 rspack loaders 合入库模式配置', () => {
+    const config = createLibraryRspackConfigs(
+      createMinimalParams({
+        config: {
+          isVue: true,
+          library: {
+            entry: 'src/index.ts',
+            name: 'MyLib',
+            formats: ['es'],
+          },
+          rspack: {
+            loaders: [
+              {
+                test: /\.vue$/,
+                loader: 'rspack-vue-loader',
+              } as never,
+            ],
+          },
+        },
+      }),
+    ) as TestCfg
+
+    expect(config.module?.rules).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          test: /\.vue$/,
+          loader: 'rspack-vue-loader',
+        }),
+      ]),
+    )
   })
 
   it('没有 library 配置应该抛出错误', () => {

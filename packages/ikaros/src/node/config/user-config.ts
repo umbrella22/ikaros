@@ -160,8 +160,9 @@ export interface RspackConfig {
   loaders?: Loader[]
 
   /**
-   * RspackExperiments
-   * @see {@link https://rspack.dev/zh/guide/features/builtin-swc-loader#rspackexperimentsimport}
+   * SWC 内置转换选项。
+   * `experiments.import` 作为兼容别名保留，内部会迁移到 Rspack 2.0 的 `transformImport`。
+   * @see {@link https://rspack.rs/guide/features/builtin-swc-loader#transformimport}
    */
   experiments?: RspackExperiments
 

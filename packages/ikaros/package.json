@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/ikaros",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "",
   "type": "module",
   "publishConfig": {
@@ -39,14 +39,14 @@
     "readme.md"
   ],
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=22.12.0",
     "npm": ">=9.5.0"
   },
   "dependencies": {
-    "@module-federation/enhanced": "^2.3.1",
-    "@rsdoctor/rspack-plugin": "^1.5.7",
-    "@rspack/core": "^1.7.11",
-    "@rspack/dev-server": "^1.2.1",
+    "@module-federation/enhanced": "^2.3.3",
+    "@rsdoctor/rspack-plugin": "^1.5.9",
+    "@rspack/core": "^2.0.0",
+    "@rspack/dev-server": "^2.0.1",
     "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
     "cli-cursor": "^5.0.0",
@@ -55,14 +55,14 @@
     "detect-port": "^2.1.0",
     "dotenv": "^17.4.1",
     "easy-table": "^1.2.0",
-    "es-toolkit": "^1.45.1",
+    "es-toolkit": "^1.46.0",
     "fs-extra": "^11.3.4",
     "glob": "^13.0.6",
     "jiti": "^2.6.1",
     "less-loader": "^12.3.2",
     "listr2": "^10.2.1",
-    "ora": "^9.3.0",
-    "oxc-transform": "^0.125.0",
+    "ora": "^9.4.0",
+    "oxc-transform": "^0.127.0",
     "picocolors": "^1.1.1",
     "pretty-bytes": "^7.1.0",
     "sass-loader": "^16.0.7",

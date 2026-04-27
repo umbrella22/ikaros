@@ -63,34 +63,29 @@ export async function startCompile(params: CompileServeParams): Promise<void> {
   }
 }
 
+function makeCompileAction(command: BuildCommand) {
+  return async (options: CompileCliOptions): Promise<void> => {
+    await startCompile({
+      command,
+      options: {
+        mode: options.mode,
+        platform: options.platform,
+      },
+      configFile: options.config,
+    })
+  }
+}
+
 export function commander(program: Command): void {
   const dev = program
     .command(BuildCommand.SERVER, { isDefault: true })
     .description('Start local develop serve')
-    .action(async (options: CompileCliOptions) => {
-      await startCompile({
-        command: BuildCommand.SERVER,
-        options: {
-          mode: options.mode,
-          platform: options.platform,
-        },
-        configFile: options.config,
-      })
-    })
+    .action(makeCompileAction(BuildCommand.SERVER))
 
   const build = program
     .command(BuildCommand.BUILD)
     .description('Start build')
-    .action(async (options: CompileCliOptions) => {
-      await startCompile({
-        command: BuildCommand.BUILD,
-        options: {
-          mode: options.mode,
-          platform: options.platform,
-        },
-        configFile: options.config,
-      })
-    })
+    .action(makeCompileAction(BuildCommand.BUILD))
 
   addCommonCompileOptions(dev)
   addCommonCompileOptions(build)

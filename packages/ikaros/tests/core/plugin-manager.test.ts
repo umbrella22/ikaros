@@ -190,6 +190,44 @@ describe('PluginManager', () => {
     expect(config.server.port).toBe(3001)
   })
 
+  it('应逐项处理多配置 bundler config 并保留数组结构', async () => {
+    const ctx = createCompileContext()
+    const manager = createPluginManager({
+      compileContext: ctx,
+    })
+
+    const plugin: IkarosPlugin = {
+      name: 'multi-config-plugin',
+      setup(api: IkarosPluginAPI) {
+        api.modifyRspackConfig((bundlerConfig: Record<string, unknown>) => ({
+          ...bundlerConfig,
+          fromMultiConfigPlugin: true,
+        }))
+      },
+    }
+
+    await manager.addPlugins([plugin])
+    await manager.init()
+    await manager.applyNormalizedConfig(createNormalizedConfig())
+
+    const bundlerConfig = await manager.applyBundlerConfig('rspack', [
+      { entry: 'index-a' },
+      { entry: 'index-b' },
+    ])
+
+    expect(Array.isArray(bundlerConfig)).toBe(true)
+    expect(bundlerConfig).toEqual([
+      {
+        entry: 'index-a',
+        fromMultiConfigPlugin: true,
+      },
+      {
+        entry: 'index-b',
+        fromMultiConfigPlugin: true,
+      },
+    ])
+  })
+
   it('应暴露插件与 hook 的诊断信息', async () => {
     const ctx = createCompileContext()
     const manager = createPluginManager({

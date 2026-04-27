@@ -45,16 +45,22 @@ const CONFIG_IMPORT_PATTERNS = [
   /require\(\s*['"]([^'"`]+)['"]\s*\)/g,
 ]
 
-const configLoader = createJiti(import.meta.url, {
-  moduleCache: false,
-  interopDefault: true,
-  nativeModules: ['@rspack/core', 'typescript'],
-  tryNative: false,
-})
+const BASE_NATIVE_MODULES = ['@rspack/core', 'typescript']
+
+function createConfigLoader(nativeModules: string[]) {
+  return createJiti(import.meta.url, {
+    moduleCache: false,
+    interopDefault: true,
+    nativeModules,
+    tryNative: false,
+  })
+}
 
 async function loadConfigAsExecutable(
   filePath: string,
 ): Promise<UserConfig | undefined> {
+  const nativeModules = await resolveConfigNativeModules(filePath)
+  const configLoader = createConfigLoader(nativeModules)
   const loadedModule = configLoader(filePath) as
     | UserConfig
     | { default?: UserConfig }
@@ -63,12 +69,13 @@ async function loadConfigAsExecutable(
   if (
     loadedModule &&
     typeof loadedModule === 'object' &&
-    'default' in loadedModule
+    'default' in loadedModule &&
+    loadedModule.default !== undefined
   ) {
     return loadedModule.default
   }
 
-  return loadedModule
+  return loadedModule as UserConfig | undefined
 }
 
 function resolveConfigInputPath(context: string, filePath: string): string {
@@ -108,13 +115,36 @@ function extractConfigSpecifiers(code: string): string[] {
     let match: RegExpExecArray | null = null
     while ((match = pattern.exec(code)) !== null) {
       const specifier = match[1]
-      if (specifier?.startsWith('.')) {
+      if (specifier) {
         found.add(specifier)
       }
     }
   }
 
   return [...found]
+}
+
+function isRelativeConfigSpecifier(specifier: string): boolean {
+  return specifier.startsWith('.')
+}
+
+function isBareModuleSpecifier(specifier: string): boolean {
+  return !specifier.startsWith('.') && !specifier.startsWith('/')
+}
+
+function resolveNativeModuleCandidates(specifier: string): string[] {
+  const candidates = new Set<string>([specifier])
+
+  if (specifier.startsWith('@')) {
+    const [scope, name] = specifier.split('/')
+    if (scope && name) {
+      candidates.add(`${scope}/${name}`)
+    }
+  } else {
+    candidates.add(specifier.split('/')[0])
+  }
+
+  return [...candidates]
 }
 
 async function resolveConfigDependencyPath(
@@ -159,6 +189,10 @@ async function collectConfigDependencies(
   const specifiers = extractConfigSpecifiers(code)
 
   for (const specifier of specifiers) {
+    if (!isRelativeConfigSpecifier(specifier)) {
+      continue
+    }
+
     const dependencyPath = await resolveConfigDependencyPath(
       filePath,
       specifier,
@@ -168,6 +202,61 @@ async function collectConfigDependencies(
     }
     await collectConfigDependencies(dependencyPath, dependencies)
   }
+}
+
+async function collectConfigNativeModules(
+  filePath: string,
+  nativeModules: Set<string>,
+  visitedFiles: Set<string>,
+): Promise<void> {
+  if (visitedFiles.has(filePath)) {
+    return
+  }
+
+  visitedFiles.add(filePath)
+
+  const suffix = extname(filePath)
+  if (suffix === '.json' || suffix === '.yaml') {
+    return
+  }
+
+  const code = await fsp.readFile(filePath, 'utf8')
+  const specifiers = extractConfigSpecifiers(code)
+
+  for (const specifier of specifiers) {
+    if (isRelativeConfigSpecifier(specifier)) {
+      const dependencyPath = await resolveConfigDependencyPath(
+        filePath,
+        specifier,
+      )
+
+      if (dependencyPath) {
+        await collectConfigNativeModules(
+          dependencyPath,
+          nativeModules,
+          visitedFiles,
+        )
+      }
+
+      continue
+    }
+
+    if (!isBareModuleSpecifier(specifier)) {
+      continue
+    }
+
+    for (const candidate of resolveNativeModuleCandidates(specifier)) {
+      nativeModules.add(candidate)
+    }
+  }
+}
+
+async function resolveConfigNativeModules(filePath: string): Promise<string[]> {
+  const nativeModules = new Set(BASE_NATIVE_MODULES)
+
+  await collectConfigNativeModules(filePath, nativeModules, new Set())
+
+  return [...nativeModules]
 }
 
 export async function resolveConfigWatchFiles({

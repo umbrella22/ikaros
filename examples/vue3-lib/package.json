@@ -19,6 +19,9 @@
         "dev": "ikaros -m dev",
         "build:lib": "ikaros build -m master"
     },
+    "engines": {
+        "node": ">=22.12.0"
+    },
     "devDependencies": {
         "@ikaros-cli/ikaros": "workspace:*",
         "rspack-vue-loader": "^17.5.0",

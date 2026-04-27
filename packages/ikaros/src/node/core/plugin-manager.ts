@@ -109,17 +109,9 @@ export class PluginManager {
     this.plugins = this.plugins.filter((plugin) => !names.has(plugin.name))
 
     for (const name of names) {
-      this.hooks.modifyIkarosConfig.untap(name)
-      this.hooks.modifyNormalizedConfig.untap(name)
-      this.hooks.modifyRspackConfig.untap(name)
-      this.hooks.modifyViteConfig.untap(name)
-      this.hooks.onBeforeCreateCompiler.untap(name)
-      this.hooks.onBeforeBuild.untap(name)
-      this.hooks.onAfterBuild.untap(name)
-      this.hooks.onCloseBuild.untap(name)
-      this.hooks.onBeforeStartDevServer.untap(name)
-      this.hooks.onAfterStartDevServer.untap(name)
-      this.hooks.onCloseDevServer.untap(name)
+      for (const hook of Object.values(this.hooks)) {
+        hook.untap(name)
+      }
     }
   }
 
@@ -132,19 +124,12 @@ export class PluginManager {
   }
 
   getHookTapNames(): PluginManagerDiagnostics['hooks'] {
-    return {
-      modifyIkarosConfig: this.hooks.modifyIkarosConfig.getTapNames(),
-      modifyNormalizedConfig: this.hooks.modifyNormalizedConfig.getTapNames(),
-      modifyRspackConfig: this.hooks.modifyRspackConfig.getTapNames(),
-      modifyViteConfig: this.hooks.modifyViteConfig.getTapNames(),
-      onBeforeCreateCompiler: this.hooks.onBeforeCreateCompiler.getTapNames(),
-      onBeforeBuild: this.hooks.onBeforeBuild.getTapNames(),
-      onAfterBuild: this.hooks.onAfterBuild.getTapNames(),
-      onCloseBuild: this.hooks.onCloseBuild.getTapNames(),
-      onBeforeStartDevServer: this.hooks.onBeforeStartDevServer.getTapNames(),
-      onAfterStartDevServer: this.hooks.onAfterStartDevServer.getTapNames(),
-      onCloseDevServer: this.hooks.onCloseDevServer.getTapNames(),
-    }
+    return Object.fromEntries(
+      Object.entries(this.hooks).map(([name, hook]) => [
+        name,
+        hook.getTapNames(),
+      ]),
+    ) as PluginManagerDiagnostics['hooks']
   }
 
   async applyIkarosConfig(
@@ -175,6 +160,16 @@ export class PluginManager {
     bundler: 'rspack' | 'vite',
     bundlerConfig: TConfig,
   ): Promise<TConfig> {
+    if (Array.isArray(bundlerConfig)) {
+      const nextConfigs = []
+
+      for (const item of bundlerConfig) {
+        nextConfigs.push(await this.applyBundlerConfig(bundler, item))
+      }
+
+      return nextConfigs as TConfig
+    }
+
     const config = this.requireNormalizedConfig()
     const hookContext: ModifyBundlerConfigContext<unknown> = {
       compileContext: this.compileContext,

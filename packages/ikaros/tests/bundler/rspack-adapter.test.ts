@@ -160,6 +160,54 @@ describe('RspackAdapter', () => {
     expect(config).toHaveProperty('mode', 'production')
   })
 
+  it('应生成 Rspack 2 兼容的 loader targets 与 transformImport 配置', () => {
+    const adapter = new RspackAdapter()
+    const config = adapter.createConfig(
+      createParams('server', {
+        config: {
+          browserslist: 'chrome >= 90, safari >= 16',
+          rspack: {
+            experiments: {
+              import: [
+                {
+                  libraryName: 'antd',
+                  style: true,
+                },
+              ],
+            },
+          },
+        },
+      }),
+    ) as {
+      module?: {
+        rules?: Array<{
+          test?: RegExp
+          loader?: string
+          options?: Record<string, unknown>
+          use?: Array<{
+            loader: string
+            options?: Record<string, unknown>
+          }>
+        }>
+      }
+    }
+
+    const rules = config.module?.rules ?? []
+    const jsRule = rules.find((rule) => rule.test?.source === '\\.m?js$')
+    const cssRule = rules.find((rule) => rule.test?.source === '\\.css$')
+
+    expect(jsRule?.options?.transformImport).toEqual([
+      {
+        libraryName: 'antd',
+        style: true,
+      },
+    ])
+    expect(jsRule?.options).not.toHaveProperty('rspackExperiments')
+    expect(cssRule?.use?.[0]?.options?.targets).toBe(
+      'chrome >= 90, safari >= 16',
+    )
+  })
+
   it('应组装可复用的 web 输出与 dev server 配置', () => {
     const adapter = new RspackAdapter()
     const config = adapter.createConfig(

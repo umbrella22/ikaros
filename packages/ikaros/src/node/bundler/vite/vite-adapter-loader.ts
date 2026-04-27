@@ -1,3 +1,6 @@
+import { isAbsolute } from 'node:path'
+import { pathToFileURL } from 'node:url'
+
 import type {
   BundlerAdapter,
   BundlerBuildOptions,
@@ -58,10 +61,16 @@ const createInvalidViteExportError = (): ViteAdapterError => {
   )
 }
 
+function resolveImportSpecifier(resolvedPath: string): string {
+  return isAbsolute(resolvedPath)
+    ? pathToFileURL(resolvedPath).href
+    : resolvedPath
+}
+
 /**
  * Vite 编译器适配器（懒加载代理）
  *
- * 通过 loadContextModule 动态加载 @ikaros-cli/ikaros-bundler-vite，
+ * 通过工作目录解析到的模块路径动态加载 @ikaros-cli/ikaros-bundler-vite，
  * 实例化其导出的 ViteBundlerAdapter，直接代理 BundlerAdapter 接口。
  *
  * adapter 实例由 BundlerFactory 创建并统一持有，无需外部手动缓存。
@@ -70,37 +79,47 @@ export class ViteAdapterLoader implements BundlerAdapter<unknown> {
   readonly name = 'vite' as const
 
   private adapter: LoadedViteAdapter | undefined
-  private readonly loadContextModule: <T>(id: string) => T
+  private adapterPromise: Promise<LoadedViteAdapter> | undefined
   private readonly resolveContextModule: (id: string) => string | undefined
 
   constructor(params: {
-    loadContextModule: <T>(id: string) => T
     resolveContextModule: (id: string) => string | undefined
   }) {
-    this.loadContextModule = params.loadContextModule
     this.resolveContextModule = params.resolveContextModule
   }
 
-  private ensureAdapter(): LoadedViteAdapter {
+  private async ensureAdapter(): Promise<LoadedViteAdapter> {
     if (this.adapter) return this.adapter
+    if (this.adapterPromise) {
+      return this.adapterPromise
+    }
 
+    this.adapterPromise = this.loadAdapter()
+
+    try {
+      this.adapter = await this.adapterPromise
+      return this.adapter
+    } catch (err) {
+      this.adapterPromise = undefined
+      throw err
+    }
+  }
+
+  private async loadAdapter(): Promise<LoadedViteAdapter> {
     // 使用共享的版本检查（Vite 7 需要 Node.js >= 22）
     assertNodeVersion(22)
 
     const pkg = '@ikaros-cli/ikaros-bundler-vite'
-    if (!this.resolveContextModule(pkg)) {
+    const resolvedPath = this.resolveContextModule(pkg)
+
+    if (!resolvedPath) {
       throw createMissingViteError()
     }
 
-    let mod:
-      | { ViteBundlerAdapter: new () => LoadedViteAdapter }
-      | { default?: { ViteBundlerAdapter: new () => LoadedViteAdapter } }
+    let mod: unknown
 
     try {
-      mod = this.loadContextModule<
-        | { ViteBundlerAdapter: new () => LoadedViteAdapter }
-        | { default?: { ViteBundlerAdapter: new () => LoadedViteAdapter } }
-      >(pkg)
+      mod = await import(resolveImportSpecifier(resolvedPath))
     } catch (err) {
       throw createLoadFailedViteError(err)
     }
@@ -120,22 +139,21 @@ export class ViteAdapterLoader implements BundlerAdapter<unknown> {
       throw createInvalidViteExportError()
     }
 
-    this.adapter = new AdapterClass()
-    return this.adapter
+    return new AdapterClass()
   }
 
-  createConfig(params: CreateConfigParams): unknown | Promise<unknown> {
-    return this.ensureAdapter().createConfig(params)
+  async createConfig(params: CreateConfigParams): Promise<unknown> {
+    return (await this.ensureAdapter()).createConfig(params)
   }
 
   async runDev(config: unknown, options: BundlerDevOptions): Promise<void> {
-    return this.ensureAdapter().runDev(config, options)
+    return (await this.ensureAdapter()).runDev(config, options)
   }
 
   async runBuild(
     config: unknown,
     options: BundlerBuildOptions,
   ): Promise<string | undefined> {
-    return this.ensureAdapter().runBuild(config, options)
+    return (await this.ensureAdapter()).runBuild(config, options)
   }
 }

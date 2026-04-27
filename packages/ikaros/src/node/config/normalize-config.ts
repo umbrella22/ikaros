@@ -142,7 +142,7 @@ const DEFAULT_RSPACK_CONFIG: NormalizedRspackConfig = {
   plugins: [],
   loaders: [],
   experiments: {
-    import: [],
+    transformImport: [],
   },
   moduleFederation: [],
   cdnOptions: {
@@ -186,10 +186,6 @@ function normalizeList<T>(value: T | T[] | undefined): T[] {
 }
 
 function formatDiagnosticValue(value: string | number | boolean): string {
-  if (typeof value === 'string') {
-    return value
-  }
-
   return String(value)
 }
 
@@ -405,7 +401,7 @@ export async function normalizeConfig(
   const target = userConfig.target ?? 'pc'
   const pages =
     userConfig.pages ?? resolveDefaultPages(resolveContext, isElectron)
-  const port = userConfig.server?.port ?? (await detect(String(DEFAULT_PORT)))
+  const port = userConfig.server?.port ?? (await detect(DEFAULT_PORT))
   const isReact = checkDependency('react', context)
   const isVue = checkDependency('vue', context)
   const browserslist = resolveBrowserslist(target)

@@ -41,7 +41,6 @@ export async function runCompile(params: CompileServeParams): Promise<void> {
 
   const bundler = createBundlerAdapter({
     bundler: preConfig.bundler,
-    loadContextModule: ctx.loadContextModule,
     resolveContextModule: ctx.resolveContextModule,
   })
 

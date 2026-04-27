@@ -21,7 +21,19 @@ import {
 type ListItemType = RuleSetRule | Plugin
 
 export type RspackExperiments = {
-  import: Record<string, unknown>[]
+  import?: Record<string, unknown>[]
+  transformImport?: Record<string, unknown>[]
+}
+
+function resolveTransformImport(
+  rspackExperiments?: RspackExperiments,
+): Record<string, unknown>[] | undefined {
+  const transformImport =
+    rspackExperiments?.transformImport ?? rspackExperiments?.import
+
+  return transformImport && transformImport.length > 0
+    ? transformImport
+    : undefined
 }
 
 type OtherEnv = {
@@ -32,9 +44,9 @@ type OtherEnv = {
 
 export class BaseCreate<T extends ListItemType> {
   protected list: T[] = []
-  protected env: 'development' | 'none' | 'production' = 'development'
-  protected mode: string = ''
-  protected isDev = true
+  protected env: 'development' | 'none' | 'production'
+  protected mode: string
+  protected isDev: boolean
   protected context: string
   constructor({
     env = 'development',
@@ -56,7 +68,7 @@ export class BaseCreate<T extends ListItemType> {
       return this
     }
     if (isArray(item)) {
-      this.list = this.list.concat(item)
+      this.list.push(...item)
     } else {
       this.list.push(item)
     }
@@ -70,6 +82,8 @@ export class BaseCreate<T extends ListItemType> {
 
 export class CreateLoader extends BaseCreate<RuleSetRule> {
   private defaultScriptLoader = (rspackExperiments?: RspackExperiments) => {
+    const transformImport = resolveTransformImport(rspackExperiments)
+
     return [
       {
         test: /\.m?ts$/i,
@@ -89,7 +103,7 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
         loader: 'builtin:swc-loader',
         options: {
           isModule: 'unknown',
-          rspackExperiments,
+          ...(transformImport ? { transformImport } : {}),
         },
         type: 'javascript/auto',
         exclude: [join(this.context, 'node_modules')],

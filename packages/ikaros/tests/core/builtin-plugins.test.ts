@@ -199,13 +199,10 @@ describe('builtin framework plugins', () => {
     expect(bundlerConfig.externals).toEqual({
       vue: 'Vue',
     })
-    expect(bundlerConfig.cache).toBe(true)
-    expect(bundlerConfig.experiments).toMatchObject({
-      css: true,
-      cache: {
-        type: 'persistent',
-      },
+    expect(bundlerConfig.cache).toMatchObject({
+      type: 'persistent',
     })
+    expect(bundlerConfig.experiments).toBeUndefined()
     expect(bundlerConfig.optimization).toMatchObject({
       minimize: true,
       splitChunks: {
@@ -236,5 +233,74 @@ describe('builtin framework plugins', () => {
     expect(pluginNames.at(0)).toBe('base-plugin')
     expect(pluginNames.at(-1)).toBe('user-rspack-plugin')
     expect(preConfig.rspack.cdnOptions.modules).toHaveLength(1)
+  })
+
+  it('库模式应跳过页面与应用专用增强', async () => {
+    const ctx = createCompileContext()
+
+    const pluginManager = createPluginManager({
+      compileContext: ctx,
+      plugins: createBuiltinPlugins(ctx),
+    })
+
+    await pluginManager.init()
+
+    await pluginManager.applyNormalizedConfig(
+      createNormalizedConfig({
+        library: {
+          entry: 'src/index.ts',
+          name: 'MyLib',
+          formats: ['es', 'umd'],
+        },
+        rspack: {
+          plugins: [{ name: 'user-rspack-plugin' } as never],
+          cdnOptions: {
+            modules: [
+              {
+                name: 'vue',
+                var: 'Vue',
+                path: 'dist/vue.runtime.esm-browser.js',
+              },
+            ],
+          },
+          moduleFederation: [{ name: 'remote-app' } as never],
+        },
+      }),
+    )
+
+    const bundlerConfig = (await pluginManager.applyBundlerConfig('rspack', [
+      {
+        entry: '/test/project/src/index.ts',
+        plugins: [],
+        optimization: {},
+      },
+      {
+        entry: '/test/project/src/index.ts',
+        plugins: [],
+        optimization: {},
+      },
+    ])) as Configuration[]
+
+    expect(Array.isArray(bundlerConfig)).toBe(true)
+
+    for (const config of bundlerConfig) {
+      const pluginNames = (config.plugins ?? []).map(readPluginName)
+
+      expect(pluginNames).toContain('DefinePlugin')
+      expect(pluginNames).toContain('PreWarningsPlugin')
+      expect(pluginNames).toContain('StatsPlugin')
+      expect(pluginNames).toContain('CssExtractRspackPlugin')
+      expect(pluginNames).not.toContain('CopyRspackPlugin')
+      expect(pluginNames).not.toContain('HtmlRspackPlugin')
+      expect(pluginNames).not.toContain('CdnPlugin')
+      expect(pluginNames).not.toContain('user-rspack-plugin')
+      expect(
+        pluginNames.some((name) =>
+          name.toLowerCase().includes('modulefederation'),
+        ),
+      ).toBe(false)
+      expect(config.externals).toBeUndefined()
+      expect(config.optimization?.splitChunks).toBeUndefined()
+    }
   })
 })
