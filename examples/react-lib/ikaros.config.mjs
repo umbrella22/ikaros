@@ -4,6 +4,12 @@ import ReactRefreshPlugin from '@rspack/plugin-react-refresh'
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development'
   return {
+    pages: {
+      index: {
+        html: './index.html',
+        entry: './src/dev.jsx',
+      },
+    },
     rspack: {
       loaders: [
         {

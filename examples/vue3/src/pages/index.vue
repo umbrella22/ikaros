@@ -1,9 +1,9 @@
 <template>
   <div class="app">
-    <img class="img" :src="avatar" />
+    <img class="img" :src="avatar" alt="Avatar" />
     <div class="title">{{ present }}</div>
     <button class="button" @click="runing = !runing">
-      {{ runing ? 'stop' : 'start' }}
+      {{ runing ? '⏹ Stop' : '▶ Start' }}
     </button>
   </div>
 </template>
@@ -17,7 +17,7 @@ defineComponent({
   name: 'page-index',
 })
 
-const { present, runing } = useScroll('Hi, welcome to Vue3 Template dsaaasds')
+const { present, runing } = useScroll('Hi, welcome to Vue 3 Template')
 </script>
 
 <style lang="scss" scoped>
@@ -29,14 +29,14 @@ const { present, runing } = useScroll('Hi, welcome to Vue3 Template dsaaasds')
   text-align: center;
   transform: translate(-50%, -50%);
 
-  img {
+  .img {
     width: 170px;
     height: 170px;
     border-radius: 50%;
     overflow: hidden;
   }
 
-  button {
+  .button {
     padding: 5px 10px;
     font-size: 14px;
   }

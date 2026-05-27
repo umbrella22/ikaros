@@ -3,6 +3,12 @@ import { VueLoaderPlugin } from 'rspack-vue-loader'
 
 export default defineConfig(() => {
   return {
+    pages: {
+      index: {
+        html: './index.html',
+        entry: './src/dev.js',
+      },
+    },
     // ── 库模式配置 ──────────────────────────────────────────
     library: {
       entry: 'src/index.js',
