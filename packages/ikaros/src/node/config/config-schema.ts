@@ -66,11 +66,11 @@ const rspackNamespaceSchema = z
       .optional(),
     css: z
       .object({
-        lightningcssOptions: z.record(z.string(), z.unknown()).optional(),
+        lightningcss: z.record(z.string(), z.unknown()).optional(),
         sourceMap: z.boolean().optional(),
-        lessOptions: z.record(z.string(), z.unknown()).optional(),
-        sassOptions: z.record(z.string(), z.unknown()).optional(),
-        stylusOptions: z.record(z.string(), z.unknown()).optional(),
+        less: z.record(z.string(), z.unknown()).optional(),
+        sass: z.record(z.string(), z.unknown()).optional(),
+        stylus: z.record(z.string(), z.unknown()).optional(),
       })
       .optional(),
   })

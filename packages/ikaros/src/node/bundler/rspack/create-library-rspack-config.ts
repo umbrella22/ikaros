@@ -124,17 +124,36 @@ const resolveFileName = (
   fileName: LibraryConfig['fileName'],
   format: LibraryFormat,
   entryName: string,
+  multiEntry: boolean,
   pkgName?: string,
 ): string => {
+  const resolvedEntryName = multiEntry ? '[name]' : entryName
+
   if (typeof fileName === 'function') {
-    const result = fileName(format, entryName)
-    if (/\.[cm]?[jt]sx?$/.test(result)) return result
-    return `${result}.js`
+    const result = fileName(format, resolvedEntryName)
+    const nextFileName = /\.[cm]?[jt]sx?$/.test(result)
+      ? result
+      : `${result}.js`
+
+    return multiEntry && !nextFileName.includes('[name]')
+      ? appendEntryNamePlaceholder(nextFileName)
+      : nextFileName
   }
 
   const baseName = fileName ?? pkgName ?? 'index'
+  const outputName =
+    multiEntry && !baseName.includes('[name]') ? `${baseName}.[name]` : baseName
 
-  return `${baseName}${getFormatExtension(format)}`
+  return `${outputName}${getFormatExtension(format)}`
+}
+
+function appendEntryNamePlaceholder(fileName: string): string {
+  const extension = fileName.match(/\.[cm]?[jt]sx?$/)?.[0]
+  if (!extension) {
+    return `${fileName}.[name]`
+  }
+
+  return `${fileName.slice(0, -extension.length)}.[name]${extension}`
 }
 
 // ─── Output Path ────────────────────────────────────────────────────────────
@@ -164,6 +183,7 @@ const createSingleFormatConfig = (params: {
   const rspackConfig = config.rspack
 
   const isEsm = format === 'es'
+  const multi = isMultiEntry(library.entry)
   const entry = resolveEntry(library.entry, resolveContext)
   const outDir = getOutDirPath({ config, resolveContext })
   const needsName = format === 'umd' || format === 'iife'
@@ -194,6 +214,7 @@ const createSingleFormatConfig = (params: {
     library.fileName,
     format,
     typeof entry === 'string' ? 'index' : Object.keys(entry)[0],
+    multi,
     contextPkg?.name,
   )
 

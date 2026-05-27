@@ -1,7 +1,22 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const cursorMock = vi.hoisted(() => ({
+  hide: vi.fn(),
+  show: vi.fn(),
+}))
+
+vi.mock('cli-cursor', () => ({
+  default: cursorMock,
+}))
+
 import StatsPlugin from '../../src/node/plugins/stats-plugin'
 
 describe('StatsPlugin', () => {
+  beforeEach(() => {
+    cursorMock.hide.mockClear()
+    cursorMock.show.mockClear()
+  })
+
   it('开启 gzip 时应兼容缺少 gzipped 关联资源的产物', () => {
     const plugin = new StatsPlugin({
       build: {
@@ -36,5 +51,32 @@ describe('StatsPlugin', () => {
     expect(table).toContain('assets/js/app.js')
     expect(table).toContain('assets/css/app.css')
     expect(table).toContain('128 B')
+  })
+
+  it('compiler 关闭时应恢复终端光标', () => {
+    const shutdownTap = vi.fn()
+    const compiler = {
+      options: {
+        mode: 'development',
+        devServer: {},
+      },
+      hooks: {
+        environment: { intercept: vi.fn() },
+        watchRun: { intercept: vi.fn() },
+        done: { intercept: vi.fn() },
+      },
+      cache: {
+        hooks: {
+          shutdown: { tap: shutdownTap },
+        },
+      },
+    } as never
+
+    new StatsPlugin().apply(compiler)
+    const restoreCursor = shutdownTap.mock.calls[0][1]
+    restoreCursor()
+
+    expect(cursorMock.hide).toHaveBeenCalledTimes(1)
+    expect(cursorMock.show).toHaveBeenCalledTimes(1)
   })
 })

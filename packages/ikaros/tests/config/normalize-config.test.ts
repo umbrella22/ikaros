@@ -23,7 +23,7 @@ import {
   normalizeConfig,
 } from '../../src/node/config/normalize-config'
 import { Command } from '../../src/node/compile/compile-context'
-import { BROWSERSLIST } from '../../src/node/shared/constants'
+import { BROWSERSLIST, DEFAULT_PORT } from '../../src/node/shared/constants'
 
 const resolveTestContext = (...paths: string[]) =>
   ['/test/project', ...paths].join('/')
@@ -45,8 +45,9 @@ describe('normalizeConfig', () => {
 
     expect(config.bundler).toBe('rspack')
     expect(config.base).toBe('/')
-    expect(config.port).toBe(4321)
-    expect(config.server.port).toBe(4321)
+    expect(config.port).toBe(DEFAULT_PORT)
+    expect(config.server.port).toBe(DEFAULT_PORT)
+    expect(mocked.detect).not.toHaveBeenCalled()
     expect(config.pages).toEqual({
       index: {
         html: '/test/project/index.html',
@@ -57,6 +58,18 @@ describe('normalizeConfig', () => {
       '@': '/test/project/src',
     })
     expect(config.library).toBeNull()
+  })
+
+  it('server 模式未配置端口时应探测可用端口', async () => {
+    const config = await normalizeConfig({
+      command: Command.SERVER,
+      context: '/test/project',
+      resolveContext: resolveTestContext,
+    })
+
+    expect(config.port).toBe(4321)
+    expect(config.server.port).toBe(4321)
+    expect(mocked.detect).toHaveBeenCalledWith(DEFAULT_PORT)
   })
 
   it('应合并用户配置并派生框架检测结果', async () => {

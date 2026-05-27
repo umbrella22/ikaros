@@ -308,18 +308,25 @@ export function explainNormalizedConfig(params: {
     baseValue: baseConfig.base,
   })
 
+  let portSource: string
+  let portReason: string
+  if (userConfig?.server?.port !== undefined) {
+    portSource = 'user.server.port'
+    portReason = `读取 userConfig.server.port=${baseConfig.port}`
+  } else if (command === Command.SERVER) {
+    portSource = 'detect-port'
+    portReason = `未配置 server.port，从默认端口 ${DEFAULT_PORT} 起探测到可用端口 ${baseConfig.port}`
+  } else {
+    portSource = 'default.server.port'
+    portReason = `构建模式未配置 server.port，使用默认值 ${baseConfig.port}`
+  }
+
   const port = withPluginOverride({
     field: 'server.port',
     decision: {
       value: baseConfig.port,
-      source:
-        userConfig?.server?.port !== undefined
-          ? 'user.server.port'
-          : 'detect-port',
-      reason:
-        userConfig?.server?.port !== undefined
-          ? `读取 userConfig.server.port=${baseConfig.port}`
-          : `未配置 server.port，从默认端口 ${DEFAULT_PORT} 起探测到可用端口 ${baseConfig.port}`,
+      source: portSource,
+      reason: portReason,
     },
     value: normalizedConfig.port,
     baseValue: baseConfig.port,
@@ -373,7 +380,8 @@ export function explainNormalizedConfig(params: {
     port: {
       ...port,
       requestedPort: userConfig?.server?.port ?? DEFAULT_PORT,
-      autoDetected: userConfig?.server?.port === undefined,
+      autoDetected:
+        command === Command.SERVER && userConfig?.server?.port === undefined,
     },
     framework: {
       react,
@@ -401,7 +409,9 @@ export async function normalizeConfig(
   const target = userConfig.target ?? 'pc'
   const pages =
     userConfig.pages ?? resolveDefaultPages(resolveContext, isElectron)
-  const port = userConfig.server?.port ?? (await detect(DEFAULT_PORT))
+  const port =
+    userConfig.server?.port ??
+    (command === Command.SERVER ? await detect(DEFAULT_PORT) : DEFAULT_PORT)
   const isReact = checkDependency('react', context)
   const isVue = checkDependency('vue', context)
   const browserslist = resolveBrowserslist(target)

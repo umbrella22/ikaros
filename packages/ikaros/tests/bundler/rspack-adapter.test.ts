@@ -184,6 +184,7 @@ describe('RspackAdapter', () => {
           test?: RegExp
           loader?: string
           options?: Record<string, unknown>
+          exclude?: RegExp
           use?: Array<{
             loader: string
             options?: Record<string, unknown>
@@ -203,6 +204,7 @@ describe('RspackAdapter', () => {
       },
     ])
     expect(jsRule?.options).not.toHaveProperty('rspackExperiments')
+    expect(jsRule?.exclude).toEqual(/node_modules/)
     expect(cssRule?.use?.[0]?.options?.targets).toBe(
       'chrome >= 90, safari >= 16',
     )

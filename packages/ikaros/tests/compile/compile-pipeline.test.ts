@@ -121,10 +121,13 @@ function createNormalizedConfig(
   }
 }
 
-function createCompileContext(userConfig?: UserConfig): CompileContext {
+function createCompileContext(
+  userConfig?: UserConfig,
+  command: CompileContext['command'] = 'build' as CompileContext['command'],
+): CompileContext {
   return {
     context: '/test/project',
-    command: 'build' as CompileContext['command'],
+    command,
     options: {
       platform: 'web',
     },
@@ -222,6 +225,80 @@ describe('runCompile', () => {
           base: '/plugin-base/',
         }),
         pluginManager: expect.anything(),
+      }),
+    )
+  })
+
+  it('build 编译结束后应清理本轮 env', async () => {
+    const ctx = createCompileContext()
+    mocked.createCompileContextSpy.mockResolvedValue(ctx)
+    mocked.resolvePreConfigSpy.mockResolvedValue(createNormalizedConfig())
+
+    await runCompile({
+      command: 'build' as never,
+      options: {
+        platform: 'web',
+      },
+    })
+
+    expect(ctx.envCleanup).toHaveBeenCalledTimes(1)
+  })
+
+  it('server 编译应把 env 清理交给运行时 cleanup', async () => {
+    const ctx = createCompileContext(undefined, 'server' as never)
+    mocked.createCompileContextSpy.mockResolvedValue(ctx)
+    mocked.resolvePreConfigSpy.mockResolvedValue(createNormalizedConfig())
+
+    await runCompile({
+      command: 'server' as never,
+      options: {
+        platform: 'web',
+      },
+    })
+
+    expect(ctx.envCleanup).not.toHaveBeenCalled()
+  })
+
+  it('modifyIkarosConfig 注入的插件应参与后续配置阶段', async () => {
+    const injectedPlugin: IkarosPlugin = {
+      name: 'injected-plugin',
+      setup(api: IkarosPluginAPI) {
+        api.modifyNormalizedConfig((config) => ({
+          ...config,
+          quiet: true,
+        }))
+      },
+    }
+    const plugin: IkarosPlugin = {
+      name: 'config-plugin',
+      setup(api: IkarosPluginAPI) {
+        api.modifyIkarosConfig((config) => ({
+          ...config,
+          plugins: [...(config?.plugins ?? []), injectedPlugin],
+        }))
+      },
+    }
+
+    mocked.createCompileContextSpy.mockResolvedValue(
+      createCompileContext({
+        plugins: [plugin],
+      }),
+    )
+    mocked.resolvePreConfigSpy.mockResolvedValue(createNormalizedConfig())
+
+    await runCompile({
+      command: 'build' as never,
+      options: {
+        platform: 'web',
+      },
+    })
+
+    expect(mocked.compileSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        preConfig: expect.objectContaining({
+          quiet: true,
+        }),
       }),
     )
   })

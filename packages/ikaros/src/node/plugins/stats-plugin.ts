@@ -45,6 +45,7 @@ export default class StatsPlugin implements RspackPluginInstance {
     new rspack.ProgressPlugin().apply(compiler)
 
     cliCursor.hide()
+    this.registerCursorRestore()
 
     if (this.isDev) {
       this.initDevHook()
@@ -62,6 +63,12 @@ export default class StatsPlugin implements RspackPluginInstance {
   private getCurrentEndCompileTime() {
     const end = process.hrtime(this.startCompileHrtime)
     return (end[0] * 1e9 + end[1]) / 1e6
+  }
+
+  private registerCursorRestore(): void {
+    this.compiler.cache.hooks.shutdown.tap(PLUGIN_NAME, () => {
+      cliCursor.show()
+    })
   }
 
   private getError(stats: StatsCompilation) {

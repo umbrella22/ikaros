@@ -59,6 +59,16 @@ describe('mergeUserConfig', () => {
     )
     expect(result).toEqual({ a: { b: { c: 10, d: 2, e: 3 } } })
   })
+
+  it('数组应整体覆盖而不是按索引合并', () => {
+    const target = { list: ['a', 'b'] }
+    const source = { list: ['c'] }
+    const result = mergeUserConfig(
+      target as Record<string, unknown>,
+      source as Record<string, unknown>,
+    )
+    expect(result).toEqual({ list: ['c'] })
+  })
 })
 
 describe('checkDependency', () => {

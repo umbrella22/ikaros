@@ -195,6 +195,8 @@ describe('createLibraryRspackConfigs', () => {
     expect(arr).toHaveLength(2)
     expect(arr[0].output.library.type).toBe('module')
     expect(arr[1].output.library.type).toBe('commonjs2')
+    expect(arr[0].output.filename).toBe('my-lib.[name].mjs')
+    expect(arr[1].output.filename).toBe('my-lib.[name].cjs')
   })
 
   it('自定义 formats 应只生成指定格式', () => {
@@ -320,6 +322,23 @@ describe('createLibraryRspackConfigs', () => {
 
     const cfg = config as TestCfg
     expect(cfg.output.filename).toBe('index.es.custom.js')
+  })
+
+  it('多入口应把 entryName 传递给 fileName 函数', () => {
+    const configs = createLibraryRspackConfigs(
+      createMinimalParams({
+        config: {
+          library: {
+            entry: { main: 'src/index.ts', utils: 'src/utils.ts' },
+            formats: ['es'],
+            fileName: (format, entryName) => `${entryName}.${format}.custom`,
+          },
+        },
+      }),
+    )
+
+    const cfg = configs as TestCfg
+    expect(cfg.output.filename).toBe('[name].es.custom.js')
   })
 
   it('应解析 entry 路径', () => {

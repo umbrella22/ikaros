@@ -96,7 +96,7 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
           },
         },
         type: 'javascript/auto',
-        exclude: [join(this.context, 'node_modules')],
+        exclude: /node_modules/,
       },
       {
         test: /\.m?js$/i,
@@ -106,7 +106,7 @@ export class CreateLoader extends BaseCreate<RuleSetRule> {
           ...(transformImport ? { transformImport } : {}),
         },
         type: 'javascript/auto',
-        exclude: [join(this.context, 'node_modules')],
+        exclude: /node_modules/,
       },
     ]
   }
@@ -264,9 +264,6 @@ export class CreateMpaAssets {
         })
       }
 
-      if (isEmpty(reMakePage)) {
-        return
-      }
       this.pages = reMakePage
     }
   }

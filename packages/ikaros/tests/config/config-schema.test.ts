@@ -31,7 +31,11 @@ describe('configSchema', () => {
         cdnOptions: { modules: [] },
         moduleFederation: {},
         css: {
+          lightningcss: { targets: 'defaults' },
           sourceMap: true,
+          less: { lessOptions: { math: 'always' } },
+          sass: { sassOptions: { api: 'modern-compiler' } },
+          stylus: { stylusOptions: { compress: false } },
         },
       },
       build: {

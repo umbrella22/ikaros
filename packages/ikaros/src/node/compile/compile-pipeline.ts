@@ -5,7 +5,9 @@ import { createBuiltinPlugins } from '../core/builtin-plugins'
 import { createPluginManager } from '../core/plugin-manager'
 import { createPlatformAdapter } from '../platform/platform-factory'
 import {
+  Command,
   createCompileContext,
+  type CompileContext,
   type CompileServeParams,
 } from './compile-context'
 
@@ -21,33 +23,45 @@ import {
  *   6. platform.compile        — 通过平台适配器执行编译
  */
 export async function runCompile(params: CompileServeParams): Promise<void> {
-  const ctx = await createCompileContext(params)
+  let ctx: CompileContext | undefined
 
-  const pluginManager = createPluginManager({
-    compileContext: ctx,
-    plugins: [...createBuiltinPlugins(ctx), ...(ctx.userConfig?.plugins ?? [])],
-  })
-  await pluginManager.init()
+  try {
+    ctx = await createCompileContext(params)
 
-  ctx.userConfig = await pluginManager.applyIkarosConfig(ctx.userConfig)
+    const pluginManager = createPluginManager({
+      compileContext: ctx,
+      plugins: [
+        ...createBuiltinPlugins(ctx),
+        ...(ctx.userConfig?.plugins ?? []),
+      ],
+    })
+    await pluginManager.init()
 
-  const platform = createPlatformAdapter(ctx.options.platform, {
-    context: ctx.context,
-  })
+    ctx.userConfig = await pluginManager.applyIkarosConfig(ctx.userConfig)
+    await pluginManager.addPlugins(ctx.userConfig?.plugins ?? [])
 
-  const preConfig = await pluginManager.applyNormalizedConfig(
-    await platform.resolvePreConfig(ctx),
-  )
+    const platform = createPlatformAdapter(ctx.options.platform, {
+      context: ctx.context,
+    })
 
-  const bundler = createBundlerAdapter({
-    bundler: preConfig.bundler,
-    resolveContextModule: ctx.resolveContextModule,
-  })
+    const preConfig = await pluginManager.applyNormalizedConfig(
+      await platform.resolvePreConfig(ctx),
+    )
 
-  await platform.compile(bundler, {
-    command: ctx.command,
-    preConfig,
-    compileContext: ctx,
-    pluginManager,
-  })
+    const bundler = createBundlerAdapter({
+      bundler: preConfig.bundler,
+      resolveContextModule: ctx.resolveContextModule,
+    })
+
+    await platform.compile(bundler, {
+      command: ctx.command,
+      preConfig,
+      compileContext: ctx,
+      pluginManager,
+    })
+  } finally {
+    if (ctx && ctx.command !== Command.SERVER) {
+      ctx.envCleanup()
+    }
+  }
 }

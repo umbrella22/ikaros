@@ -1,8 +1,16 @@
 // shared/common.ts — 通用工具函数
 
-import { isObject } from 'es-toolkit/compat'
 import { createRequire } from 'node:module'
 import { join } from 'path'
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
 
 export function mergeUserConfig<T extends Record<string, unknown>>(
   target: T,
@@ -15,7 +23,7 @@ export function mergeUserConfig<T extends Record<string, unknown>>(
     const sourceValue = sourceRecord[key]
     const targetValue = result[key]
 
-    if (isObject(sourceValue) && isObject(targetValue)) {
+    if (isPlainRecord(sourceValue) && isPlainRecord(targetValue)) {
       result[key] = mergeUserConfig(
         targetValue as Record<string, unknown>,
         sourceValue as Record<string, unknown>,
