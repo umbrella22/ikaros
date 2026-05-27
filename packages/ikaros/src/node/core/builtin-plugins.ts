@@ -48,9 +48,6 @@ function mergeRspackConfig(
     plugins: overridePlugins,
     experiments: overrideExperiments,
     ...rest
-  } = plugins: overridePlugins,
-    experiments: overrideExperiments,
-    ...rest
   } = overrides
   const merged: Configuration = {
     ...bundlerConfig,

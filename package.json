@@ -16,11 +16,11 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@changesets/cli": "^2.30.0",
+    "@changesets/cli": "^2.31.0",
     "@ikaros-cli/eslint-plugin": "workspace:*",
     "@ikaros-cli/prettier-config": "workspace:*",
-    "@types/node": "^25.5.0",
-    "dotenv": "^17.3.1",
+    "@types/node": "^25.9.1",
+    "dotenv": "^17.4.2",
     "tsdown": "^0.21.10",
     "typescript": "^6.0.3"
   }
