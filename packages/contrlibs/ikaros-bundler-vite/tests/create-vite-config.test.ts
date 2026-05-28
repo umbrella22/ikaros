@@ -86,6 +86,20 @@ describe('createViteConfig', () => {
     expect(config.resolve?.alias).toHaveProperty('~', '/custom/path')
   })
 
+  it('should expand rspack extension spread syntax for Vite', () => {
+    const config = createViteConfig(
+      createMinimalParams({
+        config: {
+          resolve: {
+            extensions: ['...', '.mjs', '.jsx', '.ts', '.tsx'],
+          },
+        },
+      }),
+    )
+
+    expect(config.resolve?.extensions).toContain('.js')
+  })
+
   it('should set outDir for electron renderer', () => {
     const config = createViteConfig(
       createMinimalParams({

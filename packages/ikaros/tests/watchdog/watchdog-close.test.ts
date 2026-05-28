@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockedChokidar = vi.hoisted(() => {
-  const handlers = new Map<string, (filePath: string) => void>()
+  const handlers = new Map<string, (...args: unknown[]) => void>()
   const closeSpy = vi.fn().mockResolvedValue(undefined)
   const addSpy = vi.fn()
   const unwatchSpy = vi.fn().mockResolvedValue(undefined)
   const watcher = {
-    on: vi.fn((event: string, handler: (filePath: string) => void) => {
+    on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
       handlers.set(event, handler)
       return watcher
     }),
@@ -26,10 +26,22 @@ const mockedChokidar = vi.hoisted(() => {
   }
 })
 
+const mockedLogger = vi.hoisted(() => ({
+  done: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  okay: vi.fn(),
+  warning: vi.fn(),
+}))
+
 vi.mock('chokidar', () => ({
   default: {
     watch: mockedChokidar.watchSpy,
   },
+}))
+
+vi.mock('../../src/node/shared/logger', () => ({
+  LoggerSystem: () => mockedLogger,
 }))
 
 import { createWatchdog } from '../../src/node/watchdog/watchdog'
@@ -43,6 +55,11 @@ describe('Watchdog close boundary', () => {
     mockedChokidar.unwatchSpy.mockClear()
     mockedChokidar.watchSpy.mockClear()
     mockedChokidar.watcher.on.mockClear()
+    mockedLogger.done.mockClear()
+    mockedLogger.error.mockClear()
+    mockedLogger.info.mockClear()
+    mockedLogger.okay.mockClear()
+    mockedLogger.warning.mockClear()
   })
 
   afterEach(() => {
@@ -100,5 +117,25 @@ describe('Watchdog close boundary', () => {
         },
       }),
     )
+  })
+
+  it('ready 事件重复触发时只打印一次就绪日志', async () => {
+    const watchdog = createWatchdog({
+      context: '/test/project',
+      onRestart: vi.fn().mockResolvedValue(undefined),
+      debounceMs: 100,
+    })
+
+    mockedChokidar.handlers.get('ready')?.()
+    mockedChokidar.handlers.get('ready')?.()
+
+    const readyLogCalls = mockedLogger.info.mock.calls.filter(
+      ([payload]) =>
+        payload.text === '看门狗已就绪，正在监听配置文件和环境变量变更...',
+    )
+
+    expect(readyLogCalls).toHaveLength(1)
+
+    await watchdog.close()
   })
 })

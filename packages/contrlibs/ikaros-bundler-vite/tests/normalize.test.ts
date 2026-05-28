@@ -77,9 +77,17 @@ describe('sanitizeViteExtensions', () => {
     expect(sanitizeViteExtensions([])).toBeUndefined()
   })
 
-  it('should filter out rspack spread syntax "..."', () => {
+  it('should expand rspack spread syntax "..." to Vite defaults', () => {
     const result = sanitizeViteExtensions(['.js', '...', '.ts'])
-    expect(result).toEqual(['.js', '.ts'])
+    expect(result).toEqual([
+      '.js',
+      '.mjs',
+      '.mts',
+      '.ts',
+      '.jsx',
+      '.tsx',
+      '.json',
+    ])
   })
 
   it('should filter out extensions not starting with "."', () => {
@@ -97,8 +105,21 @@ describe('sanitizeViteExtensions', () => {
     expect(result).toEqual(['.js', '.ts'])
   })
 
-  it('should return undefined when all items are filtered out', () => {
+  it('should return Vite defaults when input only contains spread syntax and invalid items', () => {
     const result = sanitizeViteExtensions(['...', '', 'no-dot'])
+    expect(result).toEqual([
+      '.mjs',
+      '.js',
+      '.mts',
+      '.ts',
+      '.jsx',
+      '.tsx',
+      '.json',
+    ])
+  })
+
+  it('should return undefined when all items are invalid and no spread syntax is provided', () => {
+    const result = sanitizeViteExtensions(['', 'no-dot'])
     expect(result).toBeUndefined()
   })
 })

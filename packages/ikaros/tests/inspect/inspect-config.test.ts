@@ -376,9 +376,9 @@ describe('inspectConfig', () => {
     })
     expect(result.diagnostics.resolution.port).toMatchObject({
       value: 3000,
-      source: 'detect-port',
+      source: 'default.server.port',
       requestedPort: 8080,
-      autoDetected: true,
+      autoDetected: false,
     })
     expect(result.diagnostics.resolution.framework.selected).toMatchObject({
       value: 'none',

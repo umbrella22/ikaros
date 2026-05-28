@@ -58,7 +58,9 @@ describe('StatsPlugin', () => {
     const compiler = {
       options: {
         mode: 'development',
-        devServer: {},
+        devServer: {
+          port: 3000,
+        },
       },
       hooks: {
         environment: { intercept: vi.fn() },
@@ -70,6 +72,7 @@ describe('StatsPlugin', () => {
           shutdown: { tap: shutdownTap },
         },
       },
+      __internal__registerBuiltinPlugin: vi.fn(),
     } as never
 
     new StatsPlugin().apply(compiler)

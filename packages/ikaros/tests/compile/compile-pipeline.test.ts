@@ -35,9 +35,17 @@ const mocked = vi.hoisted(() => {
   }
 })
 
-vi.mock('../../src/node/compile/compile-context', () => ({
-  createCompileContext: mocked.createCompileContextSpy,
-}))
+vi.mock('../../src/node/compile/compile-context', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('../../src/node/compile/compile-context')
+    >()
+
+  return {
+    ...actual,
+    createCompileContext: mocked.createCompileContextSpy,
+  }
+})
 
 vi.mock('../../src/node/platform/platform-factory', () => ({
   createPlatformAdapter: mocked.createPlatformAdapterSpy,

@@ -3,6 +3,16 @@ import type { PluginOption, ProxyOptions } from 'vite'
 
 import type { NormalizedConfig } from '../types'
 
+const VITE_DEFAULT_EXTENSIONS = [
+  '.mjs',
+  '.js',
+  '.mts',
+  '.ts',
+  '.jsx',
+  '.tsx',
+  '.json',
+] as const
+
 /**
  * 将 define 值统一序列化为 Vite 可接受的格式
  *
@@ -36,7 +46,7 @@ export const normalizeDefine = (
  * 过滤并规范化 Vite resolve.extensions
  *
  * - 排除空字符串
- * - 排除 rspack 的 '...' spread 语法（Vite 不支持）
+ * - 将 rspack 的 '...' spread 语法展开为 Vite 默认扩展名
  * - 确保以 '.' 开头
  * - 去重
  */
@@ -49,7 +59,12 @@ export const sanitizeViteExtensions = (
   for (const ext of input) {
     if (typeof ext !== 'string') continue
     if (!ext) continue
-    if (ext === '...') continue
+    if (ext === '...') {
+      for (const defaultExt of VITE_DEFAULT_EXTENSIONS) {
+        if (!out.includes(defaultExt)) out.push(defaultExt)
+      }
+      continue
+    }
     if (!ext.startsWith('.')) continue
     if (!out.includes(ext)) out.push(ext)
   }

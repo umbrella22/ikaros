@@ -1,6 +1,6 @@
 import { mergeUserConfig } from '../shared/common'
 
-export function mergeConfig<T extends Record<string, unknown>>(
+export function mergeConfig<T extends object>(
   base: T,
   overrides?: Partial<T>,
 ): T {
@@ -8,5 +8,8 @@ export function mergeConfig<T extends Record<string, unknown>>(
     return { ...base }
   }
 
-  return mergeUserConfig(base, overrides as T)
+  return mergeUserConfig(
+    base as unknown as Record<string, unknown>,
+    overrides as unknown as Record<string, unknown>,
+  ) as unknown as T
 }

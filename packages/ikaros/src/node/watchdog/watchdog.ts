@@ -183,6 +183,7 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
   let isClosed = false
   let isRestarting = false
   let pendingRestart: WatchdogRestartReason | null = null
+  let isReadyLogged = false
   let currentWatchPlan = baseWatchPlan
   let trackedFiles = new Set(baseWatchPlan.trackedFiles)
   let watchedPaths = new Set(baseWatchPlan.watchedPaths)
@@ -315,6 +316,11 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
   watcher.on('add', (filePath) => handleWatchEvent('add', filePath))
   watcher.on('unlink', (filePath) => handleWatchEvent('unlink', filePath))
   watcher.on('ready', () => {
+    if (isReadyLogged) {
+      return
+    }
+
+    isReadyLogged = true
     logger.info({ text: '看门狗已就绪，正在监听配置文件和环境变量变更...' })
   })
   watcher.on('error', (err) => {
