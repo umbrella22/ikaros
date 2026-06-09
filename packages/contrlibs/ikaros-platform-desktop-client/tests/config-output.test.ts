@@ -42,10 +42,14 @@ vi.mock('@ikaros-cli/ikaros', () => {
 })
 
 import { createElectronMainRspackConfig } from '../src/config/main-config'
-import { createElectronPreloadRspackConfigs } from '../src/config/preload-config'
+import {
+  createElectronPreloadRspackConfigs,
+  resolveElectronPreloadEntries,
+} from '../src/config/preload-config'
+import { Command } from '@ikaros-cli/ikaros'
 
 const baseParams = {
-  command: 'build',
+  command: Command.BUILD,
   env: {},
   context: '/project',
   resolveContext: (...paths: string[]) => `/project/${paths.join('/')}`,
@@ -63,6 +67,7 @@ describe('electron output directories', () => {
     expect(preloadConfigs[0]?.config.output).toMatchObject({
       path: '/project/dist/electron/preload',
       clean: true,
+      filename: 'main-preload.js',
     })
   })
 
@@ -89,6 +94,29 @@ describe('electron output directories', () => {
     })
     expect(preloadConfigs[0]?.config.output).toMatchObject({
       path: '/project/release/preload',
+    })
+  })
+})
+
+describe('electron preload entries', () => {
+  it('默认预加载脚本应对齐模板输出 main-preload.js', () => {
+    expect(resolveElectronPreloadEntries(undefined)).toEqual({
+      'main-preload': 'src/preload/index.ts',
+    })
+  })
+
+  it('数组配置中 index 入口应输出为 main-preload.js，其它入口保留文件名', () => {
+    expect(
+      resolveElectronPreloadEntries({
+        electron: {
+          preload: {
+            entries: ['src/preload/index.ts', 'src/preload/loader-preload.ts'],
+          },
+        },
+      }),
+    ).toEqual({
+      'main-preload': 'src/preload/index.ts',
+      'loader-preload': 'src/preload/loader-preload.ts',
     })
   })
 })

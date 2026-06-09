@@ -2,6 +2,8 @@ import readline from 'node:readline'
 import { spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
 
+type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'unknown'
+
 export type BuildStatus = {
   success: boolean
   port?: number
@@ -29,6 +31,9 @@ export type DesktopClientDevParams = {
 
   /** electron --inspect 端口 */
   inspectPort?: number
+
+  /** 透传给 Electron 主进程的额外参数 */
+  electronArgs?: string[]
 }
 
 export type DesktopClientBuildParams = {
@@ -76,6 +81,30 @@ const writeLine = (line = '') => {
   process.stdout.write(`${line}\n`)
 }
 
+const detectPackageManager = (): PackageManager => {
+  const execPath = process.env.npm_execpath ?? ''
+
+  if (execPath.endsWith('yarn.js')) return 'yarn'
+  if (execPath.endsWith('pnpm.cjs') || execPath.endsWith('pnpm.js'))
+    return 'pnpm'
+  if (execPath.endsWith('npm-cli.js')) return 'npm'
+
+  return 'unknown'
+}
+
+const resolveForwardArgs = (electronArgs?: string[]): string[] => {
+  if (electronArgs) return electronArgs
+
+  const packageManager = detectPackageManager()
+
+  if (packageManager === 'yarn') return process.argv.slice(3)
+  if (packageManager === 'npm' || packageManager === 'pnpm') {
+    return process.argv.slice(2)
+  }
+
+  return []
+}
+
 const showHelp = (controlledRestart: boolean) => {
   const lines = [
     '可用快捷键：',
@@ -98,6 +127,7 @@ export const runDesktopClientDev = async (
     registerCleanup,
     controlledRestart = false,
     inspectPort = 5858,
+    electronArgs,
   } = params
 
   const rendererPort = await startRendererDev()
@@ -178,7 +208,11 @@ export const runDesktopClientDev = async (
   const startElectron = () => {
     const electronBin = resolveElectronBin(loadContextModule)
 
-    const args = [`--inspect=${inspectPort}`, entryFile]
+    const args = [
+      `--inspect=${inspectPort}`,
+      entryFile,
+      ...resolveForwardArgs(electronArgs),
+    ]
 
     electronProcess = spawn(electronBin, args, {
       stdio: ['inherit', 'pipe', 'pipe'],

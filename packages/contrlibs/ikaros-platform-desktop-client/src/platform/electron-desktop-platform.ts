@@ -1,5 +1,3 @@
-// platform/electron-desktop-platform.ts — Electron Desktop 平台适配器（PlatformAdapter 实现）
-
 import path from 'node:path'
 import { promises as fsp } from 'node:fs'
 import type { Configuration, DefinePluginOptions } from '@rspack/core'
@@ -13,7 +11,6 @@ import {
   type BuildStatus,
   resolveWebPreConfig,
   LoggerSystem,
-  registerCleanup,
   runRspackBuild,
   watchRspackBuild,
 } from '@ikaros-cli/ikaros'
@@ -24,9 +21,6 @@ import { createElectronPreloadRspackConfigs } from '../config/preload-config'
 
 const { info, done, error } = LoggerSystem()
 
-// ─── 辅助函数 ───
-
-/** 禁用 rspack config 的 output.clean，避免 main/preload 共用输出目录时并发 clean 导致冲突 */
 const disableOutputClean = (config: Configuration): Configuration => {
   const output = config.output
   if (!output || typeof output !== 'object') return config
@@ -38,13 +32,11 @@ const disableOutputClean = (config: Configuration): Configuration => {
   return config
 }
 
-/** 统一在构建前手动清理一次输出目录 */
 const tryCleanDir = async (dir: string | undefined) => {
   if (!dir) return
   try {
     await fsp.rm(dir, { recursive: true, force: true })
   } catch (err: unknown) {
-    // ENOENT 表示目录不存在，可安全忽略；其他错误（如权限不足）应给出警告
     if (
       err &&
       typeof err === 'object' &&
@@ -58,7 +50,6 @@ const tryCleanDir = async (dir: string | undefined) => {
   }
 }
 
-/** 从 rspack config 中提取 output.path */
 const extractOutputPath = (config: Configuration): string | undefined => {
   return config.output &&
     typeof config.output === 'object' &&
@@ -68,7 +59,13 @@ const extractOutputPath = (config: Configuration): string | undefined => {
 }
 
 const collectOutputDirs = (configs: Configuration[]): string[] => {
-  return [...new Set(configs.map(extractOutputPath).filter(Boolean))]
+  return [
+    ...new Set(
+      configs
+        .map(extractOutputPath)
+        .filter((dir): dir is string => Boolean(dir)),
+    ),
+  ]
 }
 
 const cleanOutputDirs = async (configs: Configuration[]): Promise<void> => {
@@ -76,16 +73,78 @@ const cleanOutputDirs = async (configs: Configuration[]): Promise<void> => {
   await Promise.all(outputDirs.map((dir) => tryCleanDir(dir)))
 }
 
-/**
- * Electron Desktop 平台适配器
- *
- * 实现 PlatformAdapter 接口，替代原来继承 BaseCompileService 的方式。
- * 通过 compile() 方法接收 CompileContext 和 BundlerAdapter，
- * 编排 main/preload/renderer 三目标的编译流程。
- *
- * - main/preload 始终使用 rspack（node target，不走 BundlerAdapter）
- * - renderer 使用 BundlerAdapter（支持 rspack/vite 切换）
- */
+const asRspackConfigs = (config: unknown): Configuration[] => {
+  return Array.isArray(config)
+    ? (config as Configuration[])
+    : [config as Configuration]
+}
+
+const isControlledRestartEnabled = (ctx: CompileContext): boolean => {
+  return Boolean(ctx.userConfig?.electron?.build?.debug)
+}
+
+const shouldBuildHotUpdateResources = (ctx: CompileContext): boolean => {
+  return Boolean(ctx.userConfig?.electron?.build?.hotReload)
+}
+
+const writeJson = async (filePath: string, data: unknown): Promise<void> => {
+  await fsp.mkdir(path.dirname(filePath), { recursive: true })
+  await fsp.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`)
+}
+
+const collectPackageDependencies = (
+  pkg: CompileContext['contextPkg'],
+): Record<string, string> | undefined => {
+  if (!pkg || typeof pkg !== 'object') return undefined
+  const deps = (pkg as { dependencies?: Record<string, string> }).dependencies
+  return deps && typeof deps === 'object' ? deps : undefined
+}
+
+const prepareHotUpdateResources = async (
+  ctx: CompileContext,
+  configs: Configuration[],
+): Promise<void> => {
+  if (!shouldBuildHotUpdateResources(ctx)) return
+
+  const outputRoot =
+    ctx.userConfig?.electron?.build?.outDir ??
+    ctx.resolveContext('dist/electron')
+  const resourcesDir = ctx.resolveContext('build/resources')
+  const resourcesDistDir = path.join(resourcesDir, 'dist')
+
+  await fsp.rm(resourcesDistDir, { recursive: true, force: true })
+  await fsp.mkdir(resourcesDistDir, { recursive: true })
+
+  for (const dir of collectOutputDirs(configs)) {
+    const name = path.basename(dir)
+    await fsp.cp(dir, path.join(resourcesDistDir, name), {
+      recursive: true,
+      force: true,
+      errorOnExist: false,
+    })
+  }
+
+  await writeJson(path.join(resourcesDir, 'package.json'), {
+    name: ctx.contextPkg?.name,
+    version: ctx.contextPkg?.version,
+    main: path.relative(
+      resourcesDir,
+      ctx.resolveContext(outputRoot, 'main/main.js'),
+    ),
+    dependencies: collectPackageDependencies(ctx.contextPkg),
+  })
+}
+
+const runBuildLifecycle = async <T>(task: () => Promise<T>): Promise<T> => {
+  info({ text: '🔨 开始构建 Electron 应用...' })
+  console.time('Electron 构建耗时')
+  try {
+    return await task()
+  } finally {
+    console.timeEnd('Electron 构建耗时')
+  }
+}
+
 export class ElectronDesktopPlatform implements PlatformAdapter {
   readonly name = 'desktopClient' as const
 
@@ -135,21 +194,13 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
         await createElectronPreloadRspackConfigs(configParams)
       const preloadConfigs = preloadEntries.map((e) => e.config)
 
-      // 生成 renderer 编译配置
       const rendererConfig = await bundler.createConfig({
         command: 'server',
         mode: ctx.options.mode,
         env: ctx.env,
         context: ctx.context,
         contextPkg: ctx.contextPkg,
-        userConfig: preConfig.userConfig,
-        pages: preConfig.pages,
-        base: preConfig.base,
-        port: preConfig.port,
-        browserslist: preConfig.browserslist,
-        isElectron: true,
-        isVue: preConfig.isVue,
-        isReact: preConfig.isReact,
+        config: preConfig,
         resolveContext: ctx.resolveContext,
         preWarnings: ctx.preWarnings,
       })
@@ -177,7 +228,8 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
       await runDesktopClientDev({
         entryFile: this.resolveMainOutputFile(mainConfig, ctx),
         loadContextModule: ctx.loadContextModule,
-        registerCleanup,
+        registerCleanup: ctx.registerCleanup,
+        controlledRestart: isControlledRestartEnabled(ctx),
 
         startRendererDev: () => {
           return new Promise<number>((resolve, reject) => {
@@ -191,7 +243,7 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
                     reject(new Error(status.message))
                   }
                 },
-                registerCleanup,
+                registerCleanup: ctx.registerCleanup,
               })
               .catch(reject)
           })
@@ -215,100 +267,83 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
     }
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
-
-  /**
-   * 生产构建：
-   * - 如果 renderer 也用 rspack → 三合一并行构建（main + preload + renderer）
-   * - 如果 renderer 用 vite → main+preload 用 rspack，renderer 用 vite
-   */
   private async build(
     bundler: BundlerAdapter,
     ctx: CompileContext,
     preConfig: PlatformPreConfig,
   ): Promise<void> {
-    info({ text: '🔨 开始构建 Electron 应用...' })
+    await runBuildLifecycle(async () => {
+      const configParams = this.createConfigFactoryParams(ctx)
 
-    const configParams = this.createConfigFactoryParams(ctx)
+      const mainConfig = await createElectronMainRspackConfig(configParams)
+      const preloadEntries =
+        await createElectronPreloadRspackConfigs(configParams)
+      const preloadConfigs = preloadEntries.map((e) => e.config)
 
-    const mainConfig = await createElectronMainRspackConfig(configParams)
-    const preloadEntries =
-      await createElectronPreloadRspackConfigs(configParams)
-    const preloadConfigs = preloadEntries.map((e) => e.config)
+      const rendererConfig = await bundler.createConfig({
+        command: 'build',
+        mode: ctx.options.mode,
+        env: ctx.env,
+        context: ctx.context,
+        contextPkg: ctx.contextPkg,
+        config: preConfig,
+        resolveContext: ctx.resolveContext,
+        preWarnings: ctx.preWarnings,
+      })
 
-    // 生成 renderer 编译配置
-    const rendererConfig = await bundler.createConfig({
-      command: 'build',
-      mode: ctx.options.mode,
-      env: ctx.env,
-      context: ctx.context,
-      contextPkg: ctx.contextPkg,
-      userConfig: preConfig.userConfig,
-      pages: preConfig.pages,
-      base: preConfig.base,
-      port: preConfig.port,
-      browserslist: preConfig.browserslist,
-      isElectron: true,
-      isVue: preConfig.isVue,
-      isReact: preConfig.isReact,
-      resolveContext: ctx.resolveContext,
-      preWarnings: ctx.preWarnings,
-    })
+      let unionBuild = false
+      let builtConfigs: Configuration[] = []
 
-    let unionBuild = false
+      await runDesktopClientBuild({
+        buildMain: async () => {
+          const safeMainConfig = disableOutputClean(mainConfig)
+          const safePreloadConfigs = preloadConfigs.map(disableOutputClean)
 
-    await runDesktopClientBuild({
-      buildMain: async () => {
-        const safeMainConfig = disableOutputClean(mainConfig)
-        const safePreloadConfigs = preloadConfigs.map(disableOutputClean)
+          if (bundler.name === 'rspack') {
+            const safeRendererConfigs =
+              asRspackConfigs(rendererConfig).map(disableOutputClean)
+            const unionConfigs = [
+              safeMainConfig,
+              ...safePreloadConfigs,
+              ...safeRendererConfigs,
+            ]
 
-        if (bundler.name === 'rspack') {
-          // 三合一：main + preload + renderer 一次 rspack 多配置构建
-          const safeRendererConfig = disableOutputClean(
-            rendererConfig as Configuration,
-          )
-          await cleanOutputDirs([
-            safeMainConfig,
-            ...safePreloadConfigs,
-            safeRendererConfig,
-          ])
+            await cleanOutputDirs(unionConfigs)
 
-          await runRspackBuild(
-            [safeMainConfig, ...safePreloadConfigs, safeRendererConfig],
-            { onBuildStatus: ctx.onBuildStatus },
-          )
-          unionBuild = true
-          return
-        }
+            await runRspackBuild(unionConfigs, {
+              onBuildStatus: ctx.onBuildStatus,
+            })
+            unionBuild = true
+            builtConfigs = unionConfigs
+            return
+          }
 
-        // rspack 只构建 main + preload（renderer 在 buildRenderer 中执行）
-        await cleanOutputDirs([safeMainConfig, ...safePreloadConfigs])
+          const mainPreloadConfigs = [safeMainConfig, ...safePreloadConfigs]
+          await cleanOutputDirs(mainPreloadConfigs)
 
-        await runRspackBuild([safeMainConfig, ...safePreloadConfigs], {
-          onBuildStatus: ctx.onBuildStatus,
-        })
-      },
+          await runRspackBuild(mainPreloadConfigs, {
+            onBuildStatus: ctx.onBuildStatus,
+          })
+          builtConfigs = mainPreloadConfigs
+        },
 
-      buildPreload: async () => {
-        // 已合并到 buildMain，保持兼容占位
-      },
+        buildPreload: async () => undefined,
 
-      buildRenderer: async () => {
-        if (unionBuild) return
+        buildRenderer: async () => {
+          if (unionBuild) return
 
-        // renderer 使用非 rspack bundler（如 vite）构建
-        await bundler.runBuild(rendererConfig, {
-          onBuildStatus: ctx.onBuildStatus,
-        })
-      },
+          await bundler.runBuild(rendererConfig, {
+            onBuildStatus: ctx.onBuildStatus,
+          })
+        },
+      })
+
+      await prepareHotUpdateResources(ctx, builtConfigs)
     })
 
     done({ text: '🎉 Electron 应用构建完成！' })
   }
 
-  // ─── 私有辅助方法 ─────────────────────────────────────────────────────────
-
-  /** 创建配置工厂参数（main/preload 配置共用） */
   private createConfigFactoryParams(ctx: CompileContext) {
     return {
       command: ctx.command,
@@ -321,9 +356,6 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
     }
   }
 
-  /**
-   * watch main + preload（始终用 rspack，node target 不走 BundlerAdapter）
-   */
   private async watchMainAndPreload(
     mainConfig: Configuration,
     preloadConfigs: Configuration[],
@@ -339,9 +371,6 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
     })
   }
 
-  /**
-   * 从 main rspack config 派生 main 进程输出文件路径。
-   */
   private resolveMainOutputFile(
     mainConfig: Configuration,
     ctx: CompileContext,
@@ -369,7 +398,4 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
   }
 }
 
-/**
- * 单例实例，用于 platform-factory 加载
- */
 export const ElectronDesktopPlatformInstance = new ElectronDesktopPlatform()

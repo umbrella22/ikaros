@@ -1,4 +1,9 @@
-import type { Configuration, DefinePluginOptions } from '@rspack/core'
+import type {
+  Configuration,
+  DefinePluginOptions,
+  Loader,
+  Plugin,
+} from '@rspack/core'
 import { join } from 'node:path'
 
 import {
@@ -53,6 +58,15 @@ const resolveMainOutputDir = (
   return defaultOutput
 }
 
+const normalizeLoaders = (loaders: Loader[] | undefined): Loader[] => {
+  return loaders ?? []
+}
+
+const normalizePlugins = (plugins: Plugin | Plugin[] | undefined): Plugin[] => {
+  if (!plugins) return []
+  return Array.isArray(plugins) ? plugins : [plugins]
+}
+
 export const createElectronMainRspackConfig = async (
   params: CreateElectronMainRspackConfigParams,
 ): Promise<Configuration> => {
@@ -79,8 +93,8 @@ export const createElectronMainRspackConfig = async (
     mode,
   })
 
-  const mainLoaders = electronConfig?.main?.loaders || userConfig?.loaders
-  const mainPlugins = electronConfig?.main?.plugins || userConfig?.plugins
+  const mainLoaders = normalizeLoaders(electronConfig?.main?.loaders)
+  const mainPlugins = normalizePlugins(electronConfig?.main?.plugins)
 
   const rules = loaderHelper.useDefaultScriptLoader().add(mainLoaders).end()
 

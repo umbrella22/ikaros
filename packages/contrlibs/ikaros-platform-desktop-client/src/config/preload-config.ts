@@ -1,4 +1,9 @@
-import type { Configuration, DefinePluginOptions } from '@rspack/core'
+import type {
+  Configuration,
+  DefinePluginOptions,
+  Loader,
+  Plugin,
+} from '@rspack/core'
 import { basename, extname, join } from 'node:path'
 
 import {
@@ -30,12 +35,11 @@ const isRecord = (val: unknown): val is Record<string, unknown> => {
   return !!val && typeof val === 'object' && !Array.isArray(val)
 }
 
-const resolvePreloadEntries = (
+export const resolveElectronPreloadEntries = (
   userConfig: UserConfig | undefined,
 ): Record<string, string> => {
   const electronConfig = userConfig?.electron
-  // 约定：预加载脚本编译后的名字是 preload-[文件名].js
-  const defaultEntry = { 'preload-index': 'src/preload/index.ts' }
+  const defaultEntry = { 'main-preload': 'src/preload/index.ts' }
 
   const entriesRaw = electronConfig?.preload?.entries
   if (!entriesRaw) {
@@ -46,7 +50,7 @@ const resolvePreloadEntries = (
     const entries: Record<string, string> = {}
     entriesRaw.forEach((entry) => {
       const fileBase = basename(entry, extname(entry))
-      const name = `preload-${fileBase}`
+      const name = fileBase === 'index' ? 'main-preload' : `${fileBase}`
 
       if (entries[name]) {
         throw new Error(`preload.entries 存在重复文件名导致输出冲突: ${name}`)
@@ -82,6 +86,15 @@ const resolvePreloadOutputDir = (
   return defaultOutput
 }
 
+const normalizeLoaders = (loaders: Loader[] | undefined): Loader[] => {
+  return loaders ?? []
+}
+
+const normalizePlugins = (plugins: Plugin | Plugin[] | undefined): Plugin[] => {
+  if (!plugins) return []
+  return Array.isArray(plugins) ? plugins : [plugins]
+}
+
 export const createElectronPreloadRspackConfigs = async (
   params: CreateElectronPreloadRspackConfigsParams,
 ): Promise<ElectronPreloadEntryConfigs> => {
@@ -99,7 +112,7 @@ export const createElectronPreloadRspackConfigs = async (
 
   const electronConfig = userConfig?.electron
 
-  const entries = resolvePreloadEntries(userConfig)
+  const entries = resolveElectronPreloadEntries(userConfig)
   const outputDir = resolvePreloadOutputDir(userConfig, resolveContext)
 
   const result: ElectronPreloadEntryConfigs = []
@@ -114,10 +127,8 @@ export const createElectronPreloadRspackConfigs = async (
       mode,
     })
 
-    const preloadLoaders =
-      electronConfig?.preload?.loaders || userConfig?.loaders
-    const preloadPlugins =
-      electronConfig?.preload?.plugins || userConfig?.plugins
+    const preloadLoaders = normalizeLoaders(electronConfig?.preload?.loaders)
+    const preloadPlugins = normalizePlugins(electronConfig?.preload?.plugins)
 
     const rules = loaderHelper
       .useDefaultScriptLoader()

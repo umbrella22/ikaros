@@ -79,6 +79,8 @@ vi.mock('node:child_process', () => ({
 
 import { runDesktopClientDev } from '../src/runner'
 
+const loadElectron = <T>(): T => '/mock/electron' as T
+
 describe('runDesktopClientDev', () => {
   beforeEach(() => {
     runnerMocks.reset()
@@ -96,7 +98,7 @@ describe('runDesktopClientDev', () => {
 
     await runDesktopClientDev({
       entryFile: '/tmp/main.js',
-      loadContextModule: () => '/mock/electron',
+      loadContextModule: loadElectron,
       registerCleanup: (cleanup) => cleanups.push(cleanup),
       startRendererDev: async () => 3000,
       startMainDev: async () => undefined,
@@ -120,7 +122,7 @@ describe('runDesktopClientDev', () => {
 
     await runDesktopClientDev({
       entryFile: '/tmp/main.js',
-      loadContextModule: () => '/mock/electron',
+      loadContextModule: loadElectron,
       startRendererDev: async () => 3000,
       startMainDev: async () => undefined,
       startPreloadDev: async () => undefined,
@@ -141,7 +143,7 @@ describe('runDesktopClientDev', () => {
 
     await runDesktopClientDev({
       entryFile: '/tmp/main.js',
-      loadContextModule: () => '/mock/electron',
+      loadContextModule: loadElectron,
       startRendererDev: async () => 3000,
       startMainDev: async (options) => {
         mainStatusHandler = options?.onBuildStatus as typeof mainStatusHandler
@@ -166,7 +168,7 @@ describe('runDesktopClientDev', () => {
 
     await runDesktopClientDev({
       entryFile: '/tmp/main.js',
-      loadContextModule: () => '/mock/electron',
+      loadContextModule: loadElectron,
       startRendererDev: async () => 3000,
       startMainDev: async (options) => {
         options?.onBuildStatus?.({ success: true })
@@ -190,7 +192,7 @@ describe('runDesktopClientDev', () => {
 
     await runDesktopClientDev({
       entryFile: '/tmp/main.js',
-      loadContextModule: () => '/mock/electron',
+      loadContextModule: loadElectron,
       startRendererDev: async () => 3000,
       startMainDev: async () => undefined,
       startPreloadDev: async () => undefined,
@@ -199,5 +201,22 @@ describe('runDesktopClientDev', () => {
     runnerMocks.getLineHandler()?.('q')
 
     expect(exitSpy).toHaveBeenCalledWith(0)
+  })
+
+  it('应支持向 Electron 主进程透传额外参数', async () => {
+    await runDesktopClientDev({
+      entryFile: '/tmp/main.js',
+      loadContextModule: loadElectron,
+      startRendererDev: async () => 3000,
+      startMainDev: async () => undefined,
+      startPreloadDev: async () => undefined,
+      electronArgs: ['--foo', 'bar'],
+    })
+
+    expect(runnerMocks.spawnSpy).toHaveBeenCalledWith(
+      '/mock/electron',
+      ['--inspect=5858', '/tmp/main.js', '--foo', 'bar'],
+      { stdio: ['inherit', 'pipe', 'pipe'] },
+    )
   })
 })
