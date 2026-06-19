@@ -3,8 +3,8 @@ import { mergeUserConfig, checkDependency } from '../../src/node/shared/common'
 
 describe('mergeUserConfig', () => {
   it('应浅合并顶层属性', () => {
-    const target = { a: 1, b: 2 }
-    const source = { b: 3, c: 4 }
+    const target = { a: 1, b: 2 } as Record<string, unknown>
+    const source = { b: 3, c: 4 } as Record<string, unknown>
     const result = mergeUserConfig(target, source)
     expect(result).toEqual({ a: 1, b: 3, c: 4 })
   })
@@ -68,6 +68,18 @@ describe('mergeUserConfig', () => {
       source as Record<string, unknown>,
     )
     expect(result).toEqual({ list: ['c'] })
+  })
+
+  it('应跳过可能污染原型的特殊 key', () => {
+    const source = JSON.parse(
+      '{"safe":true,"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}},"prototype":{"polluted":true}}',
+    ) as Record<string, unknown>
+
+    const result = mergeUserConfig({}, source)
+
+    expect(result).toEqual({ safe: true })
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype)
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
   })
 })
 

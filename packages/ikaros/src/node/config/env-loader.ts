@@ -108,12 +108,15 @@ export async function getEnv(
     }
   }
 
-  const previousValues = new Map<string, string | undefined>()
+  const injectedKeys = new Map<string, string | undefined>()
   for (const [key, value] of Object.entries(env)) {
-    if (!previousValues.has(key)) {
-      previousValues.set(key, process.env[key])
+    const previousValue = process.env[key]
+    if (previousValue !== undefined) {
+      env[key] = previousValue
+      continue
     }
 
+    injectedKeys.set(key, previousValue)
     process.env[key] = value
   }
 
@@ -124,7 +127,7 @@ export async function getEnv(
     loadedFiles: existingFiles,
     keySources,
     cleanup: () => {
-      for (const [key, previousValue] of previousValues) {
+      for (const [key, previousValue] of injectedKeys) {
         if (previousValue === undefined) {
           delete process.env[key]
           continue

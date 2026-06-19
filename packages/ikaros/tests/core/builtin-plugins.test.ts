@@ -6,8 +6,16 @@ import { createBuiltinPlugins } from '../../src/node/core/builtin-plugins'
 import { createPluginManager } from '../../src/node/core/plugin-manager'
 import type { NormalizedConfig } from '../../src/node/config/normalize-config'
 
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Array<unknown>
+    ? T[K]
+    : T[K] extends object
+      ? DeepPartial<T[K]>
+      : T[K]
+}
+
 function createNormalizedConfig(
-  overrides?: Partial<NormalizedConfig>,
+  overrides?: DeepPartial<NormalizedConfig>,
 ): NormalizedConfig {
   const base: NormalizedConfig = {
     bundler: 'rspack',
@@ -67,9 +75,30 @@ function createNormalizedConfig(
   return {
     ...base,
     ...overrides,
+    pages: {
+      ...base.pages,
+      ...(overrides?.pages ?? {}),
+    } as NormalizedConfig['pages'],
     build: {
       ...base.build,
       ...(overrides?.build ?? {}),
+    },
+    vite: {
+      ...base.vite,
+      ...(overrides?.vite ?? {}),
+    },
+    server: {
+      ...base.server,
+      ...(overrides?.server ?? {}),
+    },
+    resolve: {
+      ...base.resolve,
+      ...(overrides?.resolve ?? {}),
+      alias: {
+        ...base.resolve.alias,
+        ...(overrides?.resolve?.alias ?? {}),
+      } as NormalizedConfig['resolve']['alias'],
+      extensions: overrides?.resolve?.extensions ?? base.resolve.extensions,
     },
     rspack: {
       ...base.rspack,
@@ -144,7 +173,55 @@ function readPluginName(plugin: unknown): string {
   return 'unknown'
 }
 
+function readDefinePluginOptions(plugin: unknown): Record<string, unknown> | undefined {
+  if (
+    plugin &&
+    typeof plugin === 'object' &&
+    '_args' in plugin &&
+    Array.isArray(plugin._args)
+  ) {
+    return plugin._args[0] as Record<string, unknown>
+  }
+
+  return undefined
+}
+
 describe('builtin framework plugins', () => {
+  it('应把 env 注入 import.meta.env 并保持 source.define 为裸 key', async () => {
+    const ctx = createCompileContext()
+    ctx.env = {
+      FOO: 'from-env',
+    }
+    const pluginManager = createPluginManager({
+      compileContext: ctx,
+      plugins: createBuiltinPlugins(ctx),
+    })
+
+    await pluginManager.init()
+    await pluginManager.applyNormalizedConfig(
+      createNormalizedConfig({
+        define: {
+          __APP__: 'demo',
+        },
+      }),
+    )
+
+    const bundlerConfig = await pluginManager.applyBundlerConfig('rspack', {
+      plugins: [],
+    } as Configuration)
+    const definePlugin = bundlerConfig.plugins?.find(
+      (plugin) => readPluginName(plugin) === 'DefinePlugin',
+    )
+    const defineOptions = readDefinePluginOptions(definePlugin)
+
+    expect(defineOptions).toMatchObject({
+      'import.meta.env.FOO': '"from-env"',
+      __APP__: '"demo"',
+    })
+    expect(defineOptions).not.toHaveProperty('FOO')
+    expect(defineOptions).not.toHaveProperty('import.meta.env.__APP__')
+  })
+
   it('应把 rspack 核心框架插件、输出增强、CDN 和生态能力注入最终 bundler config', async () => {
     const ctx = createCompileContext()
     ctx.preWarnings.push({
@@ -189,7 +266,7 @@ describe('builtin framework plugins', () => {
 
     const bundlerConfig = await pluginManager.applyBundlerConfig('rspack', {
       plugins: [{ name: 'base-plugin' } as never],
-    } satisfies Configuration)
+    } as Configuration)
 
     const pluginNames = (bundlerConfig.plugins ?? []).map(readPluginName)
     const minimizerNames = (bundlerConfig.optimization?.minimizer ?? []).map(
@@ -233,6 +310,72 @@ describe('builtin framework plugins', () => {
     expect(pluginNames.at(0)).toBe('base-plugin')
     expect(pluginNames.at(-1)).toBe('user-rspack-plugin')
     expect(preConfig.rspack.cdnOptions.modules).toHaveLength(1)
+  })
+
+  it('CDN externals 应合并已有 plain object externals', async () => {
+    const ctx = createCompileContext()
+    const pluginManager = createPluginManager({
+      compileContext: ctx,
+      plugins: createBuiltinPlugins(ctx),
+    })
+
+    await pluginManager.init()
+    await pluginManager.applyNormalizedConfig(
+      createNormalizedConfig({
+        rspack: {
+          cdnOptions: {
+            modules: [
+              {
+                name: 'vue',
+                var: 'Vue',
+              },
+            ],
+          },
+        },
+      }),
+    )
+
+    const bundlerConfig = await pluginManager.applyBundlerConfig('rspack', {
+      externals: {
+        react: 'React',
+      },
+    } as Configuration)
+
+    expect(bundlerConfig.externals).toEqual({
+      react: 'React',
+      vue: 'Vue',
+    })
+  })
+
+  it('CDN externals 遇到复杂 externals 形态时应保留原值', async () => {
+    const ctx = createCompileContext()
+    const pluginManager = createPluginManager({
+      compileContext: ctx,
+      plugins: createBuiltinPlugins(ctx),
+    })
+
+    await pluginManager.init()
+    await pluginManager.applyNormalizedConfig(
+      createNormalizedConfig({
+        rspack: {
+          cdnOptions: {
+            modules: [
+              {
+                name: 'vue',
+                var: 'Vue',
+              },
+            ],
+          },
+        },
+      }),
+    )
+
+    const externals = ['react']
+    const bundlerConfig = await pluginManager.applyBundlerConfig('rspack', {
+      externals,
+    } as Configuration)
+
+    expect(bundlerConfig.externals).toBe(externals)
   })
 
   it('库模式应跳过页面与应用专用增强', async () => {

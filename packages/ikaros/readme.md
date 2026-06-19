@@ -1,334 +1,387 @@
-# @ikaros-cli/ikaros 使用文档
+# @ikaros-cli/ikaros
 
-## 平台
+`@ikaros-cli/ikaros` 是 ikaros 的核心包，包含 CLI、配置系统、插件系统、默认 Rspack adapter、BuildPlan executor、inspect 和 watchdog。
 
-ikaros 支持多个运行平台：
+Vite 与 Electron 不内置在核心包中。需要时安装 `packages/contrlibs` 下发布的可选包，ikaros 会从用户项目依赖中懒加载它们。
 
-- `web`：默认平台（本文件后续的大部分配置项均属于 web/Rspack 编译配置）
-- `desktopClient`：Electron 平台（可选依赖，启用时才会从项目依赖中按需加载）
+ikaros 面向通用前端工程：默认配置只覆盖跨框架的构建基础，尽量降低新项目的启动心智；当项目需要更细的 bundler 能力时，`bundle.rspack`、`bundle.vite` 和插件 hook 会保留原生配置出口。
 
-### desktopClient（Electron，可选依赖）
-
-desktopClient 平台的编译实现位于独立包 `@ikaros-cli/ikaros-platform-desktop-client`。
-
-当你使用 `--platform desktopClient` 运行时，请在你的业务项目中安装：
+## 安装
 
 ```bash
-pnpm add -D @ikaros-cli/ikaros-platform-desktop-client electron
+pnpm add -D @ikaros-cli/ikaros
 ```
 
-示例：
+## CLI
+
+开发服务：
 
 ```bash
-ikaros --platform desktopClient --mode development
-ikaros build --platform desktopClient --mode release
+pnpm exec ikaros --mode development
 ```
 
-默认情况下，desktopClient 的构建产物会拆分到独立目录：
-
-- main: `dist/electron/main`
-- preload: `dist/electron/preload`
-- renderer: `dist/electron/renderer`
-
-如果缺少该可选依赖，ikaros 会在运行时提示你安装它。
-
-### bundler=vite（可选依赖）
-
-如果你选择使用 Vite bundler，仍需要额外安装可选依赖（并遵循其 Node 版本要求）：
+生产构建：
 
 ```bash
-pnpm add -D @ikaros-cli/ikaros-bundler-vite
+pnpm exec ikaros build --mode release
 ```
 
----
+检查配置：
 
-## ikaros-web 配置项
+```bash
+pnpm exec ikaros inspect -o ikaros.inspect.json
+```
 
-## target
+迁移 v2 配置：
 
-编译的平台，该值影响底层优化逻辑。
+```bash
+pnpm exec ikaros migrate-config --config ./ikaros.config.mjs
+pnpm exec ikaros migrate-config --config ./ikaros.config.mjs --write
+pnpm exec ikaros migrate-config --config ./ikaros.config.mjs --output ./ikaros.config.v3.mjs
+```
 
-- 类型: `'pc' | 'mobile'`
-- 默认值: `'pc'`
-- 未来支持: 该功能受限，目前仅支持 `'pc'`
+通用参数：
 
-## pages
+| 参数 | 说明 |
+| --- | --- |
+| `-m, --mode <name>` | 运行模式，影响 env 文件和插件上下文 |
+| `-p, --platform <type>` | 平台，`web` 或 `desktopClient` |
+| `-c, --config <file>` | 指定配置文件 |
 
-页面配置。
+## v3 配置
 
-- 类型: `Pages`
-- 默认值:
+`defineConfig` 不要求写完整 schema。没有配置的字段会使用 CLI 内部默认值；只有需要改变默认行为时再写对应命名空间：
 
-  ```json
-  {
-    "index": {
-      "html": "path.join(context, 'index.html')",
-      "entry": "path.join(context, 'src/index')"
-    }
-  }
-  ```
-
-## framework plugins
-
-框架级插件。
-
-- 类型: `IkarosPlugin[]`
-- 说明: 这里是 ikaros 的框架插件，不是 rspack 或 vite 的原生插件。
-
-## rspack
-
-Rspack 专属配置命名空间，仅在 `bundler='rspack'` 时消费。
-
-### moduleFederation
-
-模块联邦。
-
-- 类型: `ModuleFederationOptions | ModuleFederationOptions[]`
-- 默认值: `undefined`
-- 参考: [Module Federation](https://module-federation.io/zh/blog/announcement.html)
-
-### plugins
-
-插件。
-
-- 类型: `Plugin | Plugin[]`
-- 参考: [Rspack Plugins](https://rspack.dev/zh/guide/features/plugin)
-
-### loaders
-
-loader。
-
-- 类型: `Loader[]`
-- 参考: [Rspack Loaders](https://rspack.dev/zh/guide/features/loader)
-
-### experiments
-
-RspackExperiments。
-
-- 类型: `RspackExperiments`
-- 默认值: `undefined`
-- 参考: [Rspack Experiments](https://rspack.dev/zh/guide/features/builtin-swc-loader#rspackexperimentsimport)
-- 参考: [Babel Plugin Import](https://www.npmjs.com/package/babel-plugin-import)
-
-### cdnOptions
-
-- 类型：`CdnPluginOptions`
-- 默认值：`undefined`
-- 说明：用于在构建过程中将外部依赖注入到 HTML 中，支持开发和生产环境使用不同的 CDN 源。
-- 参考：
-  - 基础配置:
-
-```typescript
-// filepath: ikaros.config.ts
+```js
 import { defineConfig } from '@ikaros-cli/ikaros'
 
 export default defineConfig({
-  rspack: {
-    cdnOptions: {
-      modules: [
+  dev: {
+    port: 3000,
+  },
+  output: {
+    sourceMap: true,
+  },
+})
+```
+
+常见可配置命名空间：
+
+| 字段 | 用途 |
+| --- | --- |
+| `app` | 应用目标，例如 `target: 'mobile'` |
+| `bundle` | 选择 Rspack/Vite，并传入对应 adapter 配置 |
+| `source` | define、alias、extensions |
+| `pages` | 多页面 html 与 entry |
+| `dev` | dev server 端口、代理、https、启用页面 |
+| `output` | base、输出目录、source map、gzip、报告等 |
+| `library` | 库模式 |
+| `electron` | desktopClient 平台配置 |
+
+配置函数：
+
+```js
+export default defineConfig(({ mode, env, command }) => ({
+  source: {
+    define: {
+      __APP_MODE__: JSON.stringify(mode),
+      __API_HOST__: JSON.stringify(env.API_HOST ?? ''),
+      __COMMAND__: JSON.stringify(command),
+    },
+  },
+}))
+```
+
+环境变量加载顺序遵循 `.env`、`.env.local`、`.env.${mode}`、`.env.${mode}.local` 逐级覆盖；如果 shell/CI 已经存在同名变量，则以 shell/CI 的值为准，且不会被 `.env` 文件覆盖。
+
+最终环境变量会注入为 `import.meta.env.KEY`：
+
+```js
+console.log(import.meta.env.API_HOST)
+```
+
+`source.define` 只用于裸常量替换，不会自动挂到 `import.meta.env`：
+
+```js
+if (__APP_MODE__ === 'release') {
+  // ...
+}
+```
+
+## 页面与入口
+
+未配置 `pages` 时，默认使用：
+
+```text
+index.html
+src/index
+```
+
+多页面：
+
+```js
+export default defineConfig({
+  pages: {
+    index: {
+      html: './index.html',
+      entry: './src/index',
+    },
+    admin: {
+      html: './admin.html',
+      entry: './src/admin',
+    },
+  },
+  dev: {
+    pages: ['index'],
+  },
+})
+```
+
+## Rspack
+
+Rspack 是默认 bundler。常规项目不需要显式配置 loader；需要扩展时，原生 loader 和 plugin 放在 `bundle.rspack`：
+
+```js
+import { defineConfig } from '@ikaros-cli/ikaros'
+import { VueLoaderPlugin } from 'rspack-vue-loader'
+
+export default defineConfig({
+  bundle: {
+    rspack: {
+      loaders: [
         {
-          name: 'vue',
-          var: 'Vue',
-          path: 'dist/vue.runtime.min.js',
-        },
-        {
-          name: 'element-plus',
-          var: 'ElementPlus',
-          path: 'dist/index.full.min.js',
-          style: 'dist/index.css',
+          test: /\.vue$/,
+          loader: 'rspack-vue-loader',
         },
       ],
-      prodUrl: 'https://unpkg.com/:name@:version/:path',
-      devUrl: ':name/:path',
-      crossOrigin: 'anonymous',
+      plugins: [new VueLoaderPlugin()],
     },
   },
 })
 ```
 
-#### CDN 配置项说明
+SWC：
 
-#### CdnModule 配置
+ikaros 内置 `builtin:swc-loader`，默认只根据扩展名设置必要的 parser，例如 `.tsx` 会启用 TypeScript 和 JSX 解析。ikaros 不会根据 React/Vue 等框架自动注入框架专属 transform。
 
-| 参数    | 类型     | 必填 | 说明                                         |
-| ------- | -------- | ---- | -------------------------------------------- |
-| name    | string   | 是   | 模块名称，需与 package.json 中的名称一致     |
-| var     | string   | 否   | 模块导出的全局变量名                         |
-| version | string   | 否   | 指定版本号，未指定时自动从 node_modules 获取 |
-| path    | string   | 否   | 主 JS 文件路径                               |
-| paths   | string[] | 否   | 额外的 JS 文件路径列表                       |
-| style   | string   | 否   | 主 CSS 文件路径                              |
-| styles  | string[] | 否   | 额外的 CSS 文件路径列表                      |
-| cssOnly | boolean  | 否   | 是否仅加载 CSS 文件                          |
-| prodUrl | string   | 否   | 指定该模块的生产环境 CDN URL 模板            |
-| devUrl  | string   | 否   | 指定该模块的开发环境 CDN URL 模板            |
+需要精细控制 SWC 时，可以通过 `bundle.rspack.swc` 透传原生选项；这些选项会深合并到默认脚本规则：
 
-#### 插件选项
-
-| 参数        | 类型              | 默认值                                   | 说明                  |
-| ----------- | ----------------- | ---------------------------------------- | --------------------- |
-| modules     | CdnModule[]       | -                                        | CDN 模块配置列表      |
-| prodUrl     | string            | <https://unpkg.com/:name@:version/:path> | 生产环境 CDN URL 模板 |
-| devUrl      | string            | :name/:path                              | 开发环境 CDN URL 模板 |
-| crossOrigin | boolean \| string | false                                    | 跨域资源配置          |
-
-#### URL 模板
-
-支持以下占位符：
-
-- `:name` - 模块名称
-- `:version` - 模块版本号
-- `:path` - 资源路径
-
-#### 使用示例
-
-##### 基础用法
-
-```typescript
-rspack: {
-  cdnOptions: {
-    modules: [
-      {
-        name: 'vue',
-        var: 'Vue',
-        path: 'dist/vue.runtime.min.js',
+```js
+export default defineConfig(({ command }) => ({
+  bundle: {
+    rspack: {
+      swc: {
+        jsc: {
+          transform: {
+            react: {
+              runtime: 'automatic',
+              development: command === 'server',
+              refresh: command === 'server',
+            },
+          },
+        },
       },
-    ],
+    },
+  },
+}))
+```
+
+CDN：
+
+```js
+export default defineConfig({
+  bundle: {
+    rspack: {
+      cdn: {
+        modules: [
+          {
+            name: 'vue',
+            var: 'Vue',
+            path: 'dist/vue.runtime.min.js',
+          },
+        ],
+      },
+    },
+  },
+})
+```
+
+## Vite
+
+安装可选包：
+
+```bash
+pnpm add -D @ikaros-cli/ikaros-bundler-vite vite
+```
+
+配置：
+
+```js
+import { defineConfig } from '@ikaros-cli/ikaros'
+import vue from '@vitejs/plugin-vue'
+
+export default defineConfig({
+  bundle: {
+    adapter: 'vite',
+    vite: {
+      plugins: [vue()],
+    },
+  },
+})
+```
+
+## 库模式
+
+```js
+export default defineConfig({
+  library: {
+    entry: 'src/index.ts',
+    name: 'MyLibrary',
+    formats: ['es', 'umd'],
+    fileName: 'my-library',
+    externals: ['vue'],
+    globals: {
+      vue: 'Vue',
+    },
+  },
+})
+```
+
+## Electron
+
+安装可选包：
+
+```bash
+pnpm add -D @ikaros-cli/ikaros-platform-desktop-client electron
+```
+
+运行：
+
+```bash
+pnpm exec ikaros --platform desktopClient --mode development
+pnpm exec ikaros build --platform desktopClient --mode release
+```
+
+desktopClient 平台生成三个 BuildPlan：
+
+| Plan | Bundler |
+| --- | --- |
+| `electron-main` | `rspack` |
+| `electron-preload` | `rspack` |
+| `electron-renderer` | `bundle.adapter` |
+
+## Inspect
+
+`inspect` 使用与真实编译相同的配置流程，但不会启动 dev server 或 build：
+
+```bash
+pnpm exec ikaros inspect -o ikaros.inspect.json
+```
+
+输出包含：
+
+- raw config
+- current config
+- normalized config
+- BuildPlan 列表
+- 每个 plan 的 bundler config
+- 插件 hook trace
+- plan provenance
+- env 与 watchdog 诊断
+
+## 插件
+
+```ts
+import type { IkarosPlugin } from '@ikaros-cli/ikaros/plugin'
+
+export const plugin: IkarosPlugin = {
+  name: 'example-plugin',
+  enforce: 'pre',
+  order: 0,
+  setup(api) {
+    api.modifyBuildPlan((plan) => {
+      return {
+        ...plan,
+        output: {
+          ...plan.output,
+          sourceMap: true,
+        },
+      }
+    })
   },
 }
 ```
 
-##### 使用自定义 CDN
+推荐 hook 顺序：
 
-```typescript
-rspack: {
-  cdnOptions: {
-    modules: [
-      {
-        name: 'vue',
-        var: 'Vue',
-        path: 'dist/vue.runtime.min.js',
-      },
-    ],
-    prodUrl: 'https://cdn.jsdelivr.net/npm/:name@:version/:path',
-  },
-}
+```text
+modifyIkarosConfig
+→ platform.createPlans
+→ modifyBuildPlans
+→ modifyBuildPlan
+→ bundler.createConfig
+→ modifyRspackRules / modifyRspackPlugins
+→ modifyRspackConfig / modifyViteConfig
 ```
 
-##### 加载多个资源
+插件排序：
 
-```typescript
-rspack: {
-  cdnOptions: {
-    modules: [
-      {
-        name: 'element-plus',
-        var: 'ElementPlus',
-        path: 'dist/index.full.min.js',
-        paths: ['dist/locale/zh-cn.min.js'],
-        style: 'dist/index.css',
-        styles: ['dist/theme-chalk/dark.css'],
-      },
-    ],
-  },
-}
+```text
+内置 pre → 用户 pre → 普通 → 用户 post → 内置 post
 ```
 
-##### 仅加载样式
+同组内按 `order` 和注册顺序排序。
 
-```typescript
-rspack: {
-  cdnOptions: {
-    modules: [
-      {
-        name: 'normalize.css',
-        style: 'normalize.css',
-        cssOnly: true,
-      },
-    ],
-  },
-}
+推荐优先使用：
+
+- `modifyBuildPlans`
+- `modifyBuildPlan`
+- `modifyRspackRules`
+- `modifyRspackPlugins`
+
+高级出口：
+
+- `modifyRspackConfig`
+- `modifyViteConfig`
+
+底层 bundler config hook 会让插件直接依赖 Rspack/Vite 配置形状，适合少数必须改最终配置的场景。
+
+## 子路径入口
+
+```ts
+import { defineConfig } from '@ikaros-cli/ikaros/config'
+import type { IkarosPlugin } from '@ikaros-cli/ikaros/plugin'
+import type { BuildPlan, BundlerAdapter } from '@ikaros-cli/ikaros/adapter'
 ```
 
-#### 注意事项
+公开入口：
 
-1. 确保模块名称与 package.json 中的名称一致
-2. 建议在生产环境中明确指定版本号
-3. 使用自定义 CDN 时注意资源路径的正确性
-4. 开发环境默认使用本地 node_modules 中的文件
+| 入口 | 用途 |
+| --- | --- |
+| `@ikaros-cli/ikaros` | 常用用户 API |
+| `@ikaros-cli/ikaros/config` | 配置与迁移工具 |
+| `@ikaros-cli/ikaros/plugin` | 插件作者 API |
+| `@ikaros-cli/ikaros/adapter` | optional adapter/platform 契约 |
+| `@ikaros-cli/ikaros/testing` | 测试辅助 |
 
-## server
+## v2 到 v3 字段映射
 
-dev 服务相关，该对象下的值不影响生产环境。
+| v2 字段 | v3 字段 |
+| --- | --- |
+| `target` | `app.target` |
+| `quiet` | `log.level = 'quiet'` |
+| `bundler` | `bundle.adapter` |
+| `define` | `source.define` |
+| `resolve.alias` | `source.alias` |
+| `resolve.extensions` | `source.extensions` |
+| `enablePages` | `dev.pages` |
+| `server` | `dev` |
+| `build.base` | `output.base` |
+| `build.outDirName` | `output.dir` |
+| `build.outReport` | `output.report` |
+| `build.dependencyCycleCheck` | `output.checkCycles` |
+| `rspack` | `bundle.rspack` |
+| `rspack.cdnOptions` | `bundle.rspack.cdn` |
+| `vite` | `bundle.vite` |
 
-- 类型: `object`
-  - `port`: 服务器端口号，空则自动获取。
-    - 类型: `number`
-    - 默认值: `undefined`
-  - `proxy`: webpack-server 服务器代理。
-    - 类型: `import('@rspack/dev-server').Configuration['proxy']`
-    - 默认值: `undefined`
-    - 参考: [DevServer Proxy](https://webpack.js.org/configuration/dev-server/#devserverproxy)
-  - `https`: https 配置。
-    - 类型: `boolean | import('https').ServerOptions`
-    - 默认值: `false`
-    - 参考: [DevServer HTTPS](https://webpack.js.org/configuration/dev-server/#devserverhttps)
-
-### css
-
-css loader 配置。
-
-- 类型: `CssLoaderOptions`
-- 参考: [LightningCSS Options](https://rspack.dev/zh/guide/features/builtin-lightningcss-loader#%E9%80%89%E9%A1%B9)
-- 参考: [Stylus Options](https://webpack.js.org/loaders/stylus-loader/#options)
-- 参考: [Less Options](https://webpack.js.org/loaders/less-loader/#options)
-- 参考: [Sass Options](https://webpack.js.org/loaders/sass-loader/#options)
-
-## build
-
-构建配置。
-
-- 类型: `object`
-  - `base`: 资源前缀，值得注意的是 `'./'` 只会被原封不动的作为所有资源的前缀，如果你想根据 html 定位应该填 `'auto'`。
-    - 类型: `string`
-    - 默认值: `'/'`
-  - `assetsDir`: 资产包裹目录，只在生产环境下生效。
-    - 类型: `string`
-    - 默认值: `undefined`
-  - `gzip`: 是否输出 Gzip 版，只在生产环境下生效。
-    - 类型: `boolean`
-    - 默认值: `false`
-  - `sourceMap`: 生成映射源代码文件，只在生产环境下生效。
-    - 类型: `boolean`
-    - 默认值: `false`
-  - `outDirName`: 输出的目录名称，只在生产环境下生效。
-    - 类型: `string`
-    - 默认值: `"dist"`
-  - `outReport`: 是否输出打包分析报告，只在生产环境下生效。
-    - 类型: `boolean`
-    - 默认值: `false`
-  - `cache`: 是否缓存编译结果。
-    - 类型: `boolean`
-    - 默认值: `false`
-
-## resolve
-
-resolve 配置。
-
-- 类型: `object`
-  - `alias`: 路径别名。
-    - 类型: `Record<string, string>`
-    - 默认值: `{'@': path.join(context,'src')}`
-    - 参考: [Resolve Alias](https://webpack.js.org/configuration/resolve/#resolvealias)
-  - `extensions`: 默认后缀。
-    - 类型: `string[]`
-    - 默认值: [".js", ".json", ".wasm",'.mjs', '.jsx', '.ts', '.tsx']
-    - 参考: [Resolve Extensions](https://webpack.js.org/configuration/resolve/#resolveextensions)
-
-## 辅助工具函数
-
-### defineConfig
-
-定义配置的辅助工具函数。
-
-- 类型: `(config: UserConfigWebExport) => UserConfigWebExport`
+旧字段会被 v3 schema 拒绝，并输出迁移建议。

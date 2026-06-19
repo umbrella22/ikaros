@@ -12,6 +12,10 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null
 }
 
+function isUnsafeMergeKey(key: string): boolean {
+  return key === '__proto__' || key === 'constructor' || key === 'prototype'
+}
+
 export function mergeUserConfig<T extends Record<string, unknown>>(
   target: T,
   source: T,
@@ -20,6 +24,10 @@ export function mergeUserConfig<T extends Record<string, unknown>>(
   const sourceRecord = source as Record<string, unknown>
 
   for (const key of Object.keys(sourceRecord)) {
+    if (isUnsafeMergeKey(key)) {
+      continue
+    }
+
     const sourceValue = sourceRecord[key]
     const targetValue = result[key]
 

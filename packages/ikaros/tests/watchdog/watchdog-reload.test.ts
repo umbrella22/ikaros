@@ -27,7 +27,7 @@ describe('Watchdog reload integration', () => {
     writeFileSync(join(tempDir, 'env', '.env'), 'FOO=one')
     writeFileSync(
       join(tempDir, 'config.shared.ts'),
-      'export default { define: { CONFIG_VALUE: "one" } }',
+      'export default { source: { define: { CONFIG_VALUE: "one" } } }',
     )
     writeFileSync(
       join(tempDir, 'ikaros.config.mjs'),
@@ -59,7 +59,7 @@ describe('Watchdog reload integration', () => {
 
       snapshots.push({
         foo: ctx.env.FOO as string | undefined,
-        configValue: (ctx.userConfig?.define as Record<string, unknown>)
+        configValue: (ctx.userConfig?.source?.define as Record<string, unknown>)
           ?.CONFIG_VALUE,
       })
     }
@@ -83,7 +83,7 @@ describe('Watchdog reload integration', () => {
       writeFileSync(join(tempDir, 'env', '.env.local'), 'FOO=two')
       writeFileSync(
         join(tempDir, 'config.shared.ts'),
-        'export default { define: { CONFIG_VALUE: "two" } }',
+        'export default { source: { define: { CONFIG_VALUE: "two" } } }',
       )
 
       await wait(1200)

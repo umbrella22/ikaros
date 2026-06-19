@@ -5,6 +5,7 @@ import type {
   Loader,
   ModuleFederationPluginOptions,
   DefinePluginOptions,
+  SwcLoaderOptions,
 } from '@rspack/core'
 import type { IkarosPluginAPI } from '../core/plugin-api'
 import type { Command } from '../compile/compile-context'
@@ -20,6 +21,8 @@ export type Bundler = 'rspack' | 'vite'
 
 export interface IkarosPlugin {
   name: string
+  enforce?: 'pre' | 'post'
+  order?: number
   setup: (api: IkarosPluginAPI) => void | Promise<void>
 }
 
@@ -111,6 +114,8 @@ export interface ElectronConfig {
     hotReload?: boolean
     debug?: boolean
     outDir?: string
+    inspectPort?: number
+    electronArgs?: string[]
   }
 }
 
@@ -154,6 +159,25 @@ export interface RspackConfig {
   plugins?: Plugin | Plugin[]
 
   /**
+   * 内置 `builtin:swc-loader` 的转换选项,深合并进所有脚本(ts/tsx/js/jsx)规则。
+   *
+   * ikaros 只负责按文件扩展名设置必要的 `jsc.parser`(如 tsx 的 `jsx: true`),
+   * 不替你决定任何框架相关的转换。React 项目需在此显式提供 react 变换,例如:
+   *
+   * ```ts
+   * bundle: { rspack: { swc: { jsc: { transform: { react: {
+   *   runtime: 'automatic',
+   *   development: true,  // 仅 dev
+   *   refresh: true,      // 仅 dev，需配套 @rspack/plugin-react-refresh
+   * } } } } } }
+   * ```
+   *
+   * Vue / 非 React 项目不提供 react 变换即可,不会被强加 React JSX 语义。
+   * @see {@link https://rspack.rs/guide/features/builtin-swc-loader}
+   */
+  swc?: SwcLoaderOptions
+
+  /**
    * Rspack loader
    * @see {@link https://rspack.dev/zh/guide/features/loader}
    */
@@ -175,7 +199,7 @@ export interface RspackConfig {
   /**
    * CDN 配置
    */
-  cdnOptions?: CdnPluginOptions
+  cdn?: CdnPluginOptions
 
   /**
    * css loader 配置
@@ -191,185 +215,91 @@ export interface ViteConfig {
   plugins?: unknown
 }
 
-export interface UserConfig {
+export interface AppConfig {
+  target?: 'pc' | 'mobile'
+}
+
+export interface LogConfig {
+  level?: 'normal' | 'quiet'
+}
+
+export interface BundleConfig {
   /**
-   * 底层打包器
-   * - 'rspack': 维持现有行为（默认）
-   * - 'vite': 启用 Vite（当前主要用于 Web）
+   * 底层打包器。
    * @default 'rspack'
    */
-  bundler?: Bundler
-
-  /**
-   * 框架级插件。
-   * 注意：这里不是 bundler 原生插件；rspack/vite 原生插件分别放在 rspack/vite 命名空间中。
-   */
-  plugins?: IkarosPlugin[]
-
-  /**
-   * 静默模式，抑制非关键警告（如缺少 env 文件、页面配置等）
-   * @default false
-   */
-  quiet?: boolean
-  /**
-   * 编译的平台，该值影响底层优化逻辑
-   * @default 'pc'
-   * @future 该功能受限，目前仅支持 'pc'
-   */
-  target?: 'pc' | 'mobile'
-  /**
-   * 页面配置
-   * @default
-   * {
-   *  index: {
-   *    html: path.join(context, 'index.html'),
-   *    entry: path.join(context, 'src/index')
-   *  }
-   * }
-   */
-  pages?: Pages
-  /**
-   * 可选页面启动配置
-   * - string[]: 只启动指定的页面
-   * - false: 禁用页面选择功能，启动所有页面
-   * - undefined: 默认行为，启动所有页面
-   * @default undefined
-   */
-  enablePages?: string[] | false
-  /**
-   * 全局变量
-   * @default {}
-   */
-  define?: DefinePluginOptions
-
-  /**
-   * Rspack 配置（仅 bundler = 'rspack' 时消费）
-   */
+  adapter?: Bundler
   rspack?: RspackConfig
-
-  /**
-   * Vite 配置（仅 bundler = 'vite' 时消费）
-   */
   vite?: ViteConfig
+}
 
-  /**
-   * dev 服务相关 该对象下的值不影响 生产环境
-   */
-  server?: {
-    /**
-     * 服务器端口号 空则自动获取
-     * @default undefined
-     */
-    port?: number
+export interface SourceConfig {
+  define?: DefinePluginOptions
+  alias?: Record<string, string>
+  extensions?: string[]
+}
 
-    /**
-     * 服务器代理
-     * - rspack 模式：同 @rspack/dev-server
-     * - vite 模式：同 Vite server.proxy
-     * @default undefined
-     */
-    proxy?: import('@rspack/dev-server').Configuration['proxy']
+export interface DevConfig {
+  port?: number
+  proxy?: import('@rspack/dev-server').Configuration['proxy']
+  https?: boolean | import('https').ServerOptions
+  pages?: string[] | false
+}
 
-    /**
-     * https
-     * @see {@link https://webpack.js.org/configuration/dev-server/#devserverhttps}
-     * @default false
-     */
-    https?: boolean | import('https').ServerOptions
-  }
-  /**
-   * 构建配置
-   */
+export interface OutputConfig {
+  base?: string
+  assetsDir?: string
+  gzip?: boolean
+  sourceMap?: boolean
+  dir?: string
+  report?: boolean
+  cache?: boolean
+  checkCycles?: boolean
+}
+
+export interface UserConfig {
+  app?: AppConfig
+  log?: LogConfig
+  plugins?: IkarosPlugin[]
+  bundle?: BundleConfig
+  source?: SourceConfig
+  pages?: Pages
+  dev?: DevConfig
+  output?: OutputConfig
+  library?: LibraryConfig
+  electron?: ElectronConfig
+}
+
+export interface LegacyRspackConfig extends Omit<RspackConfig, 'cdn'> {
+  cdnOptions?: CdnPluginOptions
+}
+
+export interface LegacyUserConfig {
+  bundler?: Bundler
+  plugins?: IkarosPlugin[]
+  quiet?: boolean
+  target?: 'pc' | 'mobile'
+  pages?: Pages
+  enablePages?: string[] | false
+  define?: DefinePluginOptions
+  rspack?: LegacyRspackConfig
+  vite?: ViteConfig
+  server?: DevConfig
   build?: {
-    /**
-     * 资源前缀，值得注意的是 './' 只会被原封不动的作为所有资源的前缀，如果你想根据html定位应该填 'auto'
-     * @default '/'
-     */
     base?: string
-
-    /**
-     * 资产包裹目录，只在生产环境下生效
-     * @default undefined
-     */
     assetsDir?: string
-
-    /**
-     * 是否输出Gzip版，只在生产环境下生效
-     * @default false
-     */
     gzip?: boolean
-
-    /**
-     * 生成映射源代码文件，只在生产环境下生效
-     * @default false
-     */
     sourceMap?: boolean
-
-    /**
-     * 输出的目录名称，只在生产环境下生效
-     * @default "dist"
-     */
     outDirName?: string
-
-    /**
-     * 是否输出打包分析报告，只在生产环境下生效
-     * @default false
-     */
     outReport?: boolean
-
-    /**
-     * 是否缓存编译结果
-     * @default false
-     */
     cache?: boolean
-    /**
-     * 是否开启循环依赖检查
-     */
     dependencyCycleCheck?: boolean
   }
-  /**
-   * resolve
-   */
   resolve?: {
-    /**
-     * 路径别名
-     * @see {@link https://webpack.js.org/configuration/resolve/#resolvealias}
-     * @default {'@': path.join(context,'src')}
-     */
     alias?: Record<string, string>
-
-    /**
-     * 默认后缀
-     * @see {@link https://webpack.js.org/configuration/resolve/#resolveextensions}
-     * @default [".js", ".json", ".wasm",'.mjs', '.jsx', '.ts', '.tsx']
-     */
     extensions?: string[]
   }
-  /**
-   * 库模式配置（仅在 build 时生效）
-   *
-   * 启用后 ikaros 将以库模式构建，而非应用模式。
-   * 同一份配置在 rspack / vite 之间无缝切换。
-   *
-   * @example
-   * ```ts
-   * library: {
-   *   entry: 'src/index.ts',
-   *   name: 'MyLib',
-   *   formats: ['es', 'umd'],
-   *   externals: ['vue'],
-   *   globals: { vue: 'Vue' },
-   * }
-   * ```
-   * @see https://cn.vitejs.dev/guide/build#library-mode
-   * @see https://rspack.rs/zh/config/output#outputlibrary
-   */
   library?: LibraryConfig
-
-  /**
-   * Electron应用配置
-   * @default undefined
-   */
   electron?: ElectronConfig
 }
 
@@ -393,5 +323,73 @@ export type UserConfigWebExport =
   | Promise<UserConfig>
   | UserConfigFn<UserConfig>
 
+export interface MigrateLegacyConfigResult {
+  config: UserConfig
+  diagnostics: string[]
+}
+
+export function migrateLegacyConfig(
+  legacy: LegacyUserConfig,
+): MigrateLegacyConfigResult {
+  const diagnostics: string[] = []
+  const output: OutputConfig = {
+    base: legacy.build?.base,
+    assetsDir: legacy.build?.assetsDir,
+    gzip: legacy.build?.gzip,
+    sourceMap: legacy.build?.sourceMap,
+    dir: legacy.build?.outDirName,
+    report: legacy.build?.outReport,
+    cache: legacy.build?.cache,
+    checkCycles: legacy.build?.dependencyCycleCheck,
+  }
+
+  const config: UserConfig = {
+    app: legacy.target ? { target: legacy.target } : undefined,
+    log: legacy.quiet ? { level: 'quiet' } : undefined,
+    plugins: legacy.plugins,
+    bundle:
+      legacy.bundler || legacy.rspack || legacy.vite
+        ? {
+            adapter: legacy.bundler,
+            rspack: legacy.rspack
+              ? {
+                  ...legacy.rspack,
+                  cdn: legacy.rspack.cdnOptions,
+                }
+              : undefined,
+            vite: legacy.vite,
+          }
+        : undefined,
+    source:
+      legacy.define || legacy.resolve
+        ? {
+            define: legacy.define,
+            alias: legacy.resolve?.alias,
+            extensions: legacy.resolve?.extensions,
+          }
+        : undefined,
+    pages: legacy.pages,
+    dev:
+      legacy.server || legacy.enablePages !== undefined
+        ? {
+            ...legacy.server,
+            pages: legacy.enablePages,
+          }
+        : undefined,
+    output: Object.values(output).some((value) => value !== undefined)
+      ? output
+      : undefined,
+    library: legacy.library,
+    electron: legacy.electron,
+  }
+
+  diagnostics.push('已将 v2 配置字段迁移到 v3 语义配置结构。')
+  if (legacy.rspack?.cdnOptions) {
+    diagnostics.push('rspack.cdnOptions 已迁移为 bundle.rspack.cdn。')
+  }
+
+  return { config, diagnostics }
+}
+
 /** 辅助工具函数 */
-export const defineConfig = (config: UserConfigWebExport) => config
+export const defineConfig = (config?: UserConfigWebExport) => config

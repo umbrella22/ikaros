@@ -4,6 +4,7 @@ import { Command } from '../../src/node/compile/compile-context'
 
 const mocked = vi.hoisted(() => {
   const cleanupSpy = vi.fn(async () => undefined)
+  const loggerErrorSpy = vi.fn()
   const runCompileMock = vi.fn(async (params) => {
     params.registerCleanup?.(cleanupSpy)
   })
@@ -61,6 +62,7 @@ const mocked = vi.hoisted(() => {
     watchdogCloseMock,
     runtimeState,
     createWatchdogMock,
+    loggerErrorSpy,
   }
 })
 
@@ -76,6 +78,16 @@ vi.mock('../../src/node/watchdog/watchdog', () => ({
   createWatchdog: mocked.createWatchdogMock,
 }))
 
+vi.mock('../../src/node/shared/logger', () => ({
+  logger: {
+    done: vi.fn(),
+    error: mocked.loggerErrorSpy,
+    info: vi.fn(),
+    okay: vi.fn(),
+    warning: vi.fn(),
+  },
+}))
+
 import { createIkaros } from '../../src/node/core/create-ikaros'
 
 describe('IkarosInstance', () => {
@@ -85,6 +97,8 @@ describe('IkarosInstance', () => {
     mocked.inspectConfigMock.mockClear()
     mocked.watchdogCloseMock.mockClear()
     mocked.createWatchdogMock.mockClear()
+    mocked.loggerErrorSpy.mockClear()
+    mocked.cleanupSpy.mockResolvedValue(undefined)
     mocked.runtimeState.restartRuntime = undefined
   })
 
@@ -162,5 +176,24 @@ describe('IkarosInstance', () => {
       configFile: 'custom.config.mjs',
     })
     expect(result.command).toBe(Command.BUILD)
+  })
+
+  it('信号触发 close 失败时应捕获 rejection 并记录错误', async () => {
+    const ikaros = await createIkaros({
+      options: {
+        platform: 'web',
+      },
+    })
+    const cleanupError = new Error('cleanup exploded')
+
+    await ikaros.dev()
+    mocked.cleanupSpy.mockRejectedValueOnce(cleanupError)
+
+    process.emit('SIGTERM')
+    await vi.waitFor(() => {
+      expect(mocked.loggerErrorSpy).toHaveBeenCalledWith({
+        text: expect.stringContaining('cleanup exploded'),
+      })
+    })
   })
 })

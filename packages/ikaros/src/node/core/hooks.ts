@@ -13,6 +13,7 @@ type HookTap<THandler> = {
 export interface AsyncHook<TArgs> {
   tap: (name: string, handler: AsyncHookHandler<TArgs>) => void
   untap: (name: string) => void
+  sort: (names: string[]) => void
   call: (args: TArgs) => Promise<void>
   getTapNames: () => string[]
 }
@@ -23,12 +24,14 @@ export interface AsyncWaterfallHook<TValue, TContext = void> {
     handler: AsyncWaterfallHookHandler<TValue, TContext>,
   ) => void
   untap: (name: string) => void
+  sort: (names: string[]) => void
   call: (value: TValue, context: TContext) => Promise<TValue>
   getTapNames: () => string[]
 }
 
 export function createAsyncHook<TArgs>(): AsyncHook<TArgs> {
   const taps: HookTap<AsyncHookHandler<TArgs>>[] = []
+  const sort = (names: string[]) => sortTaps(taps, names)
 
   const untap = (name: string) => {
     for (let index = taps.length - 1; index >= 0; index -= 1) {
@@ -44,6 +47,7 @@ export function createAsyncHook<TArgs>(): AsyncHook<TArgs> {
     },
 
     untap,
+    sort,
 
     async call(args) {
       for (const tap of taps) {
@@ -62,6 +66,7 @@ export function createAsyncWaterfallHook<
   TContext = void,
 >(): AsyncWaterfallHook<TValue, TContext> {
   const taps: HookTap<AsyncWaterfallHookHandler<TValue, TContext>>[] = []
+  const sort = (names: string[]) => sortTaps(taps, names)
 
   const untap = (name: string) => {
     for (let index = taps.length - 1; index >= 0; index -= 1) {
@@ -77,6 +82,7 @@ export function createAsyncWaterfallHook<
     },
 
     untap,
+    sort,
 
     async call(value, context) {
       let current = value
@@ -95,4 +101,15 @@ export function createAsyncWaterfallHook<
       return taps.map((tap) => tap.name)
     },
   }
+}
+
+function sortTaps<THandler>(taps: HookTap<THandler>[], names: string[]): void {
+  const rank = new Map(names.map((name, index) => [name, index]))
+
+  taps.sort((left, right) => {
+    const leftRank = rank.get(left.name) ?? Number.MAX_SAFE_INTEGER
+    const rightRank = rank.get(right.name) ?? Number.MAX_SAFE_INTEGER
+
+    return leftRank - rightRank
+  })
 }

@@ -1,3 +1,4 @@
+import { relative } from 'node:path'
 import type { ServerOptions as HttpsServerOptions } from 'node:https'
 import type { PluginOption, ProxyOptions } from 'vite'
 
@@ -12,6 +13,21 @@ const VITE_DEFAULT_EXTENSIONS = [
   '.tsx',
   '.json',
 ] as const
+
+const normalizePath = (value: string): string => value.replace(/\\/g, '/')
+
+const isRootIndexHtml = (html: string, context: string): boolean => {
+  const normalized = normalizePath(html)
+  if (normalized === 'index.html' || normalized === './index.html') {
+    return true
+  }
+
+  if (normalized === '/index.html') {
+    return true
+  }
+
+  return normalizePath(relative(context, html)) === 'index.html'
+}
 
 /**
  * 将 define 值统一序列化为 Vite 可接受的格式
@@ -40,6 +56,20 @@ export const normalizeDefine = (
     }
   }
   return out
+}
+
+export const normalizeEnvDefine = (
+  env: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined => {
+  const normalized = normalizeDefine(env)
+  if (!normalized) return undefined
+
+  return Object.fromEntries(
+    Object.entries(normalized).map(([key, value]) => [
+      `import.meta.env.${key}`,
+      value,
+    ]),
+  )
 }
 
 /**
@@ -99,8 +129,9 @@ export const getOutDirPath = (params: {
 export const resolveRollupInput = (params: {
   pages: NormalizedConfig['pages']
   enablePages: NormalizedConfig['enablePages']
+  context: string
 }): Record<string, string> | undefined => {
-  const { pages, enablePages } = params
+  const { pages, enablePages, context } = params
 
   const entries = Object.entries(pages)
   const enabled = Array.isArray(enablePages) ? new Set(enablePages) : undefined
@@ -109,8 +140,15 @@ export const resolveRollupInput = (params: {
     ? entries.filter(([name]) => enabled.has(name))
     : entries
 
-  if (filtered.length <= 1) {
+  if (filtered.length === 0) {
     return undefined
+  }
+
+  if (filtered.length === 1) {
+    const [[, page]] = filtered
+    if (isRootIndexHtml(page.html, context)) {
+      return undefined
+    }
   }
 
   return Object.fromEntries(filtered.map(([name, page]) => [name, page.html]))
@@ -125,6 +163,28 @@ export const toViteProxy = (
   if (proxy && typeof proxy === 'object' && !Array.isArray(proxy)) {
     return proxy as Record<string, string | ProxyOptions>
   }
+
+  if (Array.isArray(proxy)) {
+    const out: Record<string, string | ProxyOptions> = {}
+
+    for (const item of proxy) {
+      if (!item || typeof item !== 'object' || typeof item === 'function') {
+        continue
+      }
+
+      const { context, pathFilter, ...options } = item as Record<string, unknown>
+      const rawContexts = pathFilter ?? context
+      const contexts = Array.isArray(rawContexts) ? rawContexts : [rawContexts]
+
+      for (const key of contexts) {
+        if (typeof key !== 'string') continue
+        out[key] = options as ProxyOptions
+      }
+    }
+
+    return Object.keys(out).length > 0 ? out : undefined
+  }
+
   return undefined
 }
 

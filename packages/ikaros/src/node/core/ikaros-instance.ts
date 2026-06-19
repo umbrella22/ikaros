@@ -11,6 +11,7 @@ import {
   type CleanupRegistry,
 } from '../watchdog/cleanup-registry'
 import { createWatchdog, type WatchdogInstance } from '../watchdog/watchdog'
+import { logger } from '../shared/logger'
 
 const RUNTIME_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
 
@@ -143,7 +144,12 @@ export class DefaultIkarosInstance implements IkarosInstance {
 
     for (const signal of RUNTIME_SIGNALS) {
       const handler = () => {
-        void this.close()
+        void this.close().catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error)
+          logger.error({
+            text: `关闭运行时失败: ${message}`,
+          })
+        })
       }
       this.signalHandlers.set(signal, handler)
       process.once(signal, handler)

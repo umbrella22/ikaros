@@ -2,7 +2,7 @@ import { isAbsolute, resolve } from 'node:path'
 
 import fse from 'fs-extra'
 
-import { createBundlerAdapter } from '../bundler/bundler-factory'
+import { createBuildPlanExecutor, type BuildPlan } from '../build-plan'
 import type { BundlerAdapter } from '../bundler/types'
 import {
   Command,
@@ -13,6 +13,7 @@ import {
 } from '../compile/compile-context'
 import { createBuiltinPlugins } from '../core/builtin-plugins'
 import { createPluginManager } from '../core/plugin-manager'
+import type { PluginTraceEntry } from '../core/plugin-manager'
 import type { IkarosPluginHooks } from '../core/plugin-api'
 import { resolveConfigPath } from '../config/config-loader'
 import {
@@ -20,6 +21,7 @@ import {
   type NormalizeConfigDiagnostics,
 } from '../config/normalize-config'
 import { createPlatformAdapter } from '../platform/platform-factory'
+import { resolveWebPreConfig } from '../compile/web/resolve-web-preconfig'
 import {
   resolveWatchdogWatchPlan,
   type WatchdogWatchPlan,
@@ -58,12 +60,19 @@ export interface InspectConfigResult {
   rawConfig: SerializedInspectValue
   currentConfig: SerializedInspectValue
   normalizedConfig: SerializedInspectValue
+  buildPlans: SerializedInspectValue
+  bundlerConfigs: SerializedInspectValue
   bundlerConfig: SerializedInspectValue
   diagnostics: {
-    bundler: BundlerAdapter['name']
+    bundler: BundlerAdapter['name'] | 'mixed'
     frameworkPlugins: string[]
     hooks: InspectHookDiagnostics
     bundlerPluginNames: string[]
+    planBundlers: Record<string, BundlerAdapter['name']>
+    planBundlerPluginNames: Record<string, string[]>
+    planProvenance: SerializedInspectValue
+    planDiagnostics: SerializedInspectValue
+    pluginTraces: PluginTraceEntry[]
     resolution: InspectResolutionDiagnostics
     env: InspectEnvDiagnostics
     watch: InspectWatchDiagnostics
@@ -135,6 +144,15 @@ function collectBundlerPluginNames(config: unknown): string[] {
   return names
 }
 
+function getPrimaryBundlerName(plans: BuildPlan[]): BundlerAdapter['name'] | 'mixed' {
+  const names = new Set(plans.map((plan) => plan.bundler))
+  if (names.size === 1) {
+    return plans[0]?.bundler ?? 'rspack'
+  }
+
+  return 'mixed'
+}
+
 function resolveInspectOutputFile(params: {
   context: string
   outputFile?: string
@@ -165,47 +183,63 @@ export async function inspectConfig(
     const rawConfig = serializeConfig(compileContext.userConfig)
     const pluginManager = createPluginManager({
       compileContext,
-      plugins: [
-        ...createBuiltinPlugins(compileContext),
-        ...(compileContext.userConfig?.plugins ?? []),
-      ],
+      builtinPlugins: createBuiltinPlugins(compileContext),
+      plugins: compileContext.userConfig?.plugins ?? [],
     })
     await pluginManager.init()
 
-    compileContext.userConfig = await pluginManager.applyIkarosConfig(
+    const currentUserConfig = await pluginManager.applyIkarosConfig(
       compileContext.userConfig,
     )
-    const currentConfig = serializeConfig(compileContext.userConfig)
+    await pluginManager.addPlugins(currentUserConfig?.plugins ?? [])
+    const currentConfig = serializeConfig(currentUserConfig)
 
     const platform = createPlatformAdapter(compileContext.options.platform, {
       context: compileContext.context,
     })
+    const resolvedCompileContext = {
+      ...compileContext,
+      userConfig: currentUserConfig,
+    }
     const watchDiagnostics = await resolveWatchdogWatchPlan({
       context: compileContext.context,
       configFile: compileContext.configFile,
       mode: compileContext.options.mode,
     })
-    const baseNormalizedConfig = await platform.resolvePreConfig(compileContext)
+    const baseNormalizedConfig = await resolveWebPreConfig({
+      command,
+      context: compileContext.context,
+      resolveContext: compileContext.resolveContext,
+      getUserConfig: async () => currentUserConfig,
+      isElectron: platform.name === 'desktopClient',
+    })
     const normalizedConfig =
       await pluginManager.applyNormalizedConfig(baseNormalizedConfig)
 
-    const bundler = createBundlerAdapter({
-      bundler: normalizedConfig.bundler,
-      resolveContextModule: compileContext.resolveContextModule,
+    const basePlans = await platform.createPlans({
+      command,
+      compileContext: resolvedCompileContext,
+      config: normalizedConfig,
+    })
+    const plans = await pluginManager.applyBuildPlans(basePlans)
+    const executor = createBuildPlanExecutor({
+      compileContext: resolvedCompileContext,
+      pluginManager,
     })
 
-    const bundlerConfig = await pluginManager.applyBundlerConfig(
-      bundler.name,
-      await bundler.createConfig({
-        command,
-        mode: compileContext.options.mode,
-        env: compileContext.env,
-        context: compileContext.context,
-        contextPkg: compileContext.contextPkg,
-        config: normalizedConfig,
-        resolveContext: compileContext.resolveContext,
-        preWarnings: compileContext.preWarnings,
-      }),
+    const planBundlerConfigs: Record<string, unknown> = {}
+    for (const plan of plans) {
+      planBundlerConfigs[plan.id] = await executor.createConfig(plan)
+    }
+
+    const firstBundlerConfig = plans[0]
+      ? planBundlerConfigs[plans[0].id]
+      : undefined
+    const planBundlerPluginNames = Object.fromEntries(
+      Object.entries(planBundlerConfigs).map(([id, config]) => [
+        id,
+        collectBundlerPluginNames(config),
+      ]),
     )
 
     const result: InspectConfigResult = {
@@ -222,15 +256,33 @@ export async function inspectConfig(
       rawConfig,
       currentConfig,
       normalizedConfig: serializeConfig(normalizedConfig),
-      bundlerConfig: serializeConfig(bundlerConfig),
+      buildPlans: serializeConfig(plans),
+      bundlerConfigs: serializeConfig(planBundlerConfigs),
+      bundlerConfig: serializeConfig(firstBundlerConfig),
       diagnostics: {
-        bundler: bundler.name,
+        bundler: getPrimaryBundlerName(plans),
         frameworkPlugins: pluginManager.getPluginNames(),
         hooks: pluginManager.getHookTapNames(),
-        bundlerPluginNames: collectBundlerPluginNames(bundlerConfig),
+        bundlerPluginNames: collectBundlerPluginNames(firstBundlerConfig),
+        planBundlers: Object.fromEntries(
+          plans.map((plan) => [plan.id, plan.bundler]),
+        ),
+        planBundlerPluginNames,
+        planProvenance: serializeConfig(
+          Object.fromEntries(
+            plans.map((plan) => [plan.id, plan.provenance]),
+          ),
+        ),
+        planDiagnostics: serializeConfig(
+          Object.fromEntries(
+            plans.map((plan) => [plan.id, plan.diagnostics]),
+          ),
+        ),
+        pluginTraces: pluginManager.getPluginTraces(),
         resolution: explainNormalizedConfig({
           command,
-          userConfig: compileContext.userConfig,
+          userConfig: currentUserConfig,
+          sourceUserConfig: compileContext.userConfig,
           normalizedConfig,
           baseNormalizedConfig,
         }),

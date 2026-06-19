@@ -14,11 +14,12 @@ import { mergeUserConfig } from '../../shared/common'
 import type { PreWarning } from '../../plugins/pre-warnings-plugin'
 import {
   ASSET_PATHS,
-  DEFAULT_HTML_TEMPLATE,
   DEFAULT_PUBLIC_DIR,
 } from '../../shared/constants'
+import type { RspackSemanticItem } from './semantic-registry'
 
 type ListItemType = RuleSetRule | Plugin
+export type RspackRuleItem = RspackSemanticItem<RuleSetRule>
 
 export type RspackExperiments = {
   import?: Record<string, unknown>[]
@@ -81,80 +82,211 @@ export class BaseCreate<T extends ListItemType> {
 }
 
 export class CreateLoader extends BaseCreate<RuleSetRule> {
-  private defaultScriptLoader = (rspackExperiments?: RspackExperiments) => {
-    const transformImport = resolveTransformImport(rspackExperiments)
+  private defaultScriptLoader = (options?: {
+    rspackExperiments?: RspackExperiments
+    swc?: Record<string, unknown>
+  }): RspackRuleItem[] => {
+    const transformImport = resolveTransformImport(options?.rspackExperiments)
+    // 用户提供的 swc 选项深合并进每条脚本规则的 options。
+    // ikaros 只设置按扩展名解析所必需的 jsc.parser，不强加任何框架相关转换
+    // （如 React 的 transform.react / refresh），后者完全由用户在 bundle.rspack.swc 中显式提供。
+    const userSwc = options?.swc
+    const withSwc = (base: Record<string, unknown>): Record<string, unknown> =>
+      userSwc ? mergeUserConfig(base, userSwc) : base
 
     return [
       {
-        test: /\.m?ts$/i,
-        loader: 'builtin:swc-loader',
-        options: {
-          jsc: {
-            parser: {
-              syntax: 'typescript',
+        id: 'script:tsx',
+        value: {
+          test: /\.tsx$/i,
+          loader: 'builtin:swc-loader',
+          options: withSwc({
+            jsc: {
+              parser: {
+                syntax: 'typescript',
+                jsx: true,
+              },
             },
-          },
+          }),
+          type: 'javascript/auto',
+          exclude: /node_modules/,
         },
-        type: 'javascript/auto',
-        exclude: /node_modules/,
       },
       {
-        test: /\.m?js$/i,
-        loader: 'builtin:swc-loader',
-        options: {
-          isModule: 'unknown',
-          ...(transformImport ? { transformImport } : {}),
+        id: 'script:ts',
+        value: {
+          test: /\.m?ts$/i,
+          loader: 'builtin:swc-loader',
+          options: withSwc({
+            jsc: {
+              parser: {
+                syntax: 'typescript',
+              },
+            },
+          }),
+          type: 'javascript/auto',
+          exclude: /node_modules/,
         },
-        type: 'javascript/auto',
-        exclude: /node_modules/,
+      },
+      {
+        id: 'script:jsx',
+        value: {
+          test: /\.jsx$/i,
+          loader: 'builtin:swc-loader',
+          options: withSwc({
+            jsc: {
+              parser: {
+                syntax: 'ecmascript',
+                jsx: true,
+              },
+            },
+          }),
+          type: 'javascript/auto',
+          exclude: /node_modules/,
+        },
+      },
+      {
+        id: 'script:js',
+        value: {
+          test: /\.m?js$/i,
+          loader: 'builtin:swc-loader',
+          options: withSwc({
+            isModule: 'unknown',
+            ...(transformImport ? { transformImport } : {}),
+          }),
+          type: 'javascript/auto',
+          exclude: /node_modules/,
+        },
       },
     ]
   }
-  private defaultResourceLoader: RuleSetRule[] = [
+  private defaultResourceLoader: RspackRuleItem[] = [
     {
-      test: /\.(png|jpe?g|gif|svg|ico)(\?.*)?$/,
-      type: 'asset/resource',
-      generator: {
-        filename: this.isDev ? '[id][ext]' : ASSET_PATHS.img,
+      id: 'asset:image',
+      value: {
+        test: /\.(png|jpe?g|gif|svg|ico)(\?.*)?$/,
+        type: 'asset/resource',
+        generator: {
+          filename: this.isDev ? '[id][ext]' : ASSET_PATHS.img,
+        },
       },
     },
     {
-      test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,
-      type: 'asset/resource',
-      generator: {
-        filename: this.isDev ? '[id][ext]' : ASSET_PATHS.media,
+      id: 'asset:media',
+      value: {
+        test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,
+        type: 'asset/resource',
+        generator: {
+          filename: this.isDev ? '[id][ext]' : ASSET_PATHS.media,
+        },
       },
     },
     {
-      test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/,
-      type: 'asset/resource',
-      generator: {
-        filename: this.isDev ? '[id][ext]' : ASSET_PATHS.fonts,
+      id: 'asset:font',
+      value: {
+        test: /\.(woff2?|eot|ttf|otf)(\?.*)?$/,
+        type: 'asset/resource',
+        generator: {
+          filename: this.isDev ? '[id][ext]' : ASSET_PATHS.fonts,
+        },
       },
     },
   ]
 
-  useDefaultCssLoader(options?: CssLoaderOptions): this {
-    const defaultCssLoader = buildCssLoaders(this.env, options)
-    defaultCssLoader.forEach((item) => this.add(item as RuleSetRule))
-    return this
+  createDefaultRuleItems(options?: {
+    rspackExperiments?: RspackExperiments
+    swc?: Record<string, unknown>
+    css?: CssLoaderOptions
+    extraLoaders?: RuleSetRule[]
+  }): RspackRuleItem[] {
+    const cssRules = buildCssLoaders(this.env, options?.css).map((rule) => ({
+      id: `style:${readRuleExtension(rule)}`,
+      value: rule as RuleSetRule,
+    }))
+    const extraRules = (options?.extraLoaders ?? []).map((rule, index) => ({
+      id: `user:loader:${index}`,
+      value: rule,
+    }))
+
+    return [
+      ...this.defaultResourceLoader,
+      ...this.defaultScriptLoader({
+        rspackExperiments: options?.rspackExperiments,
+        swc: options?.swc,
+      }),
+      ...cssRules,
+      ...extraRules,
+    ]
   }
 
-  useDefaultScriptLoader(options?: RspackExperiments): this {
-    this.add(this.defaultScriptLoader(options))
-    return this
-  }
-  useDefaultResourceLoader(): this {
-    this.defaultResourceLoader.forEach((item) => this.add(item))
+  useDefaultScriptLoader(options?: {
+    rspackExperiments?: RspackExperiments
+    swc?: Record<string, unknown>
+  }): this {
+    this.add(this.defaultScriptLoader(options).map((item) => item.value))
     return this
   }
 }
 
+function readRuleExtension(rule: RuleSetRule): string {
+  const test = rule.test
+  if (test instanceof RegExp) {
+    const match = test.source.match(/\\\.([a-z0-9]+)\$/i)
+    if (match?.[1]) {
+      return match[1]
+    }
+  }
+
+  return 'unknown'
+}
+
+function normalizeDefineValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return JSON.stringify(value)
+  }
+
+  if (value !== null && typeof value === 'object') {
+    return JSON.stringify(value)
+  }
+
+  return value
+}
+
+function normalizeDefineOptions(
+  define: DefinePluginOptions,
+): DefinePluginOptions {
+  return Object.fromEntries(
+    Object.entries(define).map(([key, value]) => [
+      key,
+      normalizeDefineValue(value),
+    ]),
+  ) as DefinePluginOptions
+}
+
 export class CreatePlugins extends BaseCreate<Plugin> {
+  private pluginIds: string[] = []
+
+  addPlugin(id: string, plugin: Plugin | undefined): this {
+    if (!plugin) {
+      return this
+    }
+
+    this.pluginIds.push(id)
+    return this.add(plugin)
+  }
+
+  endWithIds(): Array<RspackSemanticItem<Plugin>> {
+    return this.end().map((plugin, index) => ({
+      id: this.pluginIds[index] ?? `core:plugin:${index}`,
+      value: plugin,
+    }))
+  }
+
   useDefaultEnvPlugin(otherEnv?: OtherEnv): this {
     const { frameworkEnv = {}, extEnv = {}, env = {} } = otherEnv ?? {}
 
-    this.add(
+    this.addPlugin(
+      'define:env',
       createEnvPlugin({
         frameworkEnv,
         extEnv,
@@ -165,7 +297,8 @@ export class CreatePlugins extends BaseCreate<Plugin> {
   }
   useCopyPlugin(): this {
     if (this.env === 'production') {
-      this.add(
+      this.addPlugin(
+        'copy:public',
         new rspack.CopyRspackPlugin({
           patterns: [
             {
@@ -182,20 +315,12 @@ export class CreatePlugins extends BaseCreate<Plugin> {
     }
     return this
   }
-  useHtmlPlugin(templatePath?: string): this {
-    this.add(
-      new rspack.HtmlRspackPlugin({
-        template: templatePath ?? join(this.context, DEFAULT_HTML_TEMPLATE),
-      }),
-    )
-    return this
-  }
 }
 
 export type Pages = {
   [key: string]: {
     html: string
-    entry: string
+    entry: string | string[]
     library?: import('@rspack/core').LibraryOptions
     options?: {
       title: string
@@ -204,6 +329,57 @@ export type Pages = {
     }
   }
 }
+
+function resolveEnabledPages(
+  pages: Pages,
+  enablePages: string[] | false | undefined,
+  warnings?: PreWarning[],
+): Pages {
+  if (isEmpty(pages) || !isArray(enablePages)) {
+    return pages
+  }
+
+  const reMakePage: Pages = {}
+  const notFoundPageName: string[] = []
+
+  for (const item of enablePages) {
+    if (pages[item]) {
+      reMakePage[item] = pages[item]
+    } else {
+      notFoundPageName.push(item)
+    }
+  }
+
+  if (!isEmpty(notFoundPageName)) {
+    warnings?.push({
+      source: 'enable-pages',
+      message: `当前设置页面${notFoundPageName.join('、')}不存在`,
+    })
+  }
+
+  return reMakePage
+}
+
+export function createMpaEntry({
+  pages,
+  enablePages,
+}: {
+  pages: Pages
+  enablePages?: string[] | false
+}): Entry {
+  const enabledPages = resolveEnabledPages(pages, enablePages)
+  const entry: Entry = {}
+
+  for (const page of Object.keys(enabledPages)) {
+    entry[page] = {
+      import: enabledPages[page].entry,
+      library: enabledPages[page].library,
+    }
+  }
+
+  return entry
+}
+
 export class CreateMpaAssets {
   protected pages: Pages
   protected enablePages: string[] | false | undefined
@@ -215,9 +391,8 @@ export class CreateMpaAssets {
     pages: Pages
     enablePages?: string[] | false
   }) {
-    this.pages = pages
+    this.pages = resolveEnabledPages(pages, enablePages, this.warnings)
     this.enablePages = enablePages
-    this.getEnablePages()
   }
   create() {
     const entry: Entry = {}
@@ -244,29 +419,6 @@ export class CreateMpaAssets {
       plugins,
     }
   }
-  protected getEnablePages() {
-    if (!isEmpty(this.pages) && isArray(this.enablePages)) {
-      const reMakePage: Pages = {}
-      const notFoundPageName: string[] = []
-
-      for (const item of this.enablePages) {
-        if (this.pages[item]) {
-          reMakePage[item] = this.pages[item]
-        } else {
-          notFoundPageName.push(item)
-        }
-      }
-
-      if (!isEmpty(notFoundPageName)) {
-        this.warnings.push({
-          source: 'enable-pages',
-          message: `当前设置页面${notFoundPageName.join('、')}不存在`,
-        })
-      }
-
-      this.pages = reMakePage
-    }
-  }
 }
 
 function createEnvPlugin({
@@ -278,12 +430,15 @@ function createEnvPlugin({
   extEnv?: DefinePluginOptions
   env?: DefinePluginOptions
 }): RspackPluginInstance {
-  const baseEnv = mergeUserConfig(extEnv, env)
   const clientEnvs = Object.fromEntries(
-    Object.entries(baseEnv).map(([key, val]) => [
+    Object.entries(env).map(([key, val]) => [
       `import.meta.env.${key}`,
       JSON.stringify(val),
     ]),
   )
-  return new rspack.DefinePlugin({ ...clientEnvs, ...frameworkEnv })
+  return new rspack.DefinePlugin({
+    ...clientEnvs,
+    ...normalizeDefineOptions(extEnv),
+    ...normalizeDefineOptions(frameworkEnv),
+  })
 }

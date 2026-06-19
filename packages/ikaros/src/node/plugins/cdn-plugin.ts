@@ -1,8 +1,23 @@
 import { type RspackPluginInstance, type Compiler, rspack } from '@rspack/core'
-import type { JsAlterAssetTagsData, JsHtmlPluginTag } from '@rspack/binding'
 import { createRequire } from 'node:module'
 import chalk from 'chalk'
 import path from 'path'
+
+type JsHtmlPluginTag = {
+  tagName: string
+  voidTag?: boolean
+  attributes?: Record<string, string | boolean | null | undefined>
+  innerHTML?: string
+  meta?: Record<string, unknown>
+}
+
+type JsAlterAssetTagsData = {
+  assetTags: {
+    scripts: JsHtmlPluginTag[]
+    styles: JsHtmlPluginTag[]
+    meta: JsHtmlPluginTag[]
+  }
+}
 
 interface CdnModule {
   name: string

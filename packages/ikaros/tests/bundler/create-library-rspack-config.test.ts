@@ -4,6 +4,14 @@ import { createLibraryRspackConfigs } from '../../src/node/bundler/rspack/create
 import type { CreateConfigParams } from '../../src/node/bundler/types'
 import type { NormalizedConfig } from '../../src/node/config/normalize-config'
 
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Array<unknown>
+    ? T[K]
+    : T[K] extends object
+      ? DeepPartial<T[K]>
+      : T[K]
+}
+
 interface TestCfg {
   output: {
     library: { type: string; name?: string }
@@ -28,11 +36,24 @@ interface TestCfg {
   plugins?: Array<{ name?: string }>
 }
 
+function readDefinePluginOptions(plugin: unknown): Record<string, unknown> | undefined {
+  if (
+    plugin &&
+    typeof plugin === 'object' &&
+    '_args' in plugin &&
+    Array.isArray(plugin._args)
+  ) {
+    return plugin._args[0] as Record<string, unknown>
+  }
+
+  return undefined
+}
+
 const resolveTestContext = (...paths: string[]) =>
   ['/test/project', ...paths].join('/')
 
 const createMinimalConfig = (
-  overrides?: Partial<NormalizedConfig>,
+  overrides?: DeepPartial<NormalizedConfig>,
 ): NormalizedConfig => {
   const base: NormalizedConfig = {
     bundler: 'rspack',
@@ -95,7 +116,7 @@ const createMinimalConfig = (
     pages: {
       ...base.pages,
       ...(overrides?.pages ?? {}),
-    },
+    } as NormalizedConfig['pages'],
     rspack: {
       ...base.rspack,
       ...(overrides?.rspack ?? {}),
@@ -134,14 +155,16 @@ const createMinimalConfig = (
       alias: {
         ...base.resolve.alias,
         ...(overrides?.resolve?.alias ?? {}),
-      },
+      } as NormalizedConfig['resolve']['alias'],
       extensions: overrides?.resolve?.extensions ?? base.resolve.extensions,
     },
   }
 }
 
 const createMinimalParams = (
-  overrides?: Partial<CreateConfigParams>,
+  overrides?: Omit<Partial<CreateConfigParams>, 'config'> & {
+    config?: DeepPartial<NormalizedConfig>
+  },
 ): CreateConfigParams => {
   const config = createMinimalConfig(overrides?.config)
 
@@ -150,7 +173,6 @@ const createMinimalParams = (
     env: {},
     context: '/test/project',
     contextPkg: { name: 'my-lib', version: '1.0.0' },
-    config,
     resolveContext: resolveTestContext,
     ...overrides,
     config,
@@ -375,6 +397,33 @@ describe('createLibraryRspackConfigs', () => {
     const cfg = config as TestCfg
     expect(cfg.resolve.alias).toHaveProperty('@', '/test/project/src')
     expect(cfg.resolve.alias).toHaveProperty('~', '/custom/path')
+  })
+
+  it('应把 env 注入 import.meta.env 并保持 define 为裸 key', () => {
+    const config = createLibraryRspackConfigs(
+      createMinimalParams({
+        env: {
+          MODE: 'production',
+        },
+        config: {
+          library: {
+            entry: 'src/index.ts',
+            formats: ['es'],
+          },
+          define: {
+            __VERSION__: '1.0.0',
+          },
+        },
+      }),
+    )
+
+    const cfg = config as TestCfg
+    const definePlugin = cfg.plugins?.find((plugin) => plugin.name === 'DefinePlugin')
+    expect(readDefinePluginOptions(definePlugin)).toMatchObject({
+      'import.meta.env.MODE': '"production"',
+      __VERSION__: '"1.0.0"',
+    })
+    expect(readDefinePluginOptions(definePlugin)).not.toHaveProperty('MODE')
   })
 
   it('应使用自定义 outDirName', () => {

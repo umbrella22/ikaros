@@ -8,7 +8,6 @@ import type {
   CompileEnvInfo,
 } from '../../src/node/compile/compile-context'
 import type { IkarosPluginAPI } from '../../src/node/core/plugin-api'
-import type { NormalizedConfig } from '../../src/node/config/normalize-config'
 import type {
   IkarosPlugin,
   UserConfig,
@@ -17,14 +16,15 @@ import type {
 const mocked = vi.hoisted(() => {
   const createCompileContextSpy = vi.fn()
   const resolveConfigPathSpy = vi.fn()
-  const resolvePreConfigSpy = vi.fn()
+  const createPlansSpy = vi.fn()
   const createPlatformAdapterSpy = vi.fn(() => ({
     name: 'web' as const,
-    resolvePreConfig: resolvePreConfigSpy,
-    compile: vi.fn(),
+    createPlans: createPlansSpy,
+    run: vi.fn(),
   }))
   const createBundlerAdapterSpy = vi.fn(() => ({
     name: 'rspack' as const,
+    supports: vi.fn(() => true),
     createConfig: vi.fn(() => ({
       entry: 'index',
       plugins: [{ name: 'bundler-plugin' }],
@@ -40,7 +40,7 @@ const mocked = vi.hoisted(() => {
   return {
     createCompileContextSpy,
     resolveConfigPathSpy,
-    resolvePreConfigSpy,
+    createPlansSpy,
     createPlatformAdapterSpy,
     createBundlerAdapterSpy,
     createBuiltinPluginsSpy,
@@ -82,6 +82,16 @@ vi.mock('../../src/node/core/builtin-plugins', () => ({
   createBuiltinPlugins: mocked.createBuiltinPluginsSpy,
 }))
 
+vi.mock('../../src/node/shared/common', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../src/node/shared/common')>()
+
+  return {
+    ...actual,
+    checkDependency: vi.fn(() => false),
+  }
+})
+
 vi.mock('../../src/node/watchdog/watchdog', () => ({
   resolveWatchdogWatchPlan: mocked.resolveWatchdogWatchPlanSpy,
 }))
@@ -91,74 +101,6 @@ import {
   type CompileOptions,
 } from '../../src/node/compile/compile-context'
 import { inspectConfig } from '../../src/node/inspect/inspect-config'
-
-function createNormalizedConfig(
-  overrides?: Partial<NormalizedConfig>,
-): NormalizedConfig {
-  const base: NormalizedConfig = {
-    bundler: 'rspack',
-    plugins: [],
-    quiet: false,
-    target: 'pc',
-    pages: {
-      index: {
-        html: '/test/project/index.html',
-        entry: '/test/project/src/index.ts',
-      },
-    },
-    enablePages: false,
-    define: {},
-    rspack: {
-      plugins: [],
-      loaders: [],
-      experiments: { import: [] },
-      moduleFederation: [],
-      cdnOptions: { modules: [] },
-      css: {},
-    },
-    vite: {
-      plugins: [],
-    },
-    server: {
-      port: 3000,
-      proxy: undefined,
-      https: false,
-    },
-    build: {
-      base: '/',
-      assetsDir: '',
-      gzip: false,
-      sourceMap: false,
-      outDirName: 'dist',
-      outReport: false,
-      cache: false,
-      dependencyCycleCheck: false,
-    },
-    resolve: {
-      alias: {
-        '@': '/test/project/src',
-      },
-      extensions: ['.ts', '.tsx', '.js', '.jsx'],
-    },
-    library: null,
-    electron: {},
-    base: '/',
-    port: 3000,
-    browserslist: 'defaults',
-    isVue: false,
-    isReact: false,
-    isElectron: false,
-  }
-
-  return {
-    ...base,
-    ...overrides,
-    build: {
-      ...base.build,
-      ...(overrides?.build ?? {}),
-    },
-  }
-}
 
 function createCompileContext(params: {
   context: string
@@ -235,7 +177,9 @@ describe('inspectConfig', () => {
       setup(api: IkarosPluginAPI) {
         api.modifyIkarosConfig((config) => ({
           ...config,
-          quiet: true,
+          log: {
+            level: 'quiet',
+          },
         }))
         api.modifyNormalizedConfig((config) => ({
           ...config,
@@ -245,20 +189,20 @@ describe('inspectConfig', () => {
             base: '/from-plugin/',
           },
         }))
-        api.modifyRspackConfig((config: Record<string, unknown>) => ({
+        api.modifyRspackConfig((config) => ({
           ...config,
           fromUserPlugin: true,
-        }))
+        } as never))
       },
     }
 
     const builtinPlugin: IkarosPlugin = {
       name: 'builtin-plugin',
       setup(api: IkarosPluginAPI) {
-        api.modifyRspackConfig((config: Record<string, unknown>) => ({
+        api.modifyRspackConfig((config) => ({
           ...config,
           fromBuiltinPlugin: true,
-        }))
+        } as never))
       },
     }
 
@@ -270,9 +214,13 @@ describe('inspectConfig', () => {
           platform: 'web',
         },
         userConfig: {
-          bundler: 'rspack',
-          define: {
-            RAW_FLAG: 'yes',
+          bundle: {
+            adapter: 'rspack',
+          },
+          source: {
+            define: {
+              RAW_FLAG: 'yes',
+            },
           },
           plugins: [userPlugin],
         },
@@ -284,13 +232,65 @@ describe('inspectConfig', () => {
     mocked.resolveConfigPathSpy.mockResolvedValue(
       join(tempDir, 'ikaros.config.mjs'),
     )
-    mocked.resolvePreConfigSpy.mockImplementation(
-      async (ctx: CompileContext) => {
-        return createNormalizedConfig({
-          quiet: ctx.userConfig?.quiet ?? false,
-          define: ctx.userConfig?.define ?? {},
-        })
-      },
+    mocked.createPlansSpy.mockImplementation(
+      async ({ compileContext: ctx, config }) => [
+        {
+          id: 'web',
+          command: ctx.command,
+          platform: 'web',
+          target: 'web',
+          bundler: config.bundler,
+          mode: ctx.options.mode,
+          context: ctx.context,
+          env: ctx.env,
+          entries: {
+            index: {
+              html: '/test/project/index.html',
+              import: '/test/project/src/index.ts',
+            },
+          },
+          source: {
+            define: config.define,
+            alias: config.resolve.alias,
+            extensions: config.resolve.extensions,
+            framework: 'none',
+            browserslist: config.browserslist,
+          },
+          dev: {
+            port: config.port,
+            proxy: config.server.proxy,
+            https: config.server.https,
+            pages: config.enablePages,
+          },
+          output: {
+            base: config.base,
+            dir: config.build.outDirName,
+            assetsDir: config.build.assetsDir,
+            gzip: config.build.gzip,
+            sourceMap: config.build.sourceMap,
+            report: config.build.outReport,
+            cache: config.build.cache,
+            checkCycles: config.build.dependencyCycleCheck,
+          },
+          adapterOptions: {
+            rspack: {
+              plugins: config.rspack.plugins,
+              loaders: config.rspack.loaders,
+              experiments: config.rspack.experiments,
+              moduleFederation: config.rspack.moduleFederation,
+              cdn: config.rspack.cdnOptions,
+              css: config.rspack.css,
+            },
+          },
+          provenance: [
+            {
+              source: 'test-platform',
+              operation: 'create',
+            },
+          ],
+          diagnostics: [],
+        },
+      ],
     )
     mocked.resolveWatchdogWatchPlanSpy.mockResolvedValue({
       envDir: join(tempDir, 'env'),
@@ -330,17 +330,30 @@ describe('inspectConfig', () => {
     })
 
     expect(result.rawConfig).toMatchObject({
-      bundler: 'rspack',
-      define: {
-        RAW_FLAG: 'yes',
+      bundle: {
+        adapter: 'rspack',
+      },
+      source: {
+        define: {
+          RAW_FLAG: 'yes',
+        },
       },
     })
     expect(result.currentConfig).toMatchObject({
-      quiet: true,
+      log: {
+        level: 'quiet',
+      },
     })
     expect(result.normalizedConfig).toMatchObject({
       quiet: true,
       base: '/from-plugin/',
+    })
+    expect(result.diagnostics.resolution.target.source).toBe(
+      'default.app.target',
+    )
+    expect(result.diagnostics.resolution.base).toMatchObject({
+      source: 'plugin.modifyNormalizedConfig',
+      value: '/from-plugin/',
     })
     expect(result.bundlerConfig).toMatchObject({
       entry: 'index',
@@ -348,6 +361,19 @@ describe('inspectConfig', () => {
       fromUserPlugin: true,
       matcher: '/demo/',
       transform: '[Function transform]',
+    })
+    expect(result.buildPlans).toMatchObject([
+      {
+        id: 'web',
+        bundler: 'rspack',
+      },
+    ])
+    expect(result.bundlerConfigs).toMatchObject({
+      web: {
+        entry: 'index',
+        fromBuiltinPlugin: true,
+        fromUserPlugin: true,
+      },
     })
     expect(result.diagnostics.frameworkPlugins).toEqual([
       'builtin-plugin',
@@ -359,12 +385,40 @@ describe('inspectConfig', () => {
       'user-plugin',
     ])
     expect(result.diagnostics.bundlerPluginNames).toEqual(['bundler-plugin'])
+    expect(result.diagnostics.planBundlers).toEqual({
+      web: 'rspack',
+    })
+    expect(result.diagnostics.planBundlerPluginNames).toEqual({
+      web: ['bundler-plugin'],
+    })
+    expect(result.diagnostics.planProvenance).toMatchObject({
+      web: [
+        {
+          source: 'test-platform',
+          operation: 'create',
+        },
+      ],
+    })
+    expect(result.diagnostics.pluginTraces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          hook: 'modifyRspackConfig',
+          plugin: 'builtin-plugin',
+          phase: 'bundler-config',
+        }),
+        expect.objectContaining({
+          hook: 'modifyRspackConfig',
+          plugin: 'user-plugin',
+          phase: 'bundler-config',
+        }),
+      ]),
+    )
     expect(result.diagnostics.resolution.target).toMatchObject({
       value: 'pc',
-      source: 'default.target',
+      source: 'default.app.target',
     })
     expect(result.diagnostics.resolution.browserslist).toMatchObject({
-      value: 'defaults',
+      value: '>0.2%,Chrome >= 90,Safari >= 16,last 2 versions,not dead',
       source: 'target.pc',
     })
     expect(result.diagnostics.resolution.base).toMatchObject({
@@ -376,8 +430,8 @@ describe('inspectConfig', () => {
     })
     expect(result.diagnostics.resolution.port).toMatchObject({
       value: 3000,
-      source: 'default.server.port',
-      requestedPort: 8080,
+      source: 'default.dev.port',
+      requestedPort: 3000,
       autoDetected: false,
     })
     expect(result.diagnostics.resolution.framework.selected).toMatchObject({
@@ -401,7 +455,8 @@ describe('inspectConfig', () => {
       mode: 'production',
     })
 
-    const written = JSON.parse(readFileSync(result.outputFile, 'utf8'))
+    expect(result.outputFile).toBeDefined()
+    const written = JSON.parse(readFileSync(result.outputFile!, 'utf8'))
     expect(written.outputFile).toBe(join(tempDir, 'artifacts/inspect.json'))
     expect(written.diagnostics.env.keySources.API).toBe(
       join(tempDir, 'env', '.env.production.local'),

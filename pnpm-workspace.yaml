@@ -2,3 +2,15 @@ packages:
   - 'packages/*'
   - 'packages/contrlibs/*'
   - 'examples/*'
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@rsdoctor/client@1.5.14'
+  - '@rsdoctor/core@1.5.14'
+  - '@rsdoctor/graph@1.5.14'
+  - '@rsdoctor/rspack-plugin@1.5.14'
+  - '@rsdoctor/sdk@1.5.14'
+  - '@rsdoctor/types@1.5.14'
+  - '@rsdoctor/utils@1.5.14'

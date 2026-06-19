@@ -238,6 +238,7 @@ describe('createViteLibraryConfig', () => {
   it('应正确处理 define', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({
+        env: { MODE: 'production' },
         config: {
           library: { entry: 'src/index.ts' },
           define: { __VERSION__: '1.0.0' },
@@ -246,7 +247,9 @@ describe('createViteLibraryConfig', () => {
     )
 
     expect(config.define).toBeDefined()
+    expect(config.define?.['import.meta.env.MODE']).toBe('"production"')
     expect(config.define?.__VERSION__).toBe('"1.0.0"')
+    expect(config.define?.MODE).toBeUndefined()
   })
 
   it('没有 library 配置应该抛出错误', () => {

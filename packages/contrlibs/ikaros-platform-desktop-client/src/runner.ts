@@ -92,14 +92,20 @@ const detectPackageManager = (): PackageManager => {
   return 'unknown'
 }
 
-const resolveForwardArgs = (electronArgs?: string[]): string[] => {
+export const resolveForwardArgs = (electronArgs?: string[]): string[] => {
   if (electronArgs) return electronArgs
 
   const packageManager = detectPackageManager()
+  const separatorIndex = process.argv.indexOf('--')
+  const forwardedArgs =
+    separatorIndex >= 0 ? process.argv.slice(separatorIndex + 1) : []
 
-  if (packageManager === 'yarn') return process.argv.slice(3)
-  if (packageManager === 'npm' || packageManager === 'pnpm') {
-    return process.argv.slice(2)
+  if (
+    packageManager === 'yarn' ||
+    packageManager === 'npm' ||
+    packageManager === 'pnpm'
+  ) {
+    return forwardedArgs
   }
 
   return []
@@ -138,11 +144,10 @@ export const runDesktopClientDev = async (
 
   let electronProcess: ChildProcess | null = null
   let manualStop = false
-  let manualRestart = false
   let isCleaningUp = false
   let allowAutoRestart = false
   let restartTimer: NodeJS.Timeout | undefined
-  let restartResetTimer: NodeJS.Timeout | undefined
+  const ignoredCloseProcesses = new WeakSet<ChildProcess>()
   let rl: readline.Interface | undefined
 
   const cleanupRuntime = async () => {
@@ -152,11 +157,6 @@ export const runDesktopClientDev = async (
       clearTimeout(restartTimer)
       restartTimer = undefined
     }
-    if (restartResetTimer) {
-      clearTimeout(restartResetTimer)
-      restartResetTimer = undefined
-    }
-
     rl?.close()
     rl = undefined
 
@@ -180,20 +180,17 @@ export const runDesktopClientDev = async (
       return
     }
 
-    manualRestart = true
+    const restartingProcess = electronProcess
+    ignoredCloseProcesses.add(restartingProcess)
 
     try {
-      process.kill(electronProcess.pid)
+      process.kill(restartingProcess.pid)
     } catch {
       // ignore
     }
 
     electronProcess = null
     startElectron()
-
-    restartResetTimer = setTimeout(() => {
-      manualRestart = false
-    }, 2000)
   }
 
   const requestRestart = () => {
@@ -230,9 +227,11 @@ export const runDesktopClientDev = async (
       if (cleaned) process.stderr.write(cleaned)
     })
 
+    const currentProcess = electronProcess
+
     electronProcess.on('close', (code, signal) => {
       if (manualStop) return
-      if (manualRestart) return
+      if (currentProcess && ignoredCloseProcesses.has(currentProcess)) return
       if (isCleaningUp) return
 
       if (signal) {

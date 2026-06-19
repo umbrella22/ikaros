@@ -41,7 +41,7 @@ vi.mock('chokidar', () => ({
 }))
 
 vi.mock('../../src/node/shared/logger', () => ({
-  LoggerSystem: () => mockedLogger,
+  logger: mockedLogger,
 }))
 
 import { createWatchdog } from '../../src/node/watchdog/watchdog'

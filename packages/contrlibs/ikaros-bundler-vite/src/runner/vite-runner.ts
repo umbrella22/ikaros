@@ -57,9 +57,10 @@ export const startViteDevServer = async (
   options?: StartViteDevServerOptions,
 ): Promise<ViteDevServer> => {
   const { port, onBuildStatus, registerCleanup } = options ?? {}
+  let server: ViteDevServer | undefined
 
   try {
-    const server = await createServer({
+    server = await createServer({
       ...config,
       configFile: false,
       server: {
@@ -90,6 +91,10 @@ export const startViteDevServer = async (
 
     return server
   } catch (err) {
+    if (server) {
+      await server.close().catch(() => undefined)
+    }
+
     const message = toErrorMessage(err)
     onBuildStatus?.({
       success: false,

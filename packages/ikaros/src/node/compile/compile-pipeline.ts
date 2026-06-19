@@ -1,9 +1,11 @@
 // compile/compile-pipeline.ts — 统一编译管线入口
 
-import { createBundlerAdapter } from '../bundler/bundler-factory'
+import { createBuildPlanExecutor } from '../build-plan'
 import { createBuiltinPlugins } from '../core/builtin-plugins'
 import { createPluginManager } from '../core/plugin-manager'
 import { createPlatformAdapter } from '../platform/platform-factory'
+import { resolveWebPreConfig } from './web/resolve-web-preconfig'
+import { logger } from '../shared/logger'
 import {
   Command,
   createCompileContext,
@@ -28,36 +30,54 @@ export async function runCompile(params: CompileServeParams): Promise<void> {
   try {
     ctx = await createCompileContext(params)
 
+    const builtinPlugins = createBuiltinPlugins(ctx)
     const pluginManager = createPluginManager({
       compileContext: ctx,
-      plugins: [
-        ...createBuiltinPlugins(ctx),
-        ...(ctx.userConfig?.plugins ?? []),
-      ],
+      builtinPlugins,
+      plugins: ctx.userConfig?.plugins ?? [],
     })
     await pluginManager.init()
 
-    ctx.userConfig = await pluginManager.applyIkarosConfig(ctx.userConfig)
-    await pluginManager.addPlugins(ctx.userConfig?.plugins ?? [])
+    const currentUserConfig = await pluginManager.applyIkarosConfig(
+      ctx.userConfig,
+    )
+    await pluginManager.addPlugins(currentUserConfig?.plugins ?? [])
 
     const platform = createPlatformAdapter(ctx.options.platform, {
       context: ctx.context,
     })
 
+    const resolvedCtx = {
+      ...ctx,
+      userConfig: currentUserConfig,
+    }
     const preConfig = await pluginManager.applyNormalizedConfig(
-      await platform.resolvePreConfig(ctx),
+      await resolveWebPreConfig({
+        command: ctx.command,
+        context: ctx.context,
+        resolveContext: ctx.resolveContext,
+        getUserConfig: async () => resolvedCtx.userConfig,
+        isElectron: platform.name === 'desktopClient',
+      }),
     )
-
-    const bundler = createBundlerAdapter({
-      bundler: preConfig.bundler,
-      resolveContextModule: ctx.resolveContextModule,
+    const basePlans = await platform.createPlans({
+      command: ctx.command,
+      compileContext: resolvedCtx,
+      config: preConfig,
+    })
+    const plans = await pluginManager.applyBuildPlans(basePlans)
+    const executor = createBuildPlanExecutor({
+      compileContext: resolvedCtx,
+      pluginManager,
     })
 
-    await platform.compile(bundler, {
+    await platform.run({
       command: ctx.command,
-      preConfig,
-      compileContext: ctx,
+      plans,
+      compileContext: resolvedCtx,
       pluginManager,
+      executor,
+      logger,
     })
   } finally {
     if (ctx && ctx.command !== Command.SERVER) {

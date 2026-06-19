@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocked = vi.hoisted(() => ({
-  detect: vi.fn(async () => 4321),
   checkDependency: vi.fn(() => false),
-}))
-
-vi.mock('detect-port', () => ({
-  detect: mocked.detect,
 }))
 
 vi.mock('../../src/node/shared/common', async (importOriginal) => {
@@ -30,8 +25,6 @@ const resolveTestContext = (...paths: string[]) =>
 
 describe('normalizeConfig', () => {
   beforeEach(() => {
-    mocked.detect.mockReset()
-    mocked.detect.mockResolvedValue(4321)
     mocked.checkDependency.mockReset()
     mocked.checkDependency.mockReturnValue(false)
   })
@@ -47,7 +40,6 @@ describe('normalizeConfig', () => {
     expect(config.base).toBe('/')
     expect(config.port).toBe(DEFAULT_PORT)
     expect(config.server.port).toBe(DEFAULT_PORT)
-    expect(mocked.detect).not.toHaveBeenCalled()
     expect(config.pages).toEqual({
       index: {
         html: '/test/project/index.html',
@@ -60,20 +52,20 @@ describe('normalizeConfig', () => {
     expect(config.library).toBeNull()
   })
 
-  it('server 模式未配置端口时应探测可用端口', async () => {
+  it('server 模式未配置端口时应使用调用方解析的端口', async () => {
     const config = await normalizeConfig({
       command: Command.SERVER,
       context: '/test/project',
       resolveContext: resolveTestContext,
+      resolvedPort: 4321,
     })
 
     expect(config.port).toBe(4321)
     expect(config.server.port).toBe(4321)
-    expect(mocked.detect).toHaveBeenCalledWith(DEFAULT_PORT)
   })
 
   it('应合并用户配置并派生框架检测结果', async () => {
-    mocked.checkDependency.mockImplementation((pkg: string) => pkg === 'react')
+    mocked.checkDependency.mockImplementation((pkg?: string) => pkg === 'react')
 
     const plugin = { name: 'rspack-plugin' } as never
     const config = await normalizeConfig({
@@ -81,21 +73,25 @@ describe('normalizeConfig', () => {
       context: '/test/project',
       resolveContext: resolveTestContext,
       userConfig: {
-        target: 'mobile',
-        define: { __DEV__: 'true' },
-        enablePages: ['admin'],
-        server: {
-          port: 9000,
-          https: true,
+        app: {
+          target: 'mobile',
         },
-        resolve: {
+        source: {
+          define: { __DEV__: 'true' },
           alias: { '~': '/custom/path' },
           extensions: ['.ts', '.tsx'],
         },
-        rspack: {
-          plugins: [plugin],
-          moduleFederation: {
-            name: 'app',
+        dev: {
+          pages: ['admin'],
+          port: 9000,
+          https: true,
+        },
+        bundle: {
+          rspack: {
+            plugins: [plugin],
+            moduleFederation: {
+              name: 'app',
+            },
           },
         },
       },
@@ -118,19 +114,34 @@ describe('normalizeConfig', () => {
     expect(config.browserslist).toBe(BROWSERSLIST.mobile.join(','))
   })
 
-  it('开发模式下应拒绝外部 build.base', async () => {
+  it('开发模式下应拒绝外部 output.base', async () => {
     await expect(
       normalizeConfig({
         command: Command.SERVER,
         context: '/test/project',
         resolveContext: resolveTestContext,
         userConfig: {
-          build: {
+          output: {
             base: 'https://cdn.example.com/assets/',
           },
         },
       }),
-    ).rejects.toThrow('build.base')
+    ).rejects.toThrow('output.base')
+  })
+
+  it('开发模式下应大小写无关地拒绝外部 output.base', async () => {
+    await expect(
+      normalizeConfig({
+        command: Command.SERVER,
+        context: '/test/project',
+        resolveContext: resolveTestContext,
+        userConfig: {
+          output: {
+            base: 'HTTPS://cdn.example.com/assets/',
+          },
+        },
+      }),
+    ).rejects.toThrow('output.base')
   })
 
   it('electron 模式应生成 renderer 默认页面', async () => {
@@ -156,11 +167,13 @@ describe('normalizeConfig', () => {
       context: '/test/project',
       resolveContext: resolveTestContext,
       userConfig: {
-        target: 'mobile',
-        build: {
+        app: {
+          target: 'mobile',
+        },
+        output: {
           base: '/app/',
         },
-        server: {
+        dev: {
           port: 8080,
         },
       },
@@ -169,11 +182,13 @@ describe('normalizeConfig', () => {
     const diagnostics = explainNormalizedConfig({
       command: Command.BUILD,
       userConfig: {
-        target: 'mobile',
-        build: {
+        app: {
+          target: 'mobile',
+        },
+        output: {
           base: '/app/',
         },
-        server: {
+        dev: {
           port: 8080,
         },
       },
@@ -186,7 +201,7 @@ describe('normalizeConfig', () => {
 
     expect(diagnostics.target).toMatchObject({
       value: 'mobile',
-      source: 'user.target',
+      source: 'user.app.target',
     })
     expect(diagnostics.base).toMatchObject({
       value: '/plugin-base/',
@@ -195,7 +210,7 @@ describe('normalizeConfig', () => {
     })
     expect(diagnostics.port).toMatchObject({
       value: 8080,
-      source: 'user.server.port',
+      source: 'user.dev.port',
       requestedPort: 8080,
       autoDetected: false,
     })
@@ -203,5 +218,62 @@ describe('normalizeConfig', () => {
       value: 'none',
       source: 'framework.none',
     })
+  })
+
+  it('explain 应基于原始显式配置判断来源', async () => {
+    const baseConfig = await normalizeConfig({
+      command: Command.BUILD,
+      context: '/test/project',
+      resolveContext: resolveTestContext,
+    })
+
+    const diagnostics = explainNormalizedConfig({
+      command: Command.BUILD,
+      userConfig: {
+        app: {
+          target: 'pc',
+        },
+        output: {
+          base: '/',
+        },
+        dev: {
+          port: DEFAULT_PORT,
+        },
+      },
+      sourceUserConfig: {},
+      normalizedConfig: baseConfig,
+      baseNormalizedConfig: baseConfig,
+    })
+
+    expect(diagnostics.target.source).toBe('default.app.target')
+    expect(diagnostics.base.source).toBe('default.output.base')
+    expect(diagnostics.port.source).toBe('default.dev.port')
+  })
+
+  it('explain 应保留显式用户配置来源', async () => {
+    const baseConfig = await normalizeConfig({
+      command: Command.BUILD,
+      context: '/test/project',
+      resolveContext: resolveTestContext,
+      userConfig: {
+        output: {
+          base: '/app/',
+        },
+      },
+    })
+
+    const diagnostics = explainNormalizedConfig({
+      command: Command.BUILD,
+      userConfig: baseConfig as never,
+      sourceUserConfig: {
+        output: {
+          base: '/app/',
+        },
+      },
+      normalizedConfig: baseConfig,
+      baseNormalizedConfig: baseConfig,
+    })
+
+    expect(diagnostics.base.source).toBe('user.output.base')
   })
 })

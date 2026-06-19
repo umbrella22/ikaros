@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ViteBundlerAdapter } from '../src/vite-adapter'
-import { createMinimalParams } from './test-utils'
+import { createMinimalPlan } from './test-utils'
 
 describe('ViteBundlerAdapter', () => {
   it('should have name = "vite"', () => {
@@ -11,7 +11,7 @@ describe('ViteBundlerAdapter', () => {
 
   it('should create config without throwing', () => {
     const adapter = new ViteBundlerAdapter()
-    const config = adapter.createConfig(createMinimalParams())
+    const config = adapter.createConfig(createMinimalPlan())
     expect(config).toBeDefined()
     expect(config.root).toBe('/test/project')
   })
@@ -19,7 +19,7 @@ describe('ViteBundlerAdapter', () => {
   it('should create config for build command', () => {
     const adapter = new ViteBundlerAdapter()
     const config = adapter.createConfig(
-      createMinimalParams({ command: 'build' }),
+      createMinimalPlan({ command: 'build' }),
     )
     expect(config).toBeDefined()
     expect(config.server).toBeUndefined()
@@ -28,7 +28,7 @@ describe('ViteBundlerAdapter', () => {
   it('should accept all CreateConfigParams fields', () => {
     const adapter = new ViteBundlerAdapter()
     const config = adapter.createConfig(
-      createMinimalParams({
+      createMinimalPlan({
         mode: 'production',
         contextPkg: { name: 'my-app', version: '2.0.0' },
         config: {

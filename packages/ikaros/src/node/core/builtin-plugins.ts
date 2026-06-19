@@ -65,6 +65,33 @@ function mergeRspackConfig(
     : appendRspackPlugins(merged, [overridePlugins as Plugin | Plugin[]])
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
+function mergeRspackExternals(
+  current: Configuration['externals'],
+  next: Record<string, string>,
+): Configuration['externals'] {
+  if (current === undefined) {
+    return next
+  }
+
+  if (isPlainRecord(current)) {
+    return {
+      ...current,
+      ...next,
+    } as Configuration['externals']
+  }
+
+  return current
+}
+
 function createPluginHelper(
   compileContext: CompileContext,
   config: NormalizedConfig,
@@ -91,7 +118,7 @@ function createRspackCoreFrameworkPlugin(
   return {
     name: 'ikaros:rspack-core',
     setup(api) {
-      api.modifyRspackConfig((bundlerConfig, { config }) => {
+      api.modifyRspackPlugins((plugins, { config }) => {
         const isDev = compileContext.command === 'server'
         const env = isDev ? 'development' : 'production'
         const libraryBuild = isLibraryBuild(compileContext, config)
@@ -122,14 +149,20 @@ function createRspackCoreFrameworkPlugin(
           const { plugins: mpaPlugins } = mpaAssetsHelper.create()
 
           warnings.push(...mpaAssetsHelper.warnings)
-          pluginHelper.useCopyPlugin().add(mpaPlugins)
+          pluginHelper.useCopyPlugin()
+          for (const [index, plugin] of mpaPlugins.entries()) {
+            pluginHelper.addPlugin(`html:mpa:${index}`, plugin)
+          }
         }
 
-        pluginHelper.add(new PreWarningsPlugin(warnings, config.quiet))
+        pluginHelper.addPlugin(
+          'pre-warnings',
+          new PreWarningsPlugin(warnings, config.quiet),
+        )
 
-        return appendRspackPlugins(bundlerConfig as Configuration, [
-          pluginHelper.end(),
-        ])
+        for (const item of pluginHelper.endWithIds()) {
+          plugins.append(item.id, item.value)
+        }
       })
     },
   }
@@ -162,10 +195,8 @@ function createRspackStatsFrameworkPlugin(): IkarosPlugin {
   return {
     name: 'ikaros:rspack-stats',
     setup(api) {
-      api.modifyRspackConfig((bundlerConfig, { config }) => {
-        return appendRspackPlugins(bundlerConfig as Configuration, [
-          new StatsPlugin(config),
-        ])
+      api.modifyRspackPlugins((plugins, { config }) => {
+        plugins.append('stats', new StatsPlugin(config))
       })
     },
   }
@@ -177,15 +208,13 @@ function createRspackOutputFrameworkPlugin(
   return {
     name: 'ikaros:rspack-output',
     setup(api) {
-      api.modifyRspackConfig((bundlerConfig, { config }) => {
+      api.modifyRspackPlugins((plugins, { config }) => {
         const helper = createPluginHelper(compileContext, config)
 
-        return appendRspackPlugins(bundlerConfig as Configuration, [
-          helper.createSourceMapPlugin(),
-          helper.createCssExtractPlugin(),
-          helper.createDoctorPlugin(),
-          helper.createGzipPlugin(),
-        ])
+        plugins.append('sourcemap', helper.createSourceMapPlugin())
+        plugins.append('css-extract', helper.createCssExtractPlugin())
+        plugins.append('doctor', helper.createDoctorPlugin())
+        plugins.append('gzip', helper.createGzipPlugin())
       })
     },
   }
@@ -197,24 +226,31 @@ function createRspackCdnFrameworkPlugin(
   return {
     name: 'ikaros:rspack-cdn',
     setup(api) {
+      api.modifyRspackPlugins((plugins, { config }) => {
+        if (isLibraryBuild(compileContext, config)) {
+          return
+        }
+
+        const helper = createPluginHelper(compileContext, config)
+        plugins.append('cdn', helper.createCdnPlugin())
+      })
+
       api.modifyRspackConfig((bundlerConfig, { config }) => {
         if (isLibraryBuild(compileContext, config)) {
           return bundlerConfig
         }
 
-        const helper = createPluginHelper(compileContext, config)
         const cdnModules = config.rspack.cdnOptions.modules
-        const nextConfig = appendRspackPlugins(bundlerConfig as Configuration, [
-          helper.createCdnPlugin(),
-        ])
-
         if (cdnModules.length === 0) {
-          return nextConfig
+          return bundlerConfig
         }
 
         return {
-          ...nextConfig,
-          externals: createCdnExternals(cdnModules),
+          ...bundlerConfig,
+          externals: mergeRspackExternals(
+            bundlerConfig.externals,
+            createCdnExternals(cdnModules),
+          ),
         }
       })
     },
@@ -227,20 +263,23 @@ function createRspackEcosystemFrameworkPlugin(
   return {
     name: 'ikaros:rspack-ecosystem',
     setup(api) {
-      api.modifyRspackConfig((bundlerConfig, { config }) => {
+      api.modifyRspackPlugins((plugins, { config }) => {
         const helper = createPluginHelper(compileContext, config)
 
         if (isLibraryBuild(compileContext, config)) {
-          return appendRspackPlugins(bundlerConfig as Configuration, [
+          plugins.append(
+            'dependency-cycle',
             helper.createDependencyCyclePlugin(),
-          ])
+          )
+          return
         }
 
-        return appendRspackPlugins(bundlerConfig as Configuration, [
+        plugins.append(
+          'module-federation',
           helper.createModuleFederationPlugin(),
-          helper.createDependencyCyclePlugin(),
-          config.rspack.plugins,
-        ])
+        )
+        plugins.append('dependency-cycle', helper.createDependencyCyclePlugin())
+        plugins.append('user:rspack-plugins', config.rspack.plugins)
       })
     },
   }

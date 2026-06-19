@@ -57,4 +57,20 @@ describe('startViteDevServer', () => {
 
     expect(viteMocks.closeSpy).toHaveBeenCalledOnce()
   })
+
+  it('listen 失败时应关闭已创建的 server', async () => {
+    const listenError = new Error('EADDRINUSE')
+    viteMocks.listenSpy.mockRejectedValueOnce(listenError)
+
+    await expect(
+      startViteDevServer({
+        root: '/test/project',
+      }),
+    ).rejects.toMatchObject({
+      message: 'EADDRINUSE',
+    })
+
+    expect(viteMocks.createServerSpy).toHaveBeenCalledOnce()
+    expect(viteMocks.closeSpy).toHaveBeenCalledOnce()
+  })
 })

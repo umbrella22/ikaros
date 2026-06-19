@@ -4,12 +4,13 @@ import { isAbsolute, join, relative, resolve } from 'node:path'
 
 import chokidar from 'chokidar'
 
-import { resolveConfigWatchFiles } from '../config/config-loader'
+import {
+  resolveConfigWatchFilesWithDiagnostics,
+  type ConfigDependencyDiagnostic,
+} from '../config/config-loader'
 import { getEnvDir, getEnvFiles } from '../config/env-loader'
-import { LoggerSystem } from '../shared/logger'
+import { logger } from '../shared/logger'
 import { CONFIG_FILE_NAME, CONFIG_FILE_SUFFIXES } from '../shared/constants'
-
-const logger = LoggerSystem()
 
 type WatchdogEvent = 'add' | 'change' | 'unlink'
 
@@ -40,6 +41,7 @@ export type WatchdogWatchPlan = {
   trackedFiles: string[]
   watchedPaths: string[]
   fileCategories: Record<string, WatchdogTrackedFileKind>
+  configDependencyDiagnostics: ConfigDependencyDiagnostic[]
 }
 
 export type WatchdogOptions = {
@@ -98,9 +100,15 @@ function createFileCategories(params: {
 function buildWatchdogWatchPlan(
   options: ResolveWatchdogWatchPlanOptions & {
     configDependencyFiles: string[]
+    configDependencyDiagnostics?: ConfigDependencyDiagnostic[]
   },
 ): WatchdogWatchPlan {
-  const { context, mode, configDependencyFiles } = options
+  const {
+    context,
+    mode,
+    configDependencyFiles,
+    configDependencyDiagnostics = [],
+  } = options
   const envDir = resolveWatchPath(context, getEnvDir(context))
   const envFiles = getEnvFiles(context, mode).map((filePath) =>
     resolveWatchPath(context, filePath),
@@ -129,20 +137,22 @@ function buildWatchdogWatchPlan(
       configEntryFiles,
       configDependencyFiles: resolvedConfigDependencyFiles,
     }),
+    configDependencyDiagnostics,
   }
 }
 
 export async function resolveWatchdogWatchPlan(
   options: ResolveWatchdogWatchPlanOptions,
 ): Promise<WatchdogWatchPlan> {
-  const configDependencyFiles = await resolveConfigWatchFiles({
+  const configDependencies = await resolveConfigWatchFilesWithDiagnostics({
     context: options.context,
     configFile: options.configFile,
   })
 
   return buildWatchdogWatchPlan({
     ...options,
-    configDependencyFiles,
+    configDependencyFiles: configDependencies.files,
+    configDependencyDiagnostics: configDependencies.diagnostics,
   })
 }
 

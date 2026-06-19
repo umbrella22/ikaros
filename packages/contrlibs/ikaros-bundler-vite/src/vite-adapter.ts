@@ -4,12 +4,13 @@ import type { InlineConfig } from 'vite'
 
 import { createViteConfig } from './config/create-vite-config'
 import { createViteLibraryConfig } from './config/create-vite-library-config'
+import { buildPlanToCreateConfigParams } from './plan-compat'
 import { runViteBuild, startViteDevServer } from './runner/vite-runner'
 import type {
+  BuildPlan,
   BundlerAdapter,
   BundlerBuildOptions,
   BundlerDevOptions,
-  CreateConfigParams,
 } from './types'
 
 /**
@@ -29,7 +30,13 @@ import type {
 export class ViteBundlerAdapter implements BundlerAdapter<InlineConfig> {
   readonly name = 'vite' as const
 
-  createConfig(params: CreateConfigParams): InlineConfig {
+  supports(plan: BuildPlan): boolean {
+    return plan.bundler === 'vite'
+  }
+
+  createConfig(plan: BuildPlan): InlineConfig {
+    const params = buildPlanToCreateConfigParams(plan)
+
     // 库模式：build 命令 + 配置了 library
     if (params.command === 'build' && params.config.library) {
       return createViteLibraryConfig(params)

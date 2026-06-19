@@ -151,13 +151,14 @@ describe('getEnv', () => {
     expect(process.env.FOO).toBeUndefined()
   })
 
-  it('cleanup 应恢复已有环境变量', async () => {
+  it('已有 shell 环境变量应优先于 .env 且 cleanup 后保持不变', async () => {
     process.env.FOO = 'from-shell'
     mkdirSync(join(tempDir, 'env'))
     writeFileSync(join(tempDir, 'env', '.env'), 'FOO=from-env')
 
     const result = await getEnv(tempDir)
-    expect(process.env.FOO).toBe('from-env')
+    expect(result.env).toEqual({ FOO: 'from-shell' })
+    expect(process.env.FOO).toBe('from-shell')
 
     result.cleanup()
 

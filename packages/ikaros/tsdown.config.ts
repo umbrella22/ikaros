@@ -13,7 +13,14 @@ export default defineConfig(({ watch }) => {
   return [
     {
       ...commonOptions,
-      entry: ['src/node/index.ts', 'src/node/cli.ts'],
+      entry: [
+        'src/node/index.ts',
+        'src/node/cli.ts',
+        'src/node/entrypoints/config.ts',
+        'src/node/entrypoints/plugin.ts',
+        'src/node/entrypoints/adapter.ts',
+        'src/node/entrypoints/testing.ts',
+      ],
       outDir: 'dist',
       sourcemap: isWatch,
       minify: !isWatch,

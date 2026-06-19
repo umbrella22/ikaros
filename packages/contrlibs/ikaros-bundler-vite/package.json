@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/ikaros-bundler-vite",
-  "version": "2.4.1",
+  "version": "3.0.0",
   "description": "Optional Vite bundler adapter for @ikaros-cli/ikaros",
   "type": "module",
   "publishConfig": {
@@ -33,10 +33,14 @@
   "engines": {
     "node": ">=22.12.0"
   },
+  "peerDependencies": {
+    "@ikaros-cli/ikaros": "^3.0.0"
+  },
   "dependencies": {
     "vite": "^8.0.14"
   },
   "devDependencies": {
+    "@ikaros-cli/ikaros": "workspace:*",
     "vitest": "^4.1.7"
   }
 }

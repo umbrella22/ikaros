@@ -1,39 +1,34 @@
 # @ikaros-cli/ikaros-bundler-vite
 
-`@ikaros-cli/ikaros` 的 Vite bundler 适配器（可选依赖）。
+Vite bundler adapter for `@ikaros-cli/ikaros`.
 
-> 默认情况下 ikaros 使用 Rspack。本包仅在你显式选择 `bundler: 'vite'` 时才需要安装与使用。
-
-## 使用前提
-
-- Node.js `>= 22`
-- 项目中已安装 `@ikaros-cli/ikaros`
+ikaros 默认使用 Rspack。只有当项目配置 `bundle.adapter: 'vite'` 时，core 才会从用户项目依赖中按需加载本包。
 
 ## 安装
 
 ```bash
-pnpm add -D @ikaros-cli/ikaros @ikaros-cli/ikaros-bundler-vite
+pnpm add -D @ikaros-cli/ikaros-bundler-vite vite
 ```
 
-## 启用（示例）
+## 配置
 
-在你的 `ikaros.config.(ts|js|mjs)` 中选择 Vite：
-
-```ts
+```js
 import { defineConfig } from '@ikaros-cli/ikaros'
+import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  bundler: 'vite',
+  bundle: {
+    adapter: 'vite',
+    vite: {
+      plugins: [vue()],
+    },
+  },
 })
 ```
 
-然后正常使用 ikaros：
+## Adapter 行为
 
-```bash
-ikaros --mode development
-ikaros build --mode release
-```
-
-## 说明
-
-- 如果未安装本包但配置了 `bundler: 'vite'`，ikaros 会在运行时提示你安装它。
+- 从 `@ikaros-cli/ikaros/adapter` 读取稳定 contract 类型。
+- 消费 core 生成的 `BuildPlan`，不依赖 core 内部 `NormalizedConfig`。
+- 支持应用模式和库模式。
+- dev server、build runner 均由 core executor 调用。

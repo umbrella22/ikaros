@@ -3,7 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-import { resolveConfig } from '../../src/node/config/config-loader'
+import {
+  ConfigLoadError,
+  resolveConfig,
+  resolveConfigWatchFilesWithDiagnostics,
+} from '../../src/node/config/config-loader'
 
 describe('resolveConfig', () => {
   let tempDir: string
@@ -28,6 +32,15 @@ describe('resolveConfig', () => {
     expect(await resolveConfig({ context: tempDir })).toEqual({
       define: { VALUE: 'two' },
     })
+  })
+
+  it('应将 defineConfig() 的 default undefined 视为空配置', async () => {
+    writeFileSync(
+      join(tempDir, 'ikaros.config.mjs'),
+      'export default undefined',
+    )
+
+    expect(await resolveConfig({ context: tempDir })).toBeUndefined()
   })
 
   it('应在配置依赖文件变更后返回新值', async () => {
@@ -132,5 +145,111 @@ describe('resolveConfig', () => {
         ),
       },
     })
+  })
+
+  it('应解析静态依赖并报告无法静态解析的动态 import', async () => {
+    writeFileSync(
+      join(tempDir, 'ikaros.config.mjs'),
+      [
+        'import shared from "./config.shared.mjs"',
+        'const name = "dynamic"',
+        'await import(`./${name}.mjs`)',
+        'export default shared',
+      ].join('\n'),
+    )
+    writeFileSync(join(tempDir, 'config.shared.mjs'), 'export default {}')
+
+    const result = await resolveConfigWatchFilesWithDiagnostics({
+      context: tempDir,
+    })
+
+    expect(result.files).toContain(join(tempDir, 'ikaros.config.mjs'))
+    expect(result.files).toContain(join(tempDir, 'config.shared.mjs'))
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        file: join(tempDir, 'ikaros.config.mjs'),
+        message: expect.stringContaining('dynamic import dependency'),
+      }),
+    ])
+  })
+
+  it('损坏的 executable 配置应抛出带路径和 cause 的加载错误', async () => {
+    const configPath = join(tempDir, 'ikaros.config.mjs')
+    writeFileSync(configPath, 'export default {')
+
+    await expect(resolveConfig({ context: tempDir })).rejects.toMatchObject({
+      name: 'ConfigLoadError',
+      filePath: configPath,
+      cause: expect.any(Error),
+    })
+    await expect(resolveConfig({ context: tempDir })).rejects.toThrow(
+      configPath,
+    )
+  })
+
+  it('损坏的 json 配置应抛出带路径和 cause 的加载错误', async () => {
+    const configPath = join(tempDir, 'ikaros.config.json')
+    writeFileSync(configPath, '{')
+
+    await expect(resolveConfig({ context: tempDir })).rejects.toBeInstanceOf(
+      ConfigLoadError,
+    )
+    await expect(resolveConfig({ context: tempDir })).rejects.toMatchObject({
+      filePath: configPath,
+      cause: expect.any(Error),
+    })
+  })
+
+  it('损坏的 yaml 配置应抛出带路径和 cause 的加载错误', async () => {
+    const configPath = join(tempDir, 'ikaros.config.yaml')
+    writeFileSync(configPath, 'foo: [')
+
+    await expect(resolveConfig({ context: tempDir })).rejects.toMatchObject({
+      name: 'ConfigLoadError',
+      filePath: configPath,
+      cause: expect.any(Error),
+    })
+  })
+
+  it('依赖扫描遇到语法错误时应写入 diagnostics 而不是抛出加载错误', async () => {
+    const configPath = join(tempDir, 'ikaros.config.mjs')
+    writeFileSync(configPath, 'export default {')
+
+    const result = await resolveConfigWatchFilesWithDiagnostics({
+      context: tempDir,
+      configFile: configPath,
+    })
+
+    expect(result.files).toEqual([configPath])
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        file: configPath,
+        message: expect.stringContaining('config dependency parse failed'),
+      }),
+    ])
+  })
+
+  it('应按 TypeScript 语法扫描 .cts 配置依赖', async () => {
+    const configPath = join(tempDir, 'ikaros.config.cts')
+    const sharedPath = join(tempDir, 'shared.ts')
+
+    writeFileSync(
+      configPath,
+      [
+        'import shared from "./shared"',
+        'type Local = typeof shared',
+        'export default shared satisfies Local',
+      ].join('\n'),
+    )
+    writeFileSync(sharedPath, 'export default {}')
+
+    const result = await resolveConfigWatchFilesWithDiagnostics({
+      context: tempDir,
+      configFile: configPath,
+    })
+
+    expect(result.files).toContain(configPath)
+    expect(result.files).toContain(sharedPath)
+    expect(result.diagnostics).toEqual([])
   })
 })

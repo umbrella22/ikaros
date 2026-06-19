@@ -71,7 +71,7 @@ export interface CompileContext {
   /** 环境变量 */
   readonly env: Record<string, unknown>
   /** 用户配置（可在 modifyIkarosConfig 阶段被插件更新为 ResolvedUserConfig） */
-  userConfig?: UserConfig | ResolvedUserConfig
+  readonly userConfig?: UserConfig | ResolvedUserConfig
   /** 工作目录 package.json */
   readonly contextPkg?: PackageJson
   /** 基于工作目录的路径解析 */
@@ -209,7 +209,7 @@ async function loadEnv(
   const { platform, mode } = options
   const retain: ConfigEnvPre['env'] = {
     PLATFORM: platform,
-    MODE: mode,
+    ...(mode !== undefined ? { MODE: mode } : {}),
   }
   const {
     env: envData,

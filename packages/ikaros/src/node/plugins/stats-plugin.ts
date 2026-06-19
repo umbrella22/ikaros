@@ -146,6 +146,9 @@ export default class StatsPlugin implements RspackPluginInstance {
     const { assets } = stats
 
     if (!assets || assets.length === 0) return
+    const visibleAssets = assets.filter((asset) => !asset.info?.development)
+
+    if (visibleAssets.length === 0) return
 
     const table = new EasyTable()
     const isGzip = this.config?.build.gzip ?? false
@@ -154,10 +157,8 @@ export default class StatsPlugin implements RspackPluginInstance {
     let gzipTotal = 0
     let ignored = false
 
-    for (let i = 0; i < assets.length; i++) {
-      const { name, size, related, info } = assets[i]
-
-      if (info?.development) continue
+    for (let i = 0; i < visibleAssets.length; i++) {
+      const { name, size, related } = visibleAssets[i]
 
       const gzipAsset =
         isGzip && isArray(related)
@@ -168,7 +169,11 @@ export default class StatsPlugin implements RspackPluginInstance {
       sizeTotal += size
       gzipTotal += gzip
 
-      if (assets.length > 20 && i >= 4 && i < assets.length - 1 - 4) {
+      if (
+        visibleAssets.length > 20 &&
+        i >= 4 &&
+        i < visibleAssets.length - 1 - 4
+      ) {
         if (!ignored) {
           ignored = true
           table.cell('name', '....')
@@ -188,7 +193,7 @@ export default class StatsPlugin implements RspackPluginInstance {
 
     table.pushDelimeter()
 
-    table.cell('name', `There are ${assets.length} files`)
+    table.cell('name', `There are ${visibleAssets.length} files`)
     table.cell('size', prettyBytes(sizeTotal))
     if (isGzip) table.cell('gzip', prettyBytes(gzipTotal))
 
@@ -205,8 +210,9 @@ export default class StatsPlugin implements RspackPluginInstance {
     const { devServer } = compiler.options
 
     const userHttps =
-      devServer?.server === 'https' || typeof devServer?.server === 'object'
-    const userPort = Number(devServer?.port)
+      !!devServer &&
+      (devServer.server === 'https' || typeof devServer.server === 'object')
+    const userPort = Number(devServer ? devServer.port : undefined)
 
     let hosts: string[] = []
     let urlPath = ''
@@ -364,6 +370,10 @@ export default class StatsPlugin implements RspackPluginInstance {
     compiler.cache.hooks.shutdown.intercept({
       name: PLUGIN_NAME,
       done: () => {
+        if (!statsJson) {
+          return
+        }
+
         const { errorsCount = 0, warningsCount = 0 } = statsJson
 
         console.log()

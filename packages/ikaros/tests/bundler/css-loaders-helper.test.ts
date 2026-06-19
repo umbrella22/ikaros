@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { buildCssLoaders } from '../../src/node/bundler/rspack/css-loaders-helper'
 
+type SassLoaderOptions = {
+  sassOptions?: {
+    api?: string
+    indentedSyntax?: boolean
+  }
+}
+
 describe('buildCssLoaders', () => {
   it('应返回所有 CSS 预处理器的 loader 配置', () => {
     const loaders = buildCssLoaders('development')
@@ -54,7 +61,9 @@ describe('buildCssLoaders', () => {
     expect(scssLoader).toBeDefined()
     const sassUse = scssLoader!.use[1]
     expect(sassUse.loader).toContain('sass-loader')
-    expect(sassUse.options?.sassOptions?.api).toBe('modern-compiler')
+    expect((sassUse.options as SassLoaderOptions).sassOptions?.api).toBe(
+      'modern-compiler',
+    )
   })
 
   it('SASS loader 应使用 indentedSyntax', () => {
@@ -62,13 +71,33 @@ describe('buildCssLoaders', () => {
     const sassLoader = loaders.find((l) => l.test.source === '\\.sass$')
     expect(sassLoader).toBeDefined()
     const sassUse = sassLoader!.use[1]
-    expect(sassUse.options?.sassOptions?.indentedSyntax).toBe(true)
+    expect(
+      (sassUse.options as SassLoaderOptions).sassOptions?.indentedSyntax,
+    ).toBe(true)
   })
 
   it('应传递 sourceMap 选项到预处理器 loader', () => {
     const loaders = buildCssLoaders('development', { sourceMap: true })
     const lessLoader = loaders.find((l) => l.test.source === '\\.less$')
     expect(lessLoader!.use[1].options?.sourceMap).toBe(true)
+  })
+
+  it('development 环境默认开启预处理器 sourceMap', () => {
+    const loaders = buildCssLoaders('development')
+    const lessLoader = loaders.find((l) => l.test.source === '\\.less$')
+    expect(lessLoader!.use[1].options?.sourceMap).toBe(true)
+  })
+
+  it('production 环境默认关闭预处理器 sourceMap', () => {
+    const loaders = buildCssLoaders('production')
+    const lessLoader = loaders.find((l) => l.test.source === '\\.less$')
+    expect(lessLoader!.use[1].options?.sourceMap).toBe(false)
+  })
+
+  it('用户显式 sourceMap 应覆盖 env 默认值', () => {
+    const loaders = buildCssLoaders('development', { sourceMap: false })
+    const lessLoader = loaders.find((l) => l.test.source === '\\.less$')
+    expect(lessLoader!.use[1].options?.sourceMap).toBe(false)
   })
 
   it('应传递 lightningcss 选项', () => {

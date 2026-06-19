@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { BundlerAdapter } from '../../src/node/bundler/types'
+import { createBuildPlan } from '../../src/node/build-plan'
+import type { BuildPlanExecutor } from '../../src/node/adapter'
 import type { CompileContext } from '../../src/node/compile/compile-context'
 import type { IkarosPluginAPI } from '../../src/node/core/plugin-api'
 import { createPluginManager } from '../../src/node/core/plugin-manager'
@@ -82,10 +83,11 @@ function createNormalizedConfig(
 function createCompileContext(
   userConfig?: UserConfig,
   registerCleanup?: (cleanup: () => Promise<void> | void) => void,
+  command: CompileContext['command'] = 'build' as CompileContext['command'],
 ): CompileContext {
   return {
     context: '/test/project',
-    command: 'build' as CompileContext['command'],
+    command,
     options: {
       platform: 'web',
     },
@@ -123,7 +125,7 @@ describe('WebPlatformAdapter plugin hooks', () => {
         api.onBeforeCreateCompiler(() => {
           order.push('before-create')
         })
-        api.modifyRspackConfig((config: Record<string, unknown>) => {
+        api.modifyRspackConfig((config) => {
           order.push('modify-rspack')
           return {
             ...config,
@@ -154,24 +156,47 @@ describe('WebPlatformAdapter plugin hooks', () => {
     )
 
     let receivedConfig: Record<string, unknown> | undefined
-    const bundler: BundlerAdapter<Record<string, unknown>> = {
-      name: 'rspack',
-      createConfig: () => ({
-        entry: 'index',
-      }),
-      runDev: async () => undefined,
-      runBuild: async (config) => {
+    const plan = createBuildPlan({
+      id: 'web',
+      command: 'build',
+      platform: 'web',
+      target: 'web',
+      context: ctx.context,
+      env: ctx.env,
+      config: preConfig,
+    })
+    const executor: BuildPlanExecutor = {
+      createConfig: async () => {
+        const config = await pluginManager.applyBundlerConfig('rspack', {
+          entry: 'index',
+        })
         receivedConfig = config
+        return config
+      },
+      runDev: vi.fn(),
+      watchBuild: vi.fn(),
+      runDevConfig: vi.fn(),
+      watchBuildConfig: vi.fn(),
+      runBuild: vi.fn(),
+      runBuildConfig: async () => {
         return 'ok'
       },
     }
 
     const platform = new WebPlatformAdapter()
-    await platform.compile(bundler, {
+    await platform.run({
       command: 'build',
-      preConfig,
+      plans: [plan],
       compileContext: ctx,
       pluginManager,
+      executor,
+      logger: {
+        done: vi.fn(),
+        error: vi.fn(),
+        okay: vi.fn(),
+        warning: vi.fn(),
+        info: vi.fn(),
+      },
     })
 
     expect(receivedConfig).toMatchObject({
@@ -197,7 +222,7 @@ describe('WebPlatformAdapter plugin hooks', () => {
         api.onBeforeCreateCompiler(() => {
           order.push('before-create')
         })
-        api.modifyRspackConfig((config: Record<string, unknown>) => {
+        api.modifyRspackConfig((config) => {
           order.push('modify-rspack')
           return {
             ...config,
@@ -216,10 +241,11 @@ describe('WebPlatformAdapter plugin hooks', () => {
       },
     }
 
-    const ctx = createCompileContext({ plugins: [plugin] }, (cleanup) =>
-      cleanups.push(cleanup),
+    const ctx = createCompileContext(
+      { plugins: [plugin] },
+      (cleanup) => cleanups.push(cleanup),
+      'server' as CompileContext['command'],
     )
-    ctx.command = 'server' as CompileContext['command']
 
     const pluginManager = createPluginManager({
       compileContext: ctx,
@@ -232,23 +258,45 @@ describe('WebPlatformAdapter plugin hooks', () => {
     )
 
     let receivedConfig: Record<string, unknown> | undefined
-    const bundler: BundlerAdapter<Record<string, unknown>> = {
-      name: 'rspack',
-      createConfig: () => ({
-        entry: 'index',
-      }),
-      runDev: async (config) => {
+    const plan = createBuildPlan({
+      id: 'web',
+      command: 'server',
+      platform: 'web',
+      target: 'web',
+      context: ctx.context,
+      env: ctx.env,
+      config: preConfig,
+    })
+    const executor: BuildPlanExecutor = {
+      createConfig: async () => {
+        const config = await pluginManager.applyBundlerConfig('rspack', {
+          entry: 'index',
+        })
         receivedConfig = config
+        return config
       },
-      runBuild: async () => undefined,
+      runBuild: vi.fn(),
+      watchBuild: vi.fn(),
+      runDevConfig: vi.fn(),
+      runBuildConfig: vi.fn(),
+      watchBuildConfig: vi.fn(),
+      runDev: vi.fn(),
     }
 
     const platform = new WebPlatformAdapter()
-    await platform.compile(bundler, {
+    await platform.run({
       command: 'server',
-      preConfig,
+      plans: [plan],
       compileContext: ctx,
       pluginManager,
+      executor,
+      logger: {
+        done: vi.fn(),
+        error: vi.fn(),
+        okay: vi.fn(),
+        warning: vi.fn(),
+        info: vi.fn(),
+      },
     })
 
     expect(receivedConfig).toMatchObject({

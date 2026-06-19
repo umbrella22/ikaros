@@ -14,6 +14,10 @@ type StatsLike = {
   toString: (options: StatsValue) => string
 }
 
+type RspackWatchingLike = {
+  close: (callback: (error?: Error | null) => void) => void
+}
+
 import type { BuildStatus } from '../types'
 import type { CleanupFn } from '../../watchdog/cleanup-registry'
 
@@ -134,8 +138,35 @@ export function watchRspackBuild(
 
   return new Promise<string | undefined>((resolve, reject) => {
     const compiler = rspack(config)
+    let settled = false
+    let closed = false
+    let watching: RspackWatchingLike | undefined
+    let pendingClose: ((watching: RspackWatchingLike) => void) | undefined
 
-    const watching = compiler.watch(
+    const closeWatchingOnce = (
+      onClose: (error?: Error | null) => void,
+    ) => {
+      if (closed) {
+        onClose()
+        return
+      }
+
+      const close = (instance: RspackWatchingLike) => {
+        closed = true
+        instance.close((closeError?: Error | null) => {
+          onClose(closeError)
+        })
+      }
+
+      if (watching) {
+        close(watching)
+        return
+      }
+
+      pendingClose = close
+    }
+
+    watching = compiler.watch(
       {
         ignored: /node_modules/,
         aggregateTimeout: 300,
@@ -148,7 +179,22 @@ export function watchRspackBuild(
             success: false,
             message: err.message || 'watch build error',
           })
-          return reject(err)
+          if (!settled) {
+            settled = true
+            closeWatchingOnce((closeError) => {
+              if (closeError) {
+                reject(
+                  new AggregateError(
+                    [err, closeError],
+                    `Watch build failed: ${err.message}; Close failed: ${closeError.message}`,
+                  ),
+                )
+                return
+              }
+              reject(err)
+            })
+          }
+          return undefined
         }
 
         if (stats?.hasErrors()) {
@@ -157,7 +203,23 @@ export function watchRspackBuild(
             success: false,
             message: errorMessage,
           })
-          return reject(new Error(errorMessage))
+          if (!settled) {
+            settled = true
+            const error = new Error(errorMessage)
+            closeWatchingOnce((closeError) => {
+              if (closeError) {
+                reject(
+                  new AggregateError(
+                    [error, closeError],
+                    `Watch build failed: ${errorMessage}; Close failed: ${closeError.message}`,
+                  ),
+                )
+                return
+              }
+              reject(error)
+            })
+          }
+          return undefined
         }
 
         const buildResult = stats?.toString({
@@ -170,14 +232,21 @@ export function watchRspackBuild(
           message: buildResult,
         })
 
-        return resolve(buildResult)
+        if (!settled) {
+          settled = true
+          resolve(buildResult)
+        }
+        return undefined
       },
     )
+
+    pendingClose?.(watching)
+    pendingClose = undefined
 
     registerCleanup?.(
       () =>
         new Promise<void>((resolveClose, rejectClose) => {
-          watching.close((closeError) => {
+          closeWatchingOnce((closeError) => {
             if (closeError) {
               rejectClose(closeError)
               return

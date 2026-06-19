@@ -3,11 +3,13 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig(({ env }) => {
   return {
-    bundler: 'vite',
-    vite: {
-      plugins: [vue()],
+    bundle: {
+      adapter: 'vite',
+      vite: {
+        plugins: [vue()],
+      },
     },
-    server: {
+    dev: {
       proxy: {
         '/gw': {
           target: env.API_HOST ?? 'https://dev.example.com',

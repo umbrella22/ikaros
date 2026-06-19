@@ -16,7 +16,17 @@ import pluginImport from 'eslint-plugin-import-x'
 import * as vueParser from 'vue-eslint-parser'
 import eslintPluginVue from 'eslint-plugin-vue'
 
-export const getVueEsLint = (ver: VueVersion): FlatConfig.ConfigArray => {
+export interface VueEslintOptions {
+  alias?: {
+    map?: Array<[string, string]>
+    extensions?: string[]
+  }
+}
+
+export const getVueEsLint = (
+  ver: VueVersion,
+  options: VueEslintOptions = {},
+): FlatConfig.ConfigArray => {
   const eslintPluginVueRecommended =
     ver === VueVersion.v2
       ? eslintPluginVue.configs['flat/vue2-recommended']
@@ -43,10 +53,13 @@ export const getVueEsLint = (ver: VueVersion): FlatConfig.ConfigArray => {
         ...settings,
 
         'import-x/resolver': {
-          // 如果 monorepo 则需要在用户配置覆盖此项
           alias: {
-            map: [['@', path.join(process.cwd(), 'src')]],
-            extensions: ['.js', '.jsx', ...assetExtends],
+            map: options.alias?.map ?? [['@', path.join(process.cwd(), 'src')]],
+            extensions: options.alias?.extensions ?? [
+              '.js',
+              '.jsx',
+              ...assetExtends,
+            ],
           },
         },
       },

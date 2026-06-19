@@ -1,25 +1,19 @@
 import path from 'node:path'
 import { promises as fsp } from 'node:fs'
-import type { Configuration, DefinePluginOptions } from '@rspack/core'
+import type { Configuration } from '@rspack/core'
 
-import {
-  type PlatformAdapter,
-  type PlatformPreConfig,
-  type PlatformCompileParams,
-  type CompileContext,
-  type BundlerAdapter,
-  type BuildStatus,
-  resolveWebPreConfig,
-  LoggerSystem,
-  runRspackBuild,
-  watchRspackBuild,
-} from '@ikaros-cli/ikaros'
+import type {
+  PlatformAdapter,
+  PlatformPlanContext,
+  PlatformRunContext,
+  CompileContext,
+  BuildStatus,
+  BuildPlan,
+  BuildPlanExecutor,
+  AdapterLogger,
+} from '@ikaros-cli/ikaros/adapter'
 
 import { runDesktopClientDev, runDesktopClientBuild } from '../runner'
-import { createElectronMainRspackConfig } from '../config/main-config'
-import { createElectronPreloadRspackConfigs } from '../config/preload-config'
-
-const { info, done, error } = LoggerSystem()
 
 const disableOutputClean = (config: Configuration): Configuration => {
   const output = config.output
@@ -32,7 +26,10 @@ const disableOutputClean = (config: Configuration): Configuration => {
   return config
 }
 
-const tryCleanDir = async (dir: string | undefined) => {
+const tryCleanDir = async (
+  logger: AdapterLogger,
+  dir: string | undefined,
+) => {
   if (!dir) return
   try {
     await fsp.rm(dir, { recursive: true, force: true })
@@ -43,8 +40,8 @@ const tryCleanDir = async (dir: string | undefined) => {
       'code' in err &&
       err.code !== 'ENOENT'
     ) {
-      info({
-        text: `⚠️ 清理目录失败 ${dir}: ${err instanceof Error ? err.message : String(err)}`,
+      logger.warning({
+        text: `清理目录失败 ${dir}: ${err instanceof Error ? err.message : String(err)}`,
       })
     }
   }
@@ -68,15 +65,62 @@ const collectOutputDirs = (configs: Configuration[]): string[] => {
   ]
 }
 
-const cleanOutputDirs = async (configs: Configuration[]): Promise<void> => {
+const uniqueDirs = (dirs: Array<string | undefined>): string[] => [
+  ...new Set(dirs.filter((dir): dir is string => Boolean(dir))),
+]
+
+/**
+ * 找出主进程 rspack 配置的输出目录。
+ * 主进程配置 target 为 'electron-main',产物文件名为 main.js。
+ */
+const findMainOutputDir = (configs: Configuration[]): string | undefined => {
+  const mainConfig =
+    configs.find((c) => c.target === 'electron-main') ??
+    configs.find(
+      (c) =>
+        c.output &&
+        typeof c.output === 'object' &&
+        c.output.filename === 'main.js',
+    )
+  return mainConfig ? extractOutputPath(mainConfig) : undefined
+}
+
+
+const cleanOutputDirs = async (
+  logger: AdapterLogger,
+  configs: Configuration[],
+): Promise<void> => {
   const outputDirs = collectOutputDirs(configs)
-  await Promise.all(outputDirs.map((dir) => tryCleanDir(dir)))
+  await Promise.all(outputDirs.map((dir) => tryCleanDir(logger, dir)))
+}
+
+const resolveRendererOutputDir = (
+  ctx: CompileContext,
+  plan: BuildPlan,
+): string => {
+  const electronOutDir = plan.electron?.build?.outDir
+  if (electronOutDir) {
+    return ctx.resolveContext(electronOutDir, 'renderer')
+  }
+
+  return ctx.resolveContext('dist/electron/renderer')
 }
 
 const asRspackConfigs = (config: unknown): Configuration[] => {
   return Array.isArray(config)
     ? (config as Configuration[])
     : [config as Configuration]
+}
+
+const asSingleRspackConfig = (
+  config: unknown,
+  target: string,
+): Configuration => {
+  const configs = asRspackConfigs(config)
+  if (configs.length !== 1) {
+    throw new Error(`[ikaros] ${target} plan should create one Rspack config`)
+  }
+  return configs[0]
 }
 
 const isControlledRestartEnabled = (ctx: CompileContext): boolean => {
@@ -103,19 +147,17 @@ const collectPackageDependencies = (
 const prepareHotUpdateResources = async (
   ctx: CompileContext,
   configs: Configuration[],
+  extraOutputDirs: string[] = [],
 ): Promise<void> => {
   if (!shouldBuildHotUpdateResources(ctx)) return
 
-  const outputRoot =
-    ctx.userConfig?.electron?.build?.outDir ??
-    ctx.resolveContext('dist/electron')
   const resourcesDir = ctx.resolveContext('build/resources')
   const resourcesDistDir = path.join(resourcesDir, 'dist')
 
   await fsp.rm(resourcesDistDir, { recursive: true, force: true })
   await fsp.mkdir(resourcesDistDir, { recursive: true })
 
-  for (const dir of collectOutputDirs(configs)) {
+  for (const dir of uniqueDirs([...collectOutputDirs(configs), ...extraOutputDirs])) {
     const name = path.basename(dir)
     await fsp.cp(dir, path.join(resourcesDistDir, name), {
       recursive: true,
@@ -124,19 +166,26 @@ const prepareHotUpdateResources = async (
     })
   }
 
+  // 主进程产物被复制到 resourcesDistDir/<主进程输出目录名>/main.js。
+  // package.json 的 main 字段需相对 resourcesDir 指向该复制后的位置,
+  // 而非指向构建输出目录(后者并不会随热更新资源分发)。
+  const mainOutputDir = findMainOutputDir(configs)
+  const mainName = mainOutputDir ? path.basename(mainOutputDir) : 'main'
+  const mainEntry = path.join(resourcesDistDir, mainName, 'main.js')
+
   await writeJson(path.join(resourcesDir, 'package.json'), {
     name: ctx.contextPkg?.name,
     version: ctx.contextPkg?.version,
-    main: path.relative(
-      resourcesDir,
-      ctx.resolveContext(outputRoot, 'main/main.js'),
-    ),
+    main: path.relative(resourcesDir, mainEntry),
     dependencies: collectPackageDependencies(ctx.contextPkg),
   })
 }
 
-const runBuildLifecycle = async <T>(task: () => Promise<T>): Promise<T> => {
-  info({ text: '🔨 开始构建 Electron 应用...' })
+const runBuildLifecycle = async <T>(
+  logger: AdapterLogger,
+  task: () => Promise<T>,
+): Promise<T> => {
+  logger.info({ text: '开始构建 Electron 应用...' })
   console.time('Electron 构建耗时')
   try {
     return await task()
@@ -148,26 +197,128 @@ const runBuildLifecycle = async <T>(task: () => Promise<T>): Promise<T> => {
 export class ElectronDesktopPlatform implements PlatformAdapter {
   readonly name = 'desktopClient' as const
 
-  async resolvePreConfig(ctx: CompileContext): Promise<PlatformPreConfig> {
-    return resolveWebPreConfig({
-      command: ctx.command,
-      context: ctx.context,
-      resolveContext: ctx.resolveContext,
-      getUserConfig: async () => ctx.userConfig,
-      isElectron: true,
-    })
+  async createPlans(ctx: PlatformPlanContext): Promise<BuildPlan[]> {
+    const { command, compileContext, config } = ctx
+    const base = {
+      command,
+      platform: 'desktopClient' as const,
+      mode: compileContext.options.mode,
+      context: compileContext.context,
+      env: compileContext.env,
+      entries: {},
+      source: {
+        define: config.define,
+        alias: config.resolve.alias,
+        extensions: config.resolve.extensions,
+        framework: config.isReact
+          ? ('react' as const)
+          : config.isVue
+            ? ('vue' as const)
+            : ('none' as const),
+        browserslist: config.browserslist,
+      },
+      dev: {
+        port: config.port,
+        proxy: config.server.proxy,
+        https: config.server.https,
+        pages: config.enablePages,
+      },
+      output: {
+        base: config.base,
+        dir: config.build.outDirName,
+        assetsDir: config.build.assetsDir,
+        gzip: config.build.gzip,
+        sourceMap: config.build.sourceMap,
+        report: config.build.outReport,
+        cache: config.build.cache,
+        checkCycles: config.build.dependencyCycleCheck,
+      },
+      library: config.library ?? undefined,
+      electron: config.electron,
+      adapterOptions: {
+        rspack: {
+          plugins: config.rspack.plugins,
+          swc: config.rspack.swc,
+          loaders: config.rspack.loaders,
+          experiments: config.rspack.experiments,
+          moduleFederation: config.rspack.moduleFederation,
+          cdn: config.rspack.cdnOptions,
+          css: config.rspack.css,
+        },
+        vite: {
+          plugins: config.vite.plugins,
+        },
+      },
+      provenance: [
+        {
+          source: 'electron-platform',
+          operation: 'create',
+          message: 'created electron build plan',
+        },
+      ],
+      diagnostics: [],
+    }
+
+    return [
+      {
+        ...base,
+        id: 'electron-main',
+        target: 'electron-main',
+        bundler: 'rspack',
+      },
+      {
+        ...base,
+        id: 'electron-preload',
+        target: 'electron-preload',
+        bundler: 'rspack',
+      },
+      {
+        ...base,
+        id: 'electron-renderer',
+        target: 'electron-renderer',
+        bundler: config.bundler,
+        entries: Object.fromEntries(
+          Object.entries(config.pages).map(([name, page]) => [
+            name,
+            {
+              import: page.entry,
+              html: page.html,
+              library: page.library,
+              options: page.options,
+            },
+          ]),
+        ),
+      },
+    ]
   }
 
-  async compile(
-    bundler: BundlerAdapter,
-    params: PlatformCompileParams,
-  ): Promise<void> {
-    const { command, preConfig, compileContext: ctx } = params
+  async run(params: PlatformRunContext): Promise<void> {
+    const { command, plans } = params
+    const mainPlan = plans.find((plan) => plan.target === 'electron-main')
+    const preloadPlan = plans.find((plan) => plan.target === 'electron-preload')
+    const rendererPlan = plans.find((plan) => plan.target === 'electron-renderer')
+    if (!mainPlan) {
+      throw new Error('[ikaros] electron main plan is missing')
+    }
+    if (!preloadPlan) {
+      throw new Error('[ikaros] electron preload plan is missing')
+    }
+    if (!rendererPlan) {
+      throw new Error('[ikaros] electron renderer plan is missing')
+    }
 
     if (command === 'server') {
-      await this.dev(bundler, ctx, preConfig)
+      await this.dev(params, {
+        mainPlan,
+        preloadPlan,
+        rendererPlan,
+      })
     } else {
-      await this.build(bundler, ctx, preConfig)
+      await this.build(params, {
+        mainPlan,
+        preloadPlan,
+        rendererPlan,
+      })
     }
   }
 
@@ -180,30 +331,25 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
    * 3. 启动 Electron 进程
    */
   private async dev(
-    bundler: BundlerAdapter,
-    ctx: CompileContext,
-    preConfig: PlatformPreConfig,
+    params: PlatformRunContext,
+    plans: {
+      mainPlan: BuildPlan
+      preloadPlan: BuildPlan
+      rendererPlan: BuildPlan
+    },
   ): Promise<void> {
-    info({ text: '🚀 开始启动 Electron 开发环境...' })
+    const { compileContext: ctx, executor, logger } = params
+    const { mainPlan, preloadPlan, rendererPlan } = plans
+    logger.info({ text: '🚀 开始启动 Electron 开发环境...' })
 
     try {
-      const configParams = this.createConfigFactoryParams(ctx)
-
-      const mainConfig = await createElectronMainRspackConfig(configParams)
-      const preloadEntries =
-        await createElectronPreloadRspackConfigs(configParams)
-      const preloadConfigs = preloadEntries.map((e) => e.config)
-
-      const rendererConfig = await bundler.createConfig({
-        command: 'server',
-        mode: ctx.options.mode,
-        env: ctx.env,
-        context: ctx.context,
-        contextPkg: ctx.contextPkg,
-        config: preConfig,
-        resolveContext: ctx.resolveContext,
-        preWarnings: ctx.preWarnings,
-      })
+      const mainConfig = asSingleRspackConfig(
+        await executor.createConfig(mainPlan),
+        mainPlan.id,
+      )
+      const preloadConfigs = asRspackConfigs(
+        await executor.createConfig(preloadPlan),
+      )
 
       let mainPreloadWatchPromise: Promise<unknown> | undefined
       let mainOnBuildStatus: ((status: BuildStatus) => void) | undefined
@@ -212,6 +358,7 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
       const startMainPreloadWatchOnce = () => {
         if (!mainPreloadWatchPromise) {
           mainPreloadWatchPromise = this.watchMainAndPreload(
+            executor,
             mainConfig,
             preloadConfigs,
             {
@@ -219,6 +366,7 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
                 mainOnBuildStatus?.(status)
                 preloadOnBuildStatus?.(status)
               },
+              registerCleanup: ctx.registerCleanup,
             },
           )
         }
@@ -230,15 +378,17 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
         loadContextModule: ctx.loadContextModule,
         registerCleanup: ctx.registerCleanup,
         controlledRestart: isControlledRestartEnabled(ctx),
+        inspectPort: ctx.userConfig?.electron?.build?.inspectPort,
+        electronArgs: ctx.userConfig?.electron?.build?.electronArgs,
 
         startRendererDev: () => {
           return new Promise<number>((resolve, reject) => {
-            bundler
-              .runDev(rendererConfig, {
-                port: preConfig.port,
+            executor
+              .runDev(rendererPlan, {
+                port: rendererPlan.dev.port,
                 onBuildStatus: (status) => {
                   if (status.success) {
-                    resolve(status.port ?? preConfig.port)
+                    resolve(status.port ?? rendererPlan.dev.port)
                   } else {
                     reject(new Error(status.message))
                   }
@@ -260,46 +410,44 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
         },
       })
 
-      done({ text: '🎉 Electron 开发环境启动完成！' })
+      logger.done({ text: '🎉 Electron 开发环境启动完成！' })
     } catch (err) {
-      error({ text: `❌ Electron 开发环境启动失败: ${err}` })
+      logger.error({ text: `❌ Electron 开发环境启动失败: ${err}` })
       throw err
     }
   }
 
   private async build(
-    bundler: BundlerAdapter,
-    ctx: CompileContext,
-    preConfig: PlatformPreConfig,
+    params: PlatformRunContext,
+    plans: {
+      mainPlan: BuildPlan
+      preloadPlan: BuildPlan
+      rendererPlan: BuildPlan
+    },
   ): Promise<void> {
-    await runBuildLifecycle(async () => {
-      const configParams = this.createConfigFactoryParams(ctx)
+    const { compileContext: ctx, executor, logger } = params
+    const { mainPlan, preloadPlan, rendererPlan } = plans
+    await runBuildLifecycle(logger, async () => {
+      const mainConfig = asSingleRspackConfig(
+        await executor.createConfig(mainPlan),
+        mainPlan.id,
+      )
+      const preloadConfigs = asRspackConfigs(
+        await executor.createConfig(preloadPlan),
+      )
 
-      const mainConfig = await createElectronMainRspackConfig(configParams)
-      const preloadEntries =
-        await createElectronPreloadRspackConfigs(configParams)
-      const preloadConfigs = preloadEntries.map((e) => e.config)
-
-      const rendererConfig = await bundler.createConfig({
-        command: 'build',
-        mode: ctx.options.mode,
-        env: ctx.env,
-        context: ctx.context,
-        contextPkg: ctx.contextPkg,
-        config: preConfig,
-        resolveContext: ctx.resolveContext,
-        preWarnings: ctx.preWarnings,
-      })
+      const rendererConfig = await executor.createConfig(rendererPlan)
 
       let unionBuild = false
       let builtConfigs: Configuration[] = []
+      const extraHotUpdateDirs: string[] = []
 
       await runDesktopClientBuild({
         buildMain: async () => {
           const safeMainConfig = disableOutputClean(mainConfig)
           const safePreloadConfigs = preloadConfigs.map(disableOutputClean)
 
-          if (bundler.name === 'rspack') {
+          if (rendererPlan.bundler === 'rspack') {
             const safeRendererConfigs =
               asRspackConfigs(rendererConfig).map(disableOutputClean)
             const unionConfigs = [
@@ -308,9 +456,9 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
               ...safeRendererConfigs,
             ]
 
-            await cleanOutputDirs(unionConfigs)
+            await cleanOutputDirs(logger, unionConfigs)
 
-            await runRspackBuild(unionConfigs, {
+            await executor.runBuildConfig('rspack', unionConfigs, {
               onBuildStatus: ctx.onBuildStatus,
             })
             unionBuild = true
@@ -319,11 +467,13 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
           }
 
           const mainPreloadConfigs = [safeMainConfig, ...safePreloadConfigs]
-          await cleanOutputDirs(mainPreloadConfigs)
+          await cleanOutputDirs(logger, mainPreloadConfigs)
 
-          await runRspackBuild(mainPreloadConfigs, {
-            onBuildStatus: ctx.onBuildStatus,
-          })
+          await this.runRspackConfigsWithExecutor(
+            executor,
+            mainPreloadConfigs,
+            ctx,
+          )
           builtConfigs = mainPreloadConfigs
         },
 
@@ -332,42 +482,44 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
         buildRenderer: async () => {
           if (unionBuild) return
 
-          await bundler.runBuild(rendererConfig, {
+          await executor.runBuild(rendererPlan, {
             onBuildStatus: ctx.onBuildStatus,
           })
+          extraHotUpdateDirs.push(resolveRendererOutputDir(ctx, rendererPlan))
         },
       })
 
-      await prepareHotUpdateResources(ctx, builtConfigs)
+      await prepareHotUpdateResources(ctx, builtConfigs, extraHotUpdateDirs)
     })
 
-    done({ text: '🎉 Electron 应用构建完成！' })
-  }
-
-  private createConfigFactoryParams(ctx: CompileContext) {
-    return {
-      command: ctx.command,
-      mode: ctx.options.mode,
-      env: ctx.env as unknown as DefinePluginOptions,
-      context: ctx.context,
-      contextPkg: ctx.contextPkg,
-      userConfig: ctx.userConfig,
-      resolveContext: ctx.resolveContext,
-    }
+    logger.done({ text: '🎉 Electron 应用构建完成！' })
   }
 
   private async watchMainAndPreload(
+    executor: BuildPlanExecutor,
     mainConfig: Configuration,
     preloadConfigs: Configuration[],
     options: {
       onBuildStatus?: (status: BuildStatus) => void
+      registerCleanup?: (cleanup: () => Promise<void> | void) => void
     },
   ): Promise<void> {
     const safeMainConfig = disableOutputClean(mainConfig)
     const safePreloadConfigs = preloadConfigs.map(disableOutputClean)
 
-    await watchRspackBuild([safeMainConfig, ...safePreloadConfigs], {
+    await executor.watchBuildConfig('rspack', [safeMainConfig, ...safePreloadConfigs], {
       onBuildStatus: options.onBuildStatus,
+      registerCleanup: options.registerCleanup,
+    })
+  }
+
+  private async runRspackConfigsWithExecutor(
+    executor: BuildPlanExecutor,
+    configs: Configuration[],
+    ctx: CompileContext,
+  ): Promise<void> {
+    await executor.runBuildConfig('rspack', configs, {
+      onBuildStatus: ctx.onBuildStatus,
     })
   }
 

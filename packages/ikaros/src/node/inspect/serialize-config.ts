@@ -10,13 +10,13 @@ export type SerializedInspectValue =
 
 function serializeEntries(
   entries: Iterable<[string, unknown]>,
-  seen: WeakMap<object, string>,
+  stack: WeakMap<object, string>,
   path: string,
 ): Record<string, SerializedInspectValue> {
   const result: Record<string, SerializedInspectValue> = {}
 
   for (const [key, value] of entries) {
-    result[key] = serializeConfig(value, seen, `${path}.${key}`)
+    result[key] = serializeConfig(value, stack, `${path}.${key}`)
   }
 
   return result
@@ -24,7 +24,7 @@ function serializeEntries(
 
 export function serializeConfig(
   value: unknown,
-  seen: WeakMap<object, string> = new WeakMap(),
+  stack: WeakMap<object, string> = new WeakMap(),
   path = '$',
 ): SerializedInspectValue {
   if (value === null) {
@@ -73,7 +73,7 @@ export function serializeConfig(
 
   if (Array.isArray(value)) {
     return value.map((item, index) =>
-      serializeConfig(item, seen, `${path}[${index}]`),
+      serializeConfig(item, stack, `${path}[${index}]`),
     )
   }
 
@@ -81,30 +81,34 @@ export function serializeConfig(
     return String(value)
   }
 
-  const previousPath = seen.get(value)
+  const previousPath = stack.get(value)
   if (previousPath) {
     return `[Circular -> ${previousPath}]`
   }
 
-  seen.set(value, path)
+  stack.set(value, path)
 
   if (value instanceof Map) {
-    return {
+    const serialized: SerializedInspectValue = {
       __type: 'Map',
       entries: [...value.entries()].map(([key, item], index) => ({
-        key: serializeConfig(key, seen, `${path}.entries[${index}].key`),
-        value: serializeConfig(item, seen, `${path}.entries[${index}].value`),
+        key: serializeConfig(key, stack, `${path}.entries[${index}].key`),
+        value: serializeConfig(item, stack, `${path}.entries[${index}].value`),
       })),
     }
+    stack.delete(value)
+    return serialized
   }
 
   if (value instanceof Set) {
-    return {
+    const serialized: SerializedInspectValue = {
       __type: 'Set',
       values: [...value.values()].map((item, index) =>
-        serializeConfig(item, seen, `${path}.values[${index}]`),
+        serializeConfig(item, stack, `${path}.values[${index}]`),
       ),
     }
+    stack.delete(value)
+    return serialized
   }
 
   const constructorName =
@@ -114,11 +118,12 @@ export function serializeConfig(
       ? value.constructor.name
       : 'Object'
 
-  const serialized = serializeEntries(Object.entries(value), seen, path)
+  const serialized = serializeEntries(Object.entries(value), stack, path)
 
   if (constructorName !== 'Object' && constructorName !== 'Array') {
     serialized.__type = constructorName
   }
 
+  stack.delete(value)
   return serialized
 }

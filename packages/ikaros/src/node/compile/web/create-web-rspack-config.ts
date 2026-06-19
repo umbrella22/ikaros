@@ -2,7 +2,7 @@ import type { Configuration } from '@rspack/core'
 
 import {
   CreateLoader,
-  CreateMpaAssets,
+  createMpaEntry,
 } from '../../bundler/rspack/loader-plugin-helper'
 import {
   createRspackDevServerConfig,
@@ -40,29 +40,28 @@ export function createWebRspackConfig(
     context,
   })
 
-  const mpaAssetsHelper = new CreateMpaAssets({
+  const entry = createMpaEntry({
     pages: config.pages,
     enablePages: config.enablePages,
   })
 
-  const { entry } = mpaAssetsHelper.create()
   const { noParse } = createVueOrReactConfig({
     isVue: config.isVue,
     isReact: config.isReact,
   })
 
-  const rules = loaderHelper
-    .useDefaultResourceLoader()
-    .useDefaultScriptLoader(rspackConfig?.experiments)
-    .useDefaultCssLoader({
+  const rules = loaderHelper.createDefaultRuleItems({
+    rspackExperiments: rspackConfig?.experiments,
+    swc: rspackConfig?.swc as Record<string, unknown> | undefined,
+    css: {
       ...rspackConfig?.css,
       lightningcss: {
         targets: config.browserslist,
         ...rspackConfig?.css?.lightningcss,
       },
-    })
-    .add(rspackConfig?.loaders)
-    .end()
+    },
+    extraLoaders: rspackConfig?.loaders,
+  })
 
   return {
     mode: env,
@@ -79,7 +78,7 @@ export function createWebRspackConfig(
     stats: 'none',
     watchOptions: createRspackWatchOptions(),
     module: {
-      rules,
+      rules: rules.map((rule) => rule.value),
       noParse,
     },
     plugins: [],

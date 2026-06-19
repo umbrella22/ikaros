@@ -1,8 +1,12 @@
 import type { ServerOptions as HttpsServerOptions } from 'node:https'
 
-import type { DefinePluginOptions, Loader, Plugin } from '@rspack/core'
+import type {
+  DefinePluginOptions,
+  Loader,
+  Plugin,
+  SwcLoaderOptions,
+} from '@rspack/core'
 import chalk from 'chalk'
-import { detect } from 'detect-port'
 
 import type { CssLoaderOptions } from '../bundler/rspack/css-loaders-helper'
 import type {
@@ -31,10 +35,11 @@ import type {
   UserConfig,
 } from './user-config'
 
-type ServerProxy = NonNullable<UserConfig['server']>['proxy'] | undefined
+type ServerProxy = NonNullable<UserConfig['dev']>['proxy'] | undefined
 
 export interface NormalizedRspackConfig {
   plugins: Plugin[]
+  swc?: SwcLoaderOptions
   loaders: Loader[]
   experiments: RspackExperiments
   moduleFederation: ModuleFederationOptions[]
@@ -125,6 +130,7 @@ export interface NormalizeConfigParams {
   resolveContext: (...paths: string[]) => string
   userConfig?: UserConfig
   isElectron?: boolean
+  resolvedPort?: number
 }
 
 const DEFAULT_BUILD_CONFIG: NormalizedBuildConfig = {
@@ -252,10 +258,12 @@ function createFrameworkReason(
 export function explainNormalizedConfig(params: {
   command: Command
   userConfig?: UserConfig
+  sourceUserConfig?: UserConfig
   normalizedConfig: NormalizedConfig
   baseNormalizedConfig?: NormalizedConfig
 }): NormalizeConfigDiagnostics {
   const { command, userConfig, normalizedConfig } = params
+  const sourceUserConfig = params.sourceUserConfig ?? userConfig
   const baseConfig = params.baseNormalizedConfig ?? normalizedConfig
   const baseIsExternal = /^https?:/i.test(normalizedConfig.base)
   const baseValidation =
@@ -270,11 +278,13 @@ export function explainNormalizedConfig(params: {
     decision: {
       value: baseConfig.target,
       source:
-        userConfig?.target !== undefined ? 'user.target' : 'default.target',
+        sourceUserConfig?.app?.target !== undefined
+          ? 'user.app.target'
+          : 'default.app.target',
       reason:
-        userConfig?.target !== undefined
-          ? `读取 userConfig.target=${baseConfig.target}`
-          : `未配置 target，使用默认值 ${baseConfig.target}`,
+        sourceUserConfig?.app?.target !== undefined
+          ? `读取 userConfig.app.target=${baseConfig.target}`
+          : `未配置 app.target，使用默认值 ${baseConfig.target}`,
     },
     value: normalizedConfig.target,
     baseValue: baseConfig.target,
@@ -292,17 +302,17 @@ export function explainNormalizedConfig(params: {
   })
 
   const base = withPluginOverride({
-    field: 'build.base',
+    field: 'output.base',
     decision: {
       value: baseConfig.base,
       source:
-        userConfig?.build?.base !== undefined
-          ? 'user.build.base'
-          : 'default.build.base',
+        sourceUserConfig?.output?.base !== undefined
+          ? 'user.output.base'
+          : 'default.output.base',
       reason:
-        userConfig?.build?.base !== undefined
-          ? `读取 userConfig.build.base=${baseConfig.base}`
-          : `未配置 build.base，使用默认值 ${baseConfig.base}`,
+        sourceUserConfig?.output?.base !== undefined
+          ? `读取 userConfig.output.base=${baseConfig.base}`
+          : `未配置 output.base，使用默认值 ${baseConfig.base}`,
     },
     value: normalizedConfig.base,
     baseValue: baseConfig.base,
@@ -310,19 +320,19 @@ export function explainNormalizedConfig(params: {
 
   let portSource: string
   let portReason: string
-  if (userConfig?.server?.port !== undefined) {
-    portSource = 'user.server.port'
-    portReason = `读取 userConfig.server.port=${baseConfig.port}`
+  if (sourceUserConfig?.dev?.port !== undefined) {
+    portSource = 'user.dev.port'
+    portReason = `读取 userConfig.dev.port=${baseConfig.port}`
   } else if (command === Command.SERVER) {
     portSource = 'detect-port'
-    portReason = `未配置 server.port，从默认端口 ${DEFAULT_PORT} 起探测到可用端口 ${baseConfig.port}`
+    portReason = `未配置 dev.port，从默认端口 ${DEFAULT_PORT} 起探测到可用端口 ${baseConfig.port}`
   } else {
-    portSource = 'default.server.port'
-    portReason = `构建模式未配置 server.port，使用默认值 ${baseConfig.port}`
+    portSource = 'default.dev.port'
+    portReason = `构建模式未配置 dev.port，使用默认值 ${baseConfig.port}`
   }
 
   const port = withPluginOverride({
-    field: 'server.port',
+    field: 'dev.port',
     decision: {
       value: baseConfig.port,
       source: portSource,
@@ -379,9 +389,9 @@ export function explainNormalizedConfig(params: {
     },
     port: {
       ...port,
-      requestedPort: userConfig?.server?.port ?? DEFAULT_PORT,
+      requestedPort: sourceUserConfig?.dev?.port ?? DEFAULT_PORT,
       autoDetected:
-        command === Command.SERVER && userConfig?.server?.port === undefined,
+        command === Command.SERVER && sourceUserConfig?.dev?.port === undefined,
     },
     framework: {
       react,
@@ -398,64 +408,75 @@ export async function normalizeConfig(
   const userConfig = params.userConfig ?? {}
   const isElectron = Boolean(params.isElectron)
 
-  const bundler = userConfig.bundler ?? 'rspack'
-  const build = mergeConfig(DEFAULT_BUILD_CONFIG, userConfig.build)
+  const bundler = userConfig.bundle?.adapter ?? 'rspack'
+  const build: NormalizedBuildConfig = {
+    ...DEFAULT_BUILD_CONFIG,
+    base: userConfig.output?.base ?? DEFAULT_BUILD_CONFIG.base,
+    assetsDir: userConfig.output?.assetsDir ?? DEFAULT_BUILD_CONFIG.assetsDir,
+    gzip: userConfig.output?.gzip ?? DEFAULT_BUILD_CONFIG.gzip,
+    sourceMap: userConfig.output?.sourceMap ?? DEFAULT_BUILD_CONFIG.sourceMap,
+    outDirName: userConfig.output?.dir ?? DEFAULT_BUILD_CONFIG.outDirName,
+    outReport: userConfig.output?.report ?? DEFAULT_BUILD_CONFIG.outReport,
+    cache: userConfig.output?.cache ?? DEFAULT_BUILD_CONFIG.cache,
+    dependencyCycleCheck:
+      userConfig.output?.checkCycles ??
+      DEFAULT_BUILD_CONFIG.dependencyCycleCheck,
+  }
 
-  if (command === Command.SERVER && /^https?:/.test(build.base)) {
-    const optsText = chalk.cyan('build.base')
+  if (command === Command.SERVER && /^https?:/i.test(build.base)) {
+    const optsText = chalk.cyan('output.base')
     throw new Error(`本地开发时 ${optsText} 不应该为外部 Host!`)
   }
 
-  const target = userConfig.target ?? 'pc'
+  const target = userConfig.app?.target ?? 'pc'
   const pages =
     userConfig.pages ?? resolveDefaultPages(resolveContext, isElectron)
-  const port =
-    userConfig.server?.port ??
-    (command === Command.SERVER ? await detect(DEFAULT_PORT) : DEFAULT_PORT)
+  const port = userConfig.dev?.port ?? params.resolvedPort ?? DEFAULT_PORT
   const isReact = checkDependency('react', context)
   const isVue = checkDependency('vue', context)
   const browserslist = resolveBrowserslist(target)
 
   const server: NormalizedServerConfig = {
     port,
-    proxy: userConfig.server?.proxy,
-    https: userConfig.server?.https ?? false,
+    proxy: userConfig.dev?.proxy,
+    https: userConfig.dev?.https ?? false,
   }
 
   const resolve: NormalizedResolveConfig = {
     alias: {
       '@': resolveContext('src'),
-      ...(userConfig.resolve?.alias ?? {}),
+      ...(userConfig.source?.alias ?? {}),
     },
-    extensions: userConfig.resolve?.extensions ?? extensions,
+    extensions: userConfig.source?.extensions ?? extensions,
   }
 
   const rspack: NormalizedRspackConfig = {
-    plugins: normalizeList(userConfig.rspack?.plugins),
-    loaders: userConfig.rspack?.loaders ?? [],
+    plugins: normalizeList(userConfig.bundle?.rspack?.plugins),
+    swc: userConfig.bundle?.rspack?.swc,
+    loaders: userConfig.bundle?.rspack?.loaders ?? [],
     experiments: mergeConfig(
       DEFAULT_RSPACK_CONFIG.experiments,
-      userConfig.rspack?.experiments,
+      userConfig.bundle?.rspack?.experiments,
     ),
-    moduleFederation: normalizeList(userConfig.rspack?.moduleFederation),
+    moduleFederation: normalizeList(userConfig.bundle?.rspack?.moduleFederation),
     cdnOptions: mergeConfig(
       DEFAULT_RSPACK_CONFIG.cdnOptions,
-      userConfig.rspack?.cdnOptions,
+      userConfig.bundle?.rspack?.cdn,
     ),
-    css: mergeConfig(DEFAULT_RSPACK_CONFIG.css, userConfig.rspack?.css),
+    css: mergeConfig(DEFAULT_RSPACK_CONFIG.css, userConfig.bundle?.rspack?.css),
   }
 
   return {
     bundler,
     plugins: userConfig.plugins ?? [],
-    quiet: userConfig.quiet ?? false,
+    quiet: userConfig.log?.level === 'quiet',
     target,
     pages,
-    enablePages: userConfig.enablePages ?? false,
-    define: userConfig.define ?? {},
+    enablePages: userConfig.dev?.pages ?? false,
+    define: userConfig.source?.define ?? {},
     rspack,
     vite: {
-      plugins: userConfig.vite?.plugins ?? [],
+      plugins: userConfig.bundle?.vite?.plugins ?? [],
     },
     server,
     build,

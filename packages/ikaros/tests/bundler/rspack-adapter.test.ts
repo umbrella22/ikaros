@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest'
 
 import { RspackAdapter } from '../../src/node/bundler/rspack'
+import { createBuildPlan } from '../../src/node/build-plan'
 import type { CreateConfigParams } from '../../src/node/bundler/types'
 import type { NormalizedConfig } from '../../src/node/config/normalize-config'
 import { ELECTRON_RENDERER_SUBDIR } from '../../src/node/shared/constants'
+
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Array<unknown>
+    ? T[K]
+    : T[K] extends object
+      ? DeepPartial<T[K]>
+      : T[K]
+}
 
 const resolveTestContext = (...paths: string[]) =>
   [process.cwd(), ...paths].join('/')
 
 const createNormalizedConfig = (
-  overrides?: Partial<NormalizedConfig>,
+  overrides?: DeepPartial<NormalizedConfig>,
 ): NormalizedConfig => {
   const base: NormalizedConfig = {
     bundler: 'rspack',
@@ -72,7 +81,7 @@ const createNormalizedConfig = (
     pages: {
       ...base.pages,
       ...(overrides?.pages ?? {}),
-    },
+    } as NormalizedConfig['pages'],
     rspack: {
       ...base.rspack,
       ...(overrides?.rspack ?? {}),
@@ -111,7 +120,7 @@ const createNormalizedConfig = (
       alias: {
         ...base.resolve.alias,
         ...(overrides?.resolve?.alias ?? {}),
-      },
+      } as NormalizedConfig['resolve']['alias'],
       extensions: overrides?.resolve?.extensions ?? base.resolve.extensions,
     },
   }
@@ -119,7 +128,9 @@ const createNormalizedConfig = (
 
 const createParams = (
   command: CreateConfigParams['command'],
-  overrides?: Partial<CreateConfigParams>,
+  overrides?: Omit<Partial<CreateConfigParams>, 'config'> & {
+    config?: DeepPartial<NormalizedConfig>
+  },
 ): CreateConfigParams => {
   const config = createNormalizedConfig(overrides?.config)
 
@@ -129,11 +140,30 @@ const createParams = (
     env: {},
     context: process.cwd(),
     contextPkg: { name: 'test-app', version: '0.0.1' },
-    config,
     resolveContext: resolveTestContext,
     ...overrides,
     config,
   }
+}
+
+const createPlan = (
+  command: CreateConfigParams['command'],
+  overrides?: Omit<Partial<CreateConfigParams>, 'config'> & {
+    config?: DeepPartial<NormalizedConfig>
+  },
+) => {
+  const params = createParams(command, overrides)
+  return createBuildPlan({
+    id: params.config.isElectron ? 'electron-renderer' : 'web',
+    command,
+    platform: params.config.isElectron ? 'desktopClient' : 'web',
+    target: params.config.isElectron ? 'electron-renderer' : 'web',
+    mode: params.mode,
+    context: params.context,
+    contextPkg: params.contextPkg,
+    env: params.env,
+    config: params.config,
+  })
 }
 
 describe('RspackAdapter', () => {
@@ -144,7 +174,7 @@ describe('RspackAdapter', () => {
 
   it('createConfig() 应返回有效的 rspack Configuration', () => {
     const adapter = new RspackAdapter()
-    const config = adapter.createConfig(createParams('server'))
+    const config = adapter.createConfig(createPlan('server'))
 
     expect(config).toBeDefined()
     expect(config).toHaveProperty('mode', 'development')
@@ -155,7 +185,7 @@ describe('RspackAdapter', () => {
 
   it('createConfig() build 模式应返回 production', () => {
     const adapter = new RspackAdapter()
-    const config = adapter.createConfig(createParams('build'))
+    const config = adapter.createConfig(createPlan('build'))
 
     expect(config).toHaveProperty('mode', 'production')
   })
@@ -163,10 +193,21 @@ describe('RspackAdapter', () => {
   it('应生成 Rspack 2 兼容的 loader targets 与 transformImport 配置', () => {
     const adapter = new RspackAdapter()
     const config = adapter.createConfig(
-      createParams('server', {
+      createPlan('server', {
         config: {
           browserslist: 'chrome >= 90, safari >= 16',
           rspack: {
+            swc: {
+              jsc: {
+                transform: {
+                  react: {
+                    runtime: 'automatic',
+                    development: true,
+                    refresh: true,
+                  },
+                },
+              },
+            },
             experiments: {
               import: [
                 {
@@ -194,9 +235,37 @@ describe('RspackAdapter', () => {
     }
 
     const rules = config.module?.rules ?? []
+    const jsxRule = rules.find((rule) => rule.test?.source === '\\.jsx$')
+    const tsxRule = rules.find((rule) => rule.test?.source === '\\.tsx$')
     const jsRule = rules.find((rule) => rule.test?.source === '\\.m?js$')
     const cssRule = rules.find((rule) => rule.test?.source === '\\.css$')
 
+    expect(jsxRule?.options?.jsc).toMatchObject({
+      parser: {
+        syntax: 'ecmascript',
+        jsx: true,
+      },
+      transform: {
+        react: {
+          runtime: 'automatic',
+          development: true,
+          refresh: true,
+        },
+      },
+    })
+    expect(tsxRule?.options?.jsc).toMatchObject({
+      parser: {
+        syntax: 'typescript',
+        jsx: true,
+      },
+      transform: {
+        react: {
+          runtime: 'automatic',
+          development: true,
+          refresh: true,
+        },
+      },
+    })
     expect(jsRule?.options?.transformImport).toEqual([
       {
         libraryName: 'antd',
@@ -210,10 +279,37 @@ describe('RspackAdapter', () => {
     )
   })
 
+  it('未提供 swc 时不应注入任何 React 变换(框架无关)', () => {
+    const adapter = new RspackAdapter()
+    const config = adapter.createConfig(createPlan('server')) as {
+      module?: {
+        rules?: Array<{
+          test?: RegExp
+          options?: Record<string, unknown>
+        }>
+      }
+    }
+
+    const rules = config.module?.rules ?? []
+    const jsxRule = rules.find((rule) => rule.test?.source === '\\.jsx$')
+    const tsxRule = rules.find((rule) => rule.test?.source === '\\.tsx$')
+
+    const readReact = (rule: typeof jsxRule) =>
+      (rule?.options?.jsc as { transform?: { react?: unknown } })?.transform
+        ?.react
+
+    // ikaros 只保留 parser 默认,不强加 transform.react —— Vue/非 React 项目不受影响
+    expect(readReact(jsxRule)).toBeUndefined()
+    expect(readReact(tsxRule)).toBeUndefined()
+    expect((jsxRule?.options?.jsc as { parser?: unknown })?.parser).toMatchObject(
+      { syntax: 'ecmascript', jsx: true },
+    )
+  })
+
   it('应组装可复用的 web 输出与 dev server 配置', () => {
     const adapter = new RspackAdapter()
     const config = adapter.createConfig(
-      createParams('server', {
+      createPlan('server', {
         contextPkg: { name: 'demo-app', version: '0.0.1' },
         config: {
           base: '/app/',
@@ -225,7 +321,7 @@ describe('RspackAdapter', () => {
             port: 9090,
             proxy: {
               '/api': 'http://localhost:3001',
-            },
+            } as never,
             https: {
               key: 'test-key',
             } as never,
@@ -248,12 +344,25 @@ describe('RspackAdapter', () => {
       'auto://0.0.0.0:9090/ws',
     )
     expect(config).toHaveProperty('devServer.server.type', 'https')
+    expect(config).toHaveProperty(
+      'devServer.historyApiFallback.rewrites.1.to',
+      '/app/index.html',
+    )
+    expect(
+      String(
+        (config as {
+          devServer?: {
+            historyApiFallback?: { rewrites?: Array<{ to?: unknown }> }
+          }
+        }).devServer?.historyApiFallback?.rewrites?.[1]?.to,
+      ),
+    ).not.toContain('\\')
   })
 
   it('electron renderer 模式应使用相对 publicPath 与 renderer 输出目录', () => {
     const adapter = new RspackAdapter()
     const config = adapter.createConfig(
-      createParams('build', {
+      createPlan('build', {
         config: {
           isElectron: true,
           electron: {

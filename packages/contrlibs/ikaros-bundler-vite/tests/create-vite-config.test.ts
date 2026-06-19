@@ -41,6 +41,7 @@ describe('createViteConfig', () => {
       }),
     )
     expect(config.server).toBeDefined()
+    expect(config.server?.host).toBe('0.0.0.0')
     expect(config.server?.port).toBe(5173)
     expect(config.server?.strictPort).toBe(true)
   })
@@ -125,7 +126,11 @@ describe('createViteConfig', () => {
         config: { define: { APP_NAME: 'test' } },
       }),
     )
-    expect(config.define).toHaveProperty('MODE', '"development"')
+    expect(config.define).toHaveProperty(
+      'import.meta.env.MODE',
+      '"development"',
+    )
+    expect(config.define).not.toHaveProperty('MODE')
     expect(config.define).toHaveProperty('APP_NAME', '"test"')
   })
 

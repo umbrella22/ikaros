@@ -15,7 +15,15 @@ export type {
   ViteConfig,
   UserConfigWebExport,
 } from './user-config'
-export { defineConfig } from './user-config'
+export { defineConfig, migrateLegacyConfig } from './user-config'
+export {
+  migrateConfigFile,
+  migrateConfigSource,
+  type MigrateConfigDiagnostic,
+  type MigrateConfigFileParams,
+  type MigrateConfigFileResult,
+  type MigrateConfigResult,
+} from './migrate-config'
 
 export { configSchema } from './config-schema'
 export { mergeConfig } from './merge-config'

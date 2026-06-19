@@ -9,6 +9,38 @@ import type { CreateConfigParams } from '../types'
 import { DEFAULT_OUT_DIR, extensions } from '../../shared/constants'
 import { CreateLoader } from './loader-plugin-helper'
 
+function normalizeDefineValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return JSON.stringify(value)
+  }
+
+  if (value !== null && typeof value === 'object') {
+    return JSON.stringify(value)
+  }
+
+  return value
+}
+
+function normalizeDefineOptions(
+  define: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(define).map(([key, value]) => [
+      key,
+      normalizeDefineValue(value),
+    ]),
+  )
+}
+
+function normalizeEnvDefine(env: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(env).map(([key, value]) => [
+      `import.meta.env.${key}`,
+      JSON.stringify(value),
+    ]),
+  )
+}
+
 // ─── Format Mapping ─────────────────────────────────────────────────────────
 
 /**
@@ -179,7 +211,7 @@ const createSingleFormatConfig = (params: {
   configParams: CreateConfigParams
 }): Configuration => {
   const { format, library, configParams } = params
-  const { mode, context, contextPkg, config, resolveContext } = configParams
+  const { mode, context, contextPkg, env, config, resolveContext } = configParams
   const rspackConfig = config.rspack
 
   const isEsm = format === 'es'
@@ -197,18 +229,18 @@ const createSingleFormatConfig = (params: {
     isReact: config.isReact,
   })
 
-  const rules = loaderHelper
-    .useDefaultResourceLoader()
-    .useDefaultScriptLoader(rspackConfig?.experiments)
-    .useDefaultCssLoader({
+  const rules = loaderHelper.createDefaultRuleItems({
+    rspackExperiments: rspackConfig?.experiments,
+    swc: rspackConfig?.swc as Record<string, unknown> | undefined,
+    css: {
       ...rspackConfig?.css,
       lightningcss: {
         targets: config.browserslist,
         ...rspackConfig?.css?.lightningcss,
       },
-    })
-    .add(rspackConfig?.loaders)
-    .end()
+    },
+    extraLoaders: rspackConfig?.loaders,
+  })
 
   const fileName = resolveFileName(
     library.fileName,
@@ -256,8 +288,13 @@ const createSingleFormatConfig = (params: {
       ],
     },
     plugins: [
-      ...(Object.keys(config.define).length > 0
-        ? [new rspack.DefinePlugin(config.define as Record<string, string>)]
+      ...(Object.keys(env).length > 0 || Object.keys(config.define).length > 0
+        ? [
+            new rspack.DefinePlugin({
+              ...normalizeEnvDefine(env),
+              ...normalizeDefineOptions(config.define as Record<string, unknown>),
+            }),
+          ]
         : []),
       ...(rspackConfig?.plugins
         ? Array.isArray(rspackConfig.plugins)
@@ -266,7 +303,7 @@ const createSingleFormatConfig = (params: {
         : []),
     ],
     module: {
-      rules,
+      rules: rules.map((rule) => rule.value),
       noParse,
     },
     devtool: config.build.sourceMap ? 'source-map' : false,

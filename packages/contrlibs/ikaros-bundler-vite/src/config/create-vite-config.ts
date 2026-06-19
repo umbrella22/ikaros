@@ -5,6 +5,7 @@ import type { CreateConfigParams } from '../types'
 import {
   getOutDirPath,
   normalizeDefine,
+  normalizeEnvDefine,
   resolveRollupInput,
   sanitizeViteExtensions,
   toPluginsArray,
@@ -44,18 +45,23 @@ export const createViteConfig = (params: CreateConfigParams): InlineConfig => {
   const rollupInput = resolveRollupInput({
     pages: config.pages,
     enablePages: config.enablePages,
+    context,
   })
 
   const alias = config.resolve.alias
 
+  // Electron 渲染进程经 file:// 加载,绝对路径资源无法解析,构建时 base 需置为相对路径。
+  // 与 rspack output.publicPath 的 `isElectron && !isDev ? './' : config.base` 保持一致。
+  const base = config.isElectron && command === 'build' ? './' : config.base
+
   return {
     root: context,
-    base: config.base,
+    base,
     mode,
     appType: rollupInput ? 'mpa' : 'spa',
     plugins: [...plugins, ...(ikarosBuildPlugin ? [ikarosBuildPlugin] : [])],
     define: {
-      ...normalizeDefine(envVars),
+      ...normalizeEnvDefine(envVars),
       ...normalizeDefine(config.define),
     },
     resolve: {
@@ -64,6 +70,7 @@ export const createViteConfig = (params: CreateConfigParams): InlineConfig => {
     },
     server: isDev
       ? {
+          host: '0.0.0.0',
           port: config.port,
           strictPort: true,
           proxy: toViteProxy(config.server.proxy),

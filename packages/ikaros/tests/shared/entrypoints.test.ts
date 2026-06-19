@@ -1,24 +1,46 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const entrypointMocks = vi.hoisted(() => {
-  const parseSpy = vi.fn()
+  const parseAsyncSpy = vi.fn(async () => undefined)
   const versionSpy = vi.fn()
+  const commandSpy = vi.fn()
   const compileCommanderSpy = vi.fn()
   const inspectCommanderSpy = vi.fn()
   const assertNodeVersionSpy = vi.fn()
+  const actionSpy = vi.fn()
+  const descriptionSpy = vi.fn()
+  const optionSpy = vi.fn()
+  const requiredOptionSpy = vi.fn()
   const program = {
-    parse: parseSpy,
+    command: commandSpy,
+    parseAsync: parseAsyncSpy,
     version: versionSpy,
+  }
+  const subCommand = {
+    action: actionSpy,
+    description: descriptionSpy,
+    option: optionSpy,
+    requiredOption: requiredOptionSpy,
   }
 
   versionSpy.mockImplementation(() => program)
+  commandSpy.mockImplementation(() => subCommand)
+  descriptionSpy.mockImplementation(() => subCommand)
+  requiredOptionSpy.mockImplementation(() => subCommand)
+  optionSpy.mockImplementation(() => subCommand)
 
   return {
+    actionSpy,
     assertNodeVersionSpy,
+    commandSpy,
     compileCommanderSpy,
+    descriptionSpy,
     inspectCommanderSpy,
-    parseSpy,
+    optionSpy,
+    parseAsyncSpy,
     program,
+    requiredOptionSpy,
+    subCommand,
     versionSpy,
   }
 })
@@ -52,7 +74,7 @@ describe('node entrypoints', () => {
     expect(entrypointMocks.assertNodeVersionSpy).not.toHaveBeenCalled()
     expect(entrypointMocks.compileCommanderSpy).not.toHaveBeenCalled()
     expect(entrypointMocks.inspectCommanderSpy).not.toHaveBeenCalled()
-    expect(entrypointMocks.parseSpy).not.toHaveBeenCalled()
+    expect(entrypointMocks.parseAsyncSpy).not.toHaveBeenCalled()
     expect(entrypointMocks.versionSpy).not.toHaveBeenCalled()
   })
 
@@ -70,6 +92,6 @@ describe('node entrypoints', () => {
     expect(entrypointMocks.inspectCommanderSpy).toHaveBeenCalledWith(
       entrypointMocks.program,
     )
-    expect(entrypointMocks.parseSpy).toHaveBeenCalledOnce()
+    expect(entrypointMocks.parseAsyncSpy).toHaveBeenCalledOnce()
   })
 })

@@ -1,15 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { LoggerSystem } from '../../src/node/shared/logger'
+import { logger } from '../../src/node/shared/logger'
 
-describe('LoggerSystem', () => {
+describe('logger', () => {
   it('应返回单例实例', () => {
-    const a = LoggerSystem()
-    const b = LoggerSystem()
-    expect(a).toBe(b)
+    expect(logger).toBe(logger)
   })
 
   it('应包含所有日志方法', () => {
-    const logger = LoggerSystem()
     expect(typeof logger.done).toBe('function')
     expect(typeof logger.error).toBe('function')
     expect(typeof logger.okay).toBe('function')
@@ -18,14 +15,12 @@ describe('LoggerSystem', () => {
   })
 
   it('onlyText 为 true 时应返回格式化字符串而不打印', () => {
-    const logger = LoggerSystem()
     const result = logger.done({ text: 'only text', onlyText: true })
     expect(result).toContain('only text')
     expect(result).toContain('DONE')
   })
 
   it('各日志方法的 onlyText 应包含对应标签', () => {
-    const logger = LoggerSystem()
     expect(logger.done({ text: 'msg', onlyText: true })).toContain('DONE')
     expect(logger.error({ text: 'msg', onlyText: true })).toContain('ERROR')
     expect(logger.okay({ text: 'msg', onlyText: true })).toContain('OKAY')
@@ -34,7 +29,6 @@ describe('LoggerSystem', () => {
   })
 
   it('onlyText 结果应包含传入的文本', () => {
-    const logger = LoggerSystem()
     expect(logger.error({ text: 'custom error', onlyText: true })).toContain(
       'custom error',
     )
@@ -50,7 +44,6 @@ describe('LoggerSystem', () => {
   })
 
   it('非 onlyText 模式应返回 undefined', () => {
-    const logger = LoggerSystem()
     // 非 onlyText 时函数会调用 console 并返回 undefined
     const result = logger.done({ text: 'test' })
     expect(result).toBeUndefined()

@@ -6,11 +6,20 @@ import type {
   BundlerAdapter,
   BundlerBuildOptions,
   BundlerDevOptions,
-  CreateConfigParams,
 } from '../types'
+import type { BuildPlan } from '../../build-plan'
+import { buildPlanToCreateConfigParams } from '../../build-plan'
 import { createWebRspackConfig } from '../../compile/web/create-web-rspack-config'
 import { createLibraryRspackConfigs } from './create-library-rspack-config'
-import { runRspackBuild, startRspackDevServer } from './rspack-runner'
+import {
+  createElectronMainRspackConfig,
+  createElectronPreloadRspackConfigs,
+} from './create-electron-rspack-config'
+import {
+  runRspackBuild,
+  startRspackDevServer,
+  watchRspackBuild,
+} from './rspack-runner'
 import { Command } from '../../compile/compile-context'
 
 /**
@@ -24,7 +33,21 @@ export class RspackAdapter implements BundlerAdapter<
 > {
   readonly name = 'rspack' as const
 
-  createConfig(params: CreateConfigParams): Configuration | Configuration[] {
+  supports(plan: BuildPlan): boolean {
+    return plan.bundler === 'rspack'
+  }
+
+  createConfig(plan: BuildPlan): Configuration | Configuration[] {
+    if (plan.target === 'electron-main') {
+      return createElectronMainRspackConfig(plan)
+    }
+
+    if (plan.target === 'electron-preload') {
+      return createElectronPreloadRspackConfigs(plan)
+    }
+
+    const params = buildPlanToCreateConfigParams(plan)
+
     // 库模式：build 命令 + 配置了 library
     if (params.command === 'build' && params.config.library) {
       return createLibraryRspackConfigs(params)
@@ -71,6 +94,16 @@ export class RspackAdapter implements BundlerAdapter<
 
     return runRspackBuild(config, {
       onBuildStatus: options.onBuildStatus,
+    })
+  }
+
+  async watchBuild(
+    config: Configuration | Configuration[],
+    options: BundlerBuildOptions,
+  ): Promise<void> {
+    await watchRspackBuild(config, {
+      onBuildStatus: options.onBuildStatus,
+      registerCleanup: options.registerCleanup,
     })
   }
 }

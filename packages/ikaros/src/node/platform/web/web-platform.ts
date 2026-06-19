@@ -1,13 +1,11 @@
 // platform/web/web-platform.ts — Web 平台适配器实现
 
-import type { BundlerAdapter } from '../../bundler/types'
-import type { CompileContext } from '../../compile/compile-context'
+import { createBuildPlan, type BuildPlan } from '../../build-plan'
 import type {
   PlatformAdapter,
-  PlatformCompileParams,
-  PlatformPreConfig,
+  PlatformPlanContext,
+  PlatformRunContext,
 } from '../types'
-import { resolveWebPreConfig } from '../../compile/web/resolve-web-preconfig'
 
 /**
  * Web 平台适配器
@@ -19,47 +17,39 @@ import { resolveWebPreConfig } from '../../compile/web/resolve-web-preconfig'
 export class WebPlatformAdapter implements PlatformAdapter {
   readonly name = 'web' as const
 
-  async resolvePreConfig(ctx: CompileContext): Promise<PlatformPreConfig> {
-    return resolveWebPreConfig({
-      command: ctx.command,
-      context: ctx.context,
-      resolveContext: ctx.resolveContext,
-      getUserConfig: async () => ctx.userConfig,
-      isElectron: ctx.isElectron,
-    })
+  async createPlans(ctx: PlatformPlanContext): Promise<BuildPlan[]> {
+    const { compileContext, command, config } = ctx
+    return [
+      createBuildPlan({
+        id: 'web',
+        command,
+        platform: 'web',
+        target: 'web',
+        mode: compileContext.options.mode,
+        context: compileContext.context,
+        contextPkg: compileContext.contextPkg,
+        env: compileContext.env,
+        config,
+      }),
+    ]
   }
 
-  async compile(
-    bundler: BundlerAdapter,
-    params: PlatformCompileParams,
-  ): Promise<void> {
-    const { command, preConfig, compileContext: ctx, pluginManager } = params
-
+  async run(params: PlatformRunContext): Promise<void> {
+    const { command, plans, compileContext: ctx, pluginManager, executor } =
+      params
+    const plan = plans[0]
+    if (!plan) {
+      throw new Error('[ikaros] web platform requires one build plan')
+    }
     await pluginManager.callBeforeCreateCompiler()
-
-    // 生成编译配置
-    const config = await bundler.createConfig({
-      command,
-      mode: ctx.options.mode,
-      env: ctx.env,
-      context: ctx.context,
-      contextPkg: ctx.contextPkg,
-      config: preConfig,
-      resolveContext: ctx.resolveContext,
-      preWarnings: ctx.preWarnings,
-    })
-
-    const finalConfig = await pluginManager.applyBundlerConfig(
-      bundler.name,
-      config,
-    )
+    const config = await executor.createConfig(plan)
 
     // 根据命令执行 dev 或 build
     if (command === 'server') {
       await pluginManager.callBeforeStartDevServer()
 
-      await bundler.runDev(finalConfig, {
-        port: preConfig.port,
+      await executor.runDevConfig(plan.bundler, config, {
+        port: plan.dev.port,
         onBuildStatus: ctx.onBuildStatus,
         registerCleanup: ctx.registerCleanup,
       })
@@ -70,7 +60,7 @@ export class WebPlatformAdapter implements PlatformAdapter {
       await pluginManager.callBeforeBuild()
 
       try {
-        const result = await bundler.runBuild(finalConfig, {
+        const result = await executor.runBuildConfig(plan.bundler, config, {
           onBuildStatus: ctx.onBuildStatus,
         })
 

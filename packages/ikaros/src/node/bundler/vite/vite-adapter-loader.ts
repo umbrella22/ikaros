@@ -5,8 +5,8 @@ import type {
   BundlerAdapter,
   BundlerBuildOptions,
   BundlerDevOptions,
-  CreateConfigParams,
 } from '../types'
+import type { BuildPlan } from '../../build-plan'
 import { assertNodeVersion } from '../../shared/check-env'
 
 /**
@@ -142,8 +142,12 @@ export class ViteAdapterLoader implements BundlerAdapter<unknown> {
     return new AdapterClass()
   }
 
-  async createConfig(params: CreateConfigParams): Promise<unknown> {
-    return (await this.ensureAdapter()).createConfig(params)
+  supports(plan: BuildPlan): boolean {
+    return plan.bundler === 'vite'
+  }
+
+  async createConfig(plan: BuildPlan): Promise<unknown> {
+    return (await this.ensureAdapter()).createConfig(plan)
   }
 
   async runDev(config: unknown, options: BundlerDevOptions): Promise<void> {

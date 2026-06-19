@@ -30,7 +30,7 @@ export const CONFIG_FILE_SUFFIXES = ['ts', 'mjs', 'json', 'yaml'] as const
 
 // ─── 服务器 ──────────────────────────────────────────────────────────────────
 
-export const DEFAULT_PORT = 8080
+export const DEFAULT_PORT = 3000
 export const DEFAULT_BASE_PATH = '/'
 
 // ─── 产物路径模板 ────────────────────────────────────────────────────────────

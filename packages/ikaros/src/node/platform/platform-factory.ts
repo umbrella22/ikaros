@@ -53,24 +53,34 @@ export function createPlatformAdapter(
  */
 function createDesktopPlatformProxy(context?: string): PlatformAdapter {
   let cached: PlatformAdapter | undefined
+  let adapterPromise: Promise<PlatformAdapter> | undefined
 
   const ensureAdapter = async (): Promise<PlatformAdapter> => {
     if (cached) return cached
-    cached = await loadDesktopPlatformAdapter(context ?? process.cwd())
-    return cached
+    if (!adapterPromise) {
+      adapterPromise = loadDesktopPlatformAdapter(context ?? process.cwd())
+    }
+
+    try {
+      cached = await adapterPromise
+      return cached
+    } catch (error) {
+      adapterPromise = undefined
+      throw error
+    }
   }
 
   return {
     name: 'desktopClient',
 
-    async resolvePreConfig(ctx) {
+    async createPlans(ctx) {
       const adapter = await ensureAdapter()
-      return adapter.resolvePreConfig(ctx)
+      return adapter.createPlans(ctx)
     },
 
-    async compile(bundler, params) {
+    async run(ctx) {
       const adapter = await ensureAdapter()
-      return adapter.compile(bundler, params)
+      return adapter.run(ctx)
     },
   }
 }
@@ -116,10 +126,14 @@ async function loadDesktopPlatformAdapter(
     (mod as ExternalPlatformAdapterModule)
   const adapter = exports.ElectronDesktopPlatformInstance
 
-  if (!adapter || typeof adapter.resolvePreConfig !== 'function') {
+  if (
+    !adapter ||
+    typeof adapter.createPlans !== 'function' ||
+    typeof adapter.run !== 'function'
+  ) {
     throw new Error(
       [
-        `${pkg} 已安装但加载失败：未找到 ElectronDesktopPlatformInstance 导出。`,
+        `${pkg} 已安装但加载失败：未找到有效的 ElectronDesktopPlatformInstance 导出。`,
         '请确认安装的版本与 @ikaros-cli/ikaros 兼容（需 >=3.0）。',
       ].join('\n'),
     )

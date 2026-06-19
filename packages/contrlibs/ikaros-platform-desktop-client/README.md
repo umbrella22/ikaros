@@ -1,34 +1,45 @@
 # @ikaros-cli/ikaros-platform-desktop-client
 
-为 `@ikaros-cli/ikaros` 提供 `desktopClient`（Electron）平台的可选编译/运行能力。
+Electron desktopClient platform adapter for `@ikaros-cli/ikaros`.
 
-> 该包不会自动生效；仅当你在项目中使用 `ikaros --platform desktopClient` 时，ikaros 才会从项目依赖中按需加载它。
+只有当用户运行 `ikaros --platform desktopClient` 时，core 才会从用户项目依赖中按需加载本包。
 
 ## 安装
 
-在你的业务项目中安装（建议作为 devDependency）：
-
 ```bash
-pnpm add -D @ikaros-cli/ikaros @ikaros-cli/ikaros-platform-desktop-client electron
+pnpm add -D @ikaros-cli/ikaros-platform-desktop-client electron
 ```
 
-## 使用
+## 运行
 
 ```bash
 ikaros --platform desktopClient --mode development
 ikaros build --platform desktopClient --mode release
 ```
 
-## 默认输出目录
+## Platform 行为
 
-desktopClient 模式下，Electron 各目标默认输出到独立目录：
+desktopClient 平台只负责生成和编排 BuildPlan：
+
+- `electron-main`：固定 Rspack。
+- `electron-preload`：固定 Rspack。
+- `electron-renderer`：跟随 `bundle.adapter`，可以是 Rspack 或 Vite。
+
+dev 流程：
+
+1. 启动 renderer dev server。
+2. watch main/preload Rspack build。
+3. 启动 Electron 进程。
+
+build 流程：
+
+- renderer 为 Rspack 时，main/preload/renderer 合并为一次 Rspack build。
+- renderer 为 Vite 时，main/preload 使用 Rspack，renderer 使用 Vite adapter。
+
+## 默认输出
 
 - main: `dist/electron/main`
 - preload: `dist/electron/preload`
 - renderer: `dist/electron/renderer`
 
-这样可以避免 main 与 preload 共享目录时的清理竞态。
-
-## 导出
-
-- `startDesktopClientCompile(parame)`：供 ikaros 在运行时动态加载并调用的入口。
+本包只从 `@ikaros-cli/ikaros/adapter` 读取稳定 contract，不依赖 core 内部构建实现。

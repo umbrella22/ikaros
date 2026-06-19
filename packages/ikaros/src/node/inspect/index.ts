@@ -6,7 +6,7 @@ import {
   addCommonCompileOptions,
   type CompileCliOptions,
 } from '../compile/index'
-import { LoggerSystem } from '../shared/logger'
+import { logger } from '../shared/logger'
 
 export {
   inspectConfig,
@@ -42,7 +42,7 @@ export async function startInspect(options: InspectCliOptions): Promise<void> {
       outputFile: options.output,
     })
 
-    LoggerSystem().done({
+    logger.done({
       text: `inspect 配置已写入 ${result.outputFile}`,
     })
   } catch (error) {

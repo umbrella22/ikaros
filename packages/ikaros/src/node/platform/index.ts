@@ -4,7 +4,9 @@
 export type {
   PlatformAdapter,
   PlatformPreConfig,
-  PlatformCompileParams,
+  PlatformPlanContext,
+  PlatformRunContext,
+  BuildPlanExecutor,
 } from './types'
 
 // ─── 工厂 ───────────────────────────────────────────────────────────────────

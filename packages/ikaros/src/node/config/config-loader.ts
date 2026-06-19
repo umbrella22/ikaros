@@ -5,6 +5,7 @@ import { dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import fsp from 'node:fs/promises'
 import fse from 'fs-extra'
 import { createJiti } from 'jiti'
+import { parseSync } from 'oxc-parser'
 import { parse } from 'yaml'
 
 import type { UserConfig } from './user-config'
@@ -39,13 +40,47 @@ const CONFIG_DEPENDENCY_SUFFIXES: FileType[] = [
   '.json',
   '.yaml',
 ]
-const CONFIG_IMPORT_PATTERNS = [
-  /(?:import|export)\s+(?:[^'"`]*?\s+from\s+)?['"]([^'"`]+)['"]/g,
-  /import\s*\(\s*['"]([^'"`]+)['"]\s*\)/g,
-  /require\(\s*['"]([^'"`]+)['"]\s*\)/g,
-]
-
 const BASE_NATIVE_MODULES = ['@rspack/core', 'typescript']
+
+export interface ConfigDependencyDiagnostic {
+  file: string
+  message: string
+}
+
+export interface ConfigWatchFilesResult {
+  files: string[]
+  diagnostics: ConfigDependencyDiagnostic[]
+}
+
+export class ConfigLoadError extends Error {
+  readonly filePath: string
+
+  constructor(filePath: string, cause: unknown) {
+    const message = cause instanceof Error ? cause.message : String(cause)
+    super(`Failed to load config file ${filePath}: ${message}`, { cause })
+    this.name = 'ConfigLoadError'
+    this.filePath = filePath
+  }
+}
+
+function wrapConfigLoadError<T>(filePath: string, loader: () => T): T {
+  try {
+    return loader()
+  } catch (error) {
+    throw new ConfigLoadError(filePath, error)
+  }
+}
+
+async function wrapAsyncConfigLoadError<T>(
+  filePath: string,
+  loader: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await loader()
+  } catch (error) {
+    throw new ConfigLoadError(filePath, error)
+  }
+}
 
 function createConfigLoader(nativeModules: string[]) {
   return createJiti(import.meta.url, {
@@ -56,26 +91,44 @@ function createConfigLoader(nativeModules: string[]) {
   })
 }
 
+function isConfigModuleNamespace(
+  value: unknown,
+): value is { default?: UserConfig } {
+  if (!value || typeof value !== 'object' || !('default' in value)) {
+    return false
+  }
+
+  return Object.getOwnPropertyNames(value).every(
+    (key) => key === 'default' || key === '__esModule',
+  )
+}
+
+function unwrapConfigModuleNamespace(value: unknown): UserConfig | undefined {
+  let current = value
+
+  for (let index = 0; index < 5; index += 1) {
+    if (!isConfigModuleNamespace(current)) {
+      return current as UserConfig | undefined
+    }
+    current = current.default
+  }
+
+  return current as UserConfig | undefined
+}
+
 async function loadConfigAsExecutable(
   filePath: string,
 ): Promise<UserConfig | undefined> {
   const nativeModules = await resolveConfigNativeModules(filePath)
   const configLoader = createConfigLoader(nativeModules)
-  const loadedModule = configLoader(filePath) as
-    | UserConfig
-    | { default?: UserConfig }
-    | undefined
+  const loadedModule = wrapConfigLoadError(filePath, () => {
+    return configLoader(filePath) as
+      | UserConfig
+      | { default?: UserConfig }
+      | undefined
+  })
 
-  if (
-    loadedModule &&
-    typeof loadedModule === 'object' &&
-    'default' in loadedModule &&
-    loadedModule.default !== undefined
-  ) {
-    return loadedModule.default
-  }
-
-  return loadedModule as UserConfig | undefined
+  return unwrapConfigModuleNamespace(loadedModule)
 }
 
 function resolveConfigInputPath(context: string, filePath: string): string {
@@ -107,18 +160,106 @@ export async function resolveConfigPath({
   return index < 0 ? undefined : configList[index]
 }
 
-function extractConfigSpecifiers(code: string): string[] {
+function extractConfigSpecifiers(
+  code: string,
+  filePath: string,
+  diagnostics?: ConfigDependencyDiagnostic[],
+): string[] {
   const found = new Set<string>()
 
-  for (const pattern of CONFIG_IMPORT_PATTERNS) {
-    pattern.lastIndex = 0
-    let match: RegExpExecArray | null = null
-    while ((match = pattern.exec(code)) !== null) {
-      const specifier = match[1]
-      if (specifier) {
-        found.add(specifier)
+  const ast = parseSync(filePath, code, {
+    sourceType: 'module',
+    lang:
+      filePath.endsWith('.ts') ||
+      filePath.endsWith('.mts') ||
+      filePath.endsWith('.cts')
+        ? 'ts'
+        : 'js',
+  })
+
+  if (ast.errors.length > 0) {
+    diagnostics?.push({
+      file: filePath,
+      message: `config dependency parse failed: ${ast.errors[0]?.message ?? 'unknown parse error'}`,
+    })
+    return [...found]
+  }
+
+  const readLiteral = (node: unknown): string | undefined => {
+    if (
+      node &&
+      typeof node === 'object' &&
+      'type' in node &&
+      node.type === 'Literal' &&
+      'value' in node &&
+      typeof node.value === 'string'
+    ) {
+      return node.value
+    }
+    return undefined
+  }
+
+  const reportDynamic = (kind: 'dynamic import' | 'require', node: unknown) => {
+    const expression =
+      node && typeof node === 'object' && 'start' in node && 'end' in node
+        ? code.slice(Number(node.start), Number(node.end))
+        : kind
+    diagnostics?.push({
+      file: filePath,
+      message: `${kind} dependency cannot be statically resolved: ${expression}`,
+    })
+  }
+
+  const visit = (node: unknown) => {
+    if (!node || typeof node !== 'object') return
+    const record = node as Record<string, unknown>
+
+    switch (record.type) {
+      case 'ImportDeclaration':
+      case 'ExportNamedDeclaration':
+      case 'ExportAllDeclaration': {
+        const specifier = readLiteral(record.source)
+        if (specifier) found.add(specifier)
+        break
+      }
+      case 'ImportExpression': {
+        const specifier = readLiteral(record.source)
+        if (specifier) {
+          found.add(specifier)
+        } else {
+          reportDynamic('dynamic import', record.source)
+        }
+        break
+      }
+      case 'CallExpression': {
+        const callee = record.callee as Record<string, unknown> | undefined
+        if (callee?.type === 'Identifier' && callee.name === 'require') {
+          const args = Array.isArray(record.arguments) ? record.arguments : []
+          const specifier = readLiteral(args[0])
+          if (specifier) {
+            found.add(specifier)
+          } else {
+            reportDynamic('require', args[0] ?? record)
+          }
+        }
+        break
       }
     }
+
+    for (const value of Object.values(record)) {
+      if (!value || typeof value !== 'object') continue
+      if (Array.isArray(value)) {
+        for (const item of value) visit(item)
+      } else {
+        visit(value)
+      }
+    }
+  }
+
+  visit(ast.program)
+
+  for (const item of ast.module.staticImports) {
+    if (item.moduleRequest?.value) found.add(item.moduleRequest.value)
   }
 
   return [...found]
@@ -174,6 +315,7 @@ async function resolveConfigDependencyPath(
 async function collectConfigDependencies(
   filePath: string,
   dependencies: Set<string>,
+  diagnostics: ConfigDependencyDiagnostic[],
 ): Promise<void> {
   if (dependencies.has(filePath)) {
     return
@@ -186,7 +328,7 @@ async function collectConfigDependencies(
   }
 
   const code = await fsp.readFile(filePath, 'utf8')
-  const specifiers = extractConfigSpecifiers(code)
+  const specifiers = extractConfigSpecifiers(code, filePath, diagnostics)
 
   for (const specifier of specifiers) {
     if (!isRelativeConfigSpecifier(specifier)) {
@@ -200,7 +342,7 @@ async function collectConfigDependencies(
     if (!dependencyPath) {
       continue
     }
-    await collectConfigDependencies(dependencyPath, dependencies)
+    await collectConfigDependencies(dependencyPath, dependencies, diagnostics)
   }
 }
 
@@ -221,7 +363,7 @@ async function collectConfigNativeModules(
   }
 
   const code = await fsp.readFile(filePath, 'utf8')
-  const specifiers = extractConfigSpecifiers(code)
+  const specifiers = extractConfigSpecifiers(code, filePath)
 
   for (const specifier of specifiers) {
     if (isRelativeConfigSpecifier(specifier)) {
@@ -266,14 +408,32 @@ export async function resolveConfigWatchFiles({
   configFile?: string
   context?: string
 }): Promise<string[]> {
+  return (await resolveConfigWatchFilesWithDiagnostics({ configFile, context }))
+    .files
+}
+
+export async function resolveConfigWatchFilesWithDiagnostics({
+  configFile,
+  context,
+}: {
+  configFile?: string
+  context?: string
+}): Promise<ConfigWatchFilesResult> {
   const configPath = await resolveConfigPath({ configFile, context })
   if (!configPath) {
-    return []
+    return {
+      files: [],
+      diagnostics: [],
+    }
   }
 
   const dependencies = new Set<string>()
-  await collectConfigDependencies(configPath, dependencies)
-  return [...dependencies]
+  const diagnostics: ConfigDependencyDiagnostic[] = []
+  await collectConfigDependencies(configPath, dependencies, diagnostics)
+  return {
+    files: [...dependencies],
+    diagnostics,
+  }
 }
 
 /**
@@ -297,11 +457,15 @@ export async function resolveConfig({
     return loadConfigAsExecutable(configPath)
   }
   if (suffix === '.json') {
-    return await fse.readJson(configPath)
+    return await wrapAsyncConfigLoadError(configPath, () =>
+      fse.readJson(configPath),
+    )
   }
   if (suffix === '.yaml') {
-    const text = await fsp.readFile(configPath, 'utf8')
-    return parse(text)
+    return await wrapAsyncConfigLoadError(configPath, async () => {
+      const text = await fsp.readFile(configPath, 'utf8')
+      return parse(text)
+    })
   }
 
   throw new Error('No configuration file ! ')

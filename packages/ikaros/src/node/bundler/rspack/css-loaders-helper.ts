@@ -19,7 +19,8 @@ function createLoader(loader: string, options?: Record<string, unknown>) {
 }
 
 function cssLoaders(env: string, options?: CssLoaderOptions) {
-  const { lightningcss, sourceMap } = options ?? {}
+  const { lightningcss } = options ?? {}
+  const sourceMap = options?.sourceMap ?? env === 'development'
   const lightningcssLoader = createLoader('builtin:lightningcss-loader', {
     ...lightningcss,
   })

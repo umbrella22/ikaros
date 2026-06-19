@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { CreateMpaAssets } from '../../src/node/bundler/rspack/loader-plugin-helper'
+import {
+  CreateMpaAssets,
+  createMpaEntry,
+} from '../../src/node/bundler/rspack/loader-plugin-helper'
 
 describe('CreateMpaAssets', () => {
   const pages = {
@@ -30,5 +33,19 @@ describe('CreateMpaAssets', () => {
         message: '当前设置页面missing不存在',
       },
     ])
+  })
+
+  it('createMpaEntry 应只生成 entry 不构造 html 插件或 warning', () => {
+    const entry = createMpaEntry({
+      pages,
+      enablePages: ['index'],
+    })
+
+    expect(entry).toEqual({
+      index: {
+        import: '/test/project/src/index.ts',
+        library: undefined,
+      },
+    })
   })
 })

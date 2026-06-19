@@ -2,34 +2,68 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CompileContext } from '../../src/node/compile/compile-context'
 import type { IkarosPluginAPI } from '../../src/node/core/plugin-api'
-import type { NormalizedConfig } from '../../src/node/config/normalize-config'
 import type {
   IkarosPlugin,
   UserConfig,
 } from '../../src/node/config/user-config'
 
 const mocked = vi.hoisted(() => {
-  const compileSpy = vi.fn(async () => undefined)
-  const resolvePreConfigSpy = vi.fn()
+  const runSpy = vi.fn(async () => undefined)
+  const createPlansSpy = vi.fn(async ({ config }) => [
+    {
+      id: 'web',
+      command: 'build',
+      platform: 'web',
+      target: 'web',
+      bundler: config.bundler,
+      mode: undefined,
+      context: '/test/project',
+      env: {},
+      entries: {},
+      source: {
+        define: config.define,
+        alias: config.resolve.alias,
+        extensions: config.resolve.extensions,
+        framework: 'none',
+        browserslist: config.browserslist,
+      },
+      dev: {
+        port: config.port,
+        proxy: config.server.proxy,
+        https: config.server.https,
+        pages: config.enablePages,
+      },
+      output: {
+        base: config.base,
+        dir: config.build.outDirName,
+        assetsDir: config.build.assetsDir,
+        gzip: config.build.gzip,
+        sourceMap: config.build.sourceMap,
+        report: config.build.outReport,
+        cache: config.build.cache,
+          checkCycles: config.build.dependencyCycleCheck,
+      },
+      contextPkg: {
+        name: 'test-app',
+        version: '1.0.0',
+      },
+      adapterOptions: {},
+      provenance: [],
+      diagnostics: [],
+    },
+  ])
   const createPlatformAdapterSpy = vi.fn(() => ({
     name: 'web' as const,
-    resolvePreConfig: resolvePreConfigSpy,
-    compile: compileSpy,
-  }))
-  const createBundlerAdapterSpy = vi.fn(() => ({
-    name: 'rspack' as const,
-    createConfig: vi.fn(),
-    runDev: vi.fn(),
-    runBuild: vi.fn(),
+    createPlans: createPlansSpy,
+    run: runSpy,
   }))
   const createCompileContextSpy = vi.fn()
   const createBuiltinPluginsSpy = vi.fn(() => [])
 
   return {
-    compileSpy,
-    resolvePreConfigSpy,
+    runSpy,
+    createPlansSpy,
     createPlatformAdapterSpy,
-    createBundlerAdapterSpy,
     createCompileContextSpy,
     createBuiltinPluginsSpy,
   }
@@ -51,83 +85,11 @@ vi.mock('../../src/node/platform/platform-factory', () => ({
   createPlatformAdapter: mocked.createPlatformAdapterSpy,
 }))
 
-vi.mock('../../src/node/bundler/bundler-factory', () => ({
-  createBundlerAdapter: mocked.createBundlerAdapterSpy,
-}))
-
 vi.mock('../../src/node/core/builtin-plugins', () => ({
   createBuiltinPlugins: mocked.createBuiltinPluginsSpy,
 }))
 
 import { runCompile } from '../../src/node/compile/compile-pipeline'
-
-function createNormalizedConfig(
-  overrides?: Partial<NormalizedConfig>,
-): NormalizedConfig {
-  const base: NormalizedConfig = {
-    bundler: 'rspack',
-    plugins: [],
-    quiet: false,
-    target: 'pc',
-    pages: {
-      index: {
-        html: '/test/project/index.html',
-        entry: '/test/project/src/index.ts',
-      },
-    },
-    enablePages: false,
-    define: {},
-    rspack: {
-      plugins: [],
-      loaders: [],
-      experiments: { import: [] },
-      moduleFederation: [],
-      cdnOptions: { modules: [] },
-      css: {},
-    },
-    vite: {
-      plugins: [],
-    },
-    server: {
-      port: 3000,
-      proxy: undefined,
-      https: false,
-    },
-    build: {
-      base: '/',
-      assetsDir: '',
-      gzip: false,
-      sourceMap: false,
-      outDirName: 'dist',
-      outReport: false,
-      cache: false,
-      dependencyCycleCheck: false,
-    },
-    resolve: {
-      alias: {
-        '@': '/test/project/src',
-      },
-      extensions: ['.ts', '.tsx', '.js', '.jsx'],
-    },
-    library: null,
-    electron: {},
-    base: '/',
-    port: 3000,
-    browserslist: 'defaults',
-    isVue: false,
-    isReact: false,
-    isElectron: false,
-  }
-
-  return {
-    ...base,
-    ...overrides,
-    build: {
-      ...base.build,
-      ...(overrides?.build ?? {}),
-    },
-  }
-}
 
 function createCompileContext(
   userConfig?: UserConfig,
@@ -167,6 +129,46 @@ function createCompileContext(
 describe('runCompile', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocked.createPlansSpy.mockImplementation(async ({ compileContext: ctx, config }) => [
+      {
+        id: 'web',
+        command: ctx.command,
+        platform: 'web',
+        target: 'web',
+        bundler: config.bundler,
+        mode: ctx.options.mode,
+        context: ctx.context,
+        contextPkg: ctx.contextPkg,
+        env: ctx.env,
+        entries: {},
+        source: {
+          define: config.define,
+          alias: config.resolve.alias,
+          extensions: config.resolve.extensions,
+          framework: 'none',
+          browserslist: config.browserslist,
+        },
+        dev: {
+          port: config.port,
+          proxy: config.server.proxy,
+          https: config.server.https,
+          pages: config.enablePages,
+        },
+        output: {
+          base: config.base,
+          dir: config.build.outDirName,
+          assetsDir: config.build.assetsDir,
+          gzip: config.build.gzip,
+          sourceMap: config.build.sourceMap,
+          report: config.build.outReport,
+          cache: config.build.cache,
+          checkCycles: config.build.dependencyCycleCheck,
+        },
+        adapterOptions: {},
+        provenance: [],
+        diagnostics: [],
+      },
+    ])
   })
 
   it('应在平台 resolvePreConfig 前后执行插件配置 hooks', async () => {
@@ -175,10 +177,15 @@ describe('runCompile', () => {
       setup(api: IkarosPluginAPI) {
         api.modifyIkarosConfig((config) => ({
           ...config,
-          quiet: true,
-          define: {
-            ...(config?.define ?? {}),
-            __FROM_PLUGIN__: 'yes',
+          log: {
+            level: 'quiet',
+          },
+          source: {
+            ...(config?.source ?? {}),
+            define: {
+              ...(config?.source?.define ?? {}),
+              __FROM_PLUGIN__: 'yes',
+            },
           },
         }))
 
@@ -196,22 +203,61 @@ describe('runCompile', () => {
 
     mocked.createCompileContextSpy.mockResolvedValue(
       createCompileContext({
-        bundler: 'rspack',
+        bundle: {
+          adapter: 'rspack',
+        },
         plugins: [plugin],
       }),
     )
 
-    mocked.resolvePreConfigSpy.mockImplementation(
-      async (ctx: CompileContext) => {
+    mocked.createPlansSpy.mockImplementation(
+      async ({ compileContext: ctx, config }) => {
         expect(
-          (ctx.userConfig?.define as Record<string, unknown>).__FROM_PLUGIN__,
+          (ctx.userConfig?.source?.define as Record<string, unknown>)
+            .__FROM_PLUGIN__,
         ).toBe('yes')
-        expect(ctx.userConfig?.quiet).toBe(true)
+        expect(ctx.userConfig?.log?.level).toBe('quiet')
 
-        return createNormalizedConfig({
-          define: ctx.userConfig?.define ?? {},
-          quiet: ctx.userConfig?.quiet ?? false,
-        })
+        return [
+          {
+            id: 'web',
+            command: ctx.command,
+            platform: 'web',
+            target: 'web',
+            bundler: config.bundler,
+              mode: ctx.options.mode,
+              context: ctx.context,
+              contextPkg: ctx.contextPkg,
+              env: ctx.env,
+            entries: {},
+            source: {
+              define: config.define,
+              alias: config.resolve.alias,
+              extensions: config.resolve.extensions,
+              framework: 'none',
+              browserslist: config.browserslist,
+            },
+            dev: {
+              port: config.port,
+              proxy: config.server.proxy,
+              https: config.server.https,
+              pages: config.enablePages,
+            },
+            output: {
+              base: config.base,
+              dir: config.build.outDirName,
+              assetsDir: config.build.assetsDir,
+              gzip: config.build.gzip,
+              sourceMap: config.build.sourceMap,
+              report: config.build.outReport,
+              cache: config.build.cache,
+              checkCycles: config.build.dependencyCycleCheck,
+            },
+            adapterOptions: {},
+            provenance: [],
+            diagnostics: [],
+          },
+        ]
       },
     )
 
@@ -222,16 +268,15 @@ describe('runCompile', () => {
       },
     })
 
-    expect(mocked.createBundlerAdapterSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ bundler: 'rspack' }),
-    )
-    expect(mocked.compileSpy).toHaveBeenCalledWith(
-      expect.anything(),
+    expect(mocked.runSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        preConfig: expect.objectContaining({
-          quiet: true,
-          base: '/plugin-base/',
-        }),
+        plans: expect.arrayContaining([
+          expect.objectContaining({
+            output: expect.objectContaining({
+              base: '/plugin-base/',
+            }),
+          }),
+        ]),
         pluginManager: expect.anything(),
       }),
     )
@@ -240,7 +285,6 @@ describe('runCompile', () => {
   it('build 编译结束后应清理本轮 env', async () => {
     const ctx = createCompileContext()
     mocked.createCompileContextSpy.mockResolvedValue(ctx)
-    mocked.resolvePreConfigSpy.mockResolvedValue(createNormalizedConfig())
 
     await runCompile({
       command: 'build' as never,
@@ -255,7 +299,6 @@ describe('runCompile', () => {
   it('server 编译应把 env 清理交给运行时 cleanup', async () => {
     const ctx = createCompileContext(undefined, 'server' as never)
     mocked.createCompileContextSpy.mockResolvedValue(ctx)
-    mocked.resolvePreConfigSpy.mockResolvedValue(createNormalizedConfig())
 
     await runCompile({
       command: 'server' as never,
@@ -292,8 +335,6 @@ describe('runCompile', () => {
         plugins: [plugin],
       }),
     )
-    mocked.resolvePreConfigSpy.mockResolvedValue(createNormalizedConfig())
-
     await runCompile({
       command: 'build' as never,
       options: {
@@ -301,12 +342,9 @@ describe('runCompile', () => {
       },
     })
 
-    expect(mocked.compileSpy).toHaveBeenCalledWith(
-      expect.anything(),
+    expect(mocked.runSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        preConfig: expect.objectContaining({
-          quiet: true,
-        }),
+        plans: expect.any(Array),
       }),
     )
   })

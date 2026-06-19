@@ -1,10 +1,18 @@
-import type { CreateConfigParams, NormalizedConfig } from '../src/types'
+import type { BuildPlan, CreateConfigParams, NormalizedConfig } from '../src/types'
+
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends Array<unknown>
+    ? T[K]
+    : T[K] extends object
+      ? DeepPartial<T[K]>
+      : T[K]
+}
 
 export const resolveTestContext = (...paths: string[]) =>
   ['/test/project', ...paths].join('/')
 
 export const createNormalizedConfig = (
-  overrides?: Partial<NormalizedConfig>,
+  overrides?: DeepPartial<NormalizedConfig>,
 ): NormalizedConfig => {
   const base: NormalizedConfig = {
     bundler: 'vite',
@@ -63,7 +71,7 @@ export const createNormalizedConfig = (
     pages: {
       ...base.pages,
       ...(overrides?.pages ?? {}),
-    },
+    } as NormalizedConfig['pages'],
     define: {
       ...base.define,
       ...(overrides?.define ?? {}),
@@ -74,7 +82,7 @@ export const createNormalizedConfig = (
       alias: {
         ...base.resolve.alias,
         ...(overrides?.resolve?.alias ?? {}),
-      },
+      } as NormalizedConfig['resolve']['alias'],
       extensions: overrides?.resolve?.extensions ?? base.resolve.extensions,
     },
     server,
@@ -90,7 +98,9 @@ export const createNormalizedConfig = (
 }
 
 export const createMinimalParams = (
-  overrides?: Partial<CreateConfigParams>,
+  overrides?: Omit<Partial<CreateConfigParams>, 'config'> & {
+    config?: DeepPartial<NormalizedConfig>
+  },
 ): CreateConfigParams => {
   const config = createNormalizedConfig(overrides?.config)
 
@@ -99,9 +109,68 @@ export const createMinimalParams = (
     env: {},
     context: '/test/project',
     contextPkg: { name: 'test-app', version: '1.0.0' },
-    config,
     resolveContext: resolveTestContext,
     ...overrides,
     config,
+  }
+}
+
+export const createMinimalPlan = (
+  overrides?: Omit<Partial<CreateConfigParams>, 'config'> & {
+    config?: DeepPartial<NormalizedConfig>
+  },
+): BuildPlan => {
+  const params = createMinimalParams(overrides)
+  const framework = 'none' as const
+
+  return {
+    id: 'web',
+    command: params.command,
+    platform: params.config.isElectron ? 'desktopClient' : 'web',
+    target: params.config.isElectron ? 'electron-renderer' : 'web',
+    bundler: 'vite',
+    mode: params.mode,
+    context: params.context,
+    env: params.env,
+    entries: Object.fromEntries(
+      Object.entries(params.config.pages).map(([name, page]) => [
+        name,
+        {
+          html: page.html,
+          import: page.entry ?? '',
+        },
+      ]),
+    ),
+    source: {
+      define: params.config.define as never,
+      alias: params.config.resolve.alias,
+      extensions: params.config.resolve.extensions,
+      framework,
+      browserslist: 'defaults',
+    },
+    dev: {
+      port: params.config.port,
+      proxy: params.config.server.proxy,
+      https: params.config.server.https,
+      pages: params.config.enablePages ?? false,
+    },
+    output: {
+      base: params.config.base,
+      dir: params.config.build.outDirName,
+      assetsDir: params.config.build.assetsDir,
+      gzip: params.config.build.gzip,
+      sourceMap: params.config.build.sourceMap,
+      report: params.config.build.outReport,
+      cache: params.config.build.cache,
+      checkCycles: params.config.build.dependencyCycleCheck,
+    },
+    library: params.config.library ?? undefined,
+    adapterOptions: {
+      vite: {
+        plugins: params.config.vite?.plugins,
+      },
+    },
+    provenance: [],
+    diagnostics: [],
   }
 }

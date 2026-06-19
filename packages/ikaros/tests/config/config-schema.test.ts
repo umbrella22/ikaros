@@ -9,48 +9,62 @@ describe('configSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('应接受显式指定 bundler 为 rspack', () => {
-    const result = configSchema.safeParse({ bundler: 'rspack' })
+  it('应接受显式指定 bundle.adapter 为 rspack', () => {
+    const result = configSchema.safeParse({
+      bundle: {
+        adapter: 'rspack',
+      },
+    })
     expect(result.success).toBe(true)
   })
 
   it('应接受 vite 配置', () => {
-    const result = configSchema.safeParse({ bundler: 'vite' })
+    const result = configSchema.safeParse({
+      bundle: {
+        adapter: 'vite',
+      },
+    })
     expect(result.success).toBe(true)
   })
 
   it('应接受完整的 rspack 配置', () => {
     const result = configSchema.safeParse({
-      bundler: 'rspack',
-      target: 'mobile',
-      quiet: true,
-      rspack: {
-        plugins: [{}],
-        loaders: [{}],
-        experiments: {},
-        cdnOptions: { modules: [] },
-        moduleFederation: {},
-        css: {
-          lightningcss: { targets: 'defaults' },
-          sourceMap: true,
-          less: { lessOptions: { math: 'always' } },
-          sass: { sassOptions: { api: 'modern-compiler' } },
-          stylus: { stylusOptions: { compress: false } },
+      app: {
+        target: 'mobile',
+      },
+      log: {
+        level: 'quiet',
+      },
+      bundle: {
+        adapter: 'rspack',
+        rspack: {
+          plugins: [{}],
+          loaders: [{}],
+          experiments: {},
+          cdn: { modules: [] },
+          moduleFederation: {},
+          css: {
+            lightningcss: { targets: 'defaults' },
+            sourceMap: true,
+            less: { lessOptions: { math: 'always' } },
+            sass: { sassOptions: { api: 'modern-compiler' } },
+            stylus: { stylusOptions: { compress: false } },
+          },
         },
       },
-      build: {
+      output: {
         sourceMap: true,
         gzip: true,
-        outDirName: 'output',
-        outReport: false,
+        dir: 'output',
+        report: false,
         cache: true,
-        dependencyCycleCheck: true,
+        checkCycles: true,
       },
-      resolve: {
+      source: {
         alias: { '@': './src' },
         extensions: ['.ts', '.tsx'],
       },
-      server: {
+      dev: {
         port: 3000,
       },
     })
@@ -138,21 +152,21 @@ describe('configSchema', () => {
 
   it('应拒绝端口号小于 1024', () => {
     const result = configSchema.safeParse({
-      server: { port: 80 },
+      dev: { port: 80 },
     })
     expect(result.success).toBe(false)
   })
 
   it('应拒绝端口号大于 65535', () => {
     const result = configSchema.safeParse({
-      server: { port: 70000 },
+      dev: { port: 70000 },
     })
     expect(result.success).toBe(false)
   })
 
   it('应接受有效端口号', () => {
     const result = configSchema.safeParse({
-      server: { port: 8080 },
+      dev: { port: 8080 },
     })
     expect(result.success).toBe(true)
   })
@@ -161,7 +175,7 @@ describe('configSchema', () => {
 
   it('顶层 plugins 不再接受旧的 bundler 插件写法', () => {
     const result = configSchema.safeParse({
-      bundler: 'rspack',
+      bundle: { adapter: 'rspack' },
       plugins: [{}],
     })
     expect(result.success).toBe(false)
@@ -169,7 +183,7 @@ describe('configSchema', () => {
 
   it('顶层不应再允许旧 loaders 字段', () => {
     const result = configSchema.safeParse({
-      bundler: 'rspack',
+      bundle: { adapter: 'rspack' },
       loaders: [{}],
     })
     expect(result.success).toBe(false)
@@ -177,7 +191,7 @@ describe('configSchema', () => {
 
   it('顶层不应再允许旧 experiments 字段', () => {
     const result = configSchema.safeParse({
-      bundler: 'rspack',
+      bundle: { adapter: 'rspack' },
       experiments: {},
     })
     expect(result.success).toBe(false)
@@ -185,7 +199,7 @@ describe('configSchema', () => {
 
   it('顶层不应再允许旧 cdnOptions 字段', () => {
     const result = configSchema.safeParse({
-      bundler: 'rspack',
+      bundle: { adapter: 'rspack' },
       cdnOptions: { modules: [] },
     })
     expect(result.success).toBe(false)
@@ -193,7 +207,7 @@ describe('configSchema', () => {
 
   it('顶层不应再允许旧 moduleFederation 字段', () => {
     const result = configSchema.safeParse({
-      bundler: 'rspack',
+      bundle: { adapter: 'rspack' },
       moduleFederation: {},
     })
     expect(result.success).toBe(false)
@@ -201,7 +215,7 @@ describe('configSchema', () => {
 
   it('顶层不应再允许旧 css 字段', () => {
     const result = configSchema.safeParse({
-      bundler: 'rspack',
+      bundle: { adapter: 'rspack' },
       css: {
         sourceMap: true,
       },
@@ -211,8 +225,10 @@ describe('configSchema', () => {
 
   it('vite 模式下允许 vite.plugins', () => {
     const result = configSchema.safeParse({
-      bundler: 'vite',
-      vite: { plugins: [] },
+      bundle: {
+        adapter: 'vite',
+        vite: { plugins: [] },
+      },
     })
     expect(result.success).toBe(true)
   })
@@ -220,17 +236,17 @@ describe('configSchema', () => {
   // ─── Target ────────────────────────────────────────────────────────────
 
   it('应接受 pc target', () => {
-    const result = configSchema.safeParse({ target: 'pc' })
+    const result = configSchema.safeParse({ app: { target: 'pc' } })
     expect(result.success).toBe(true)
   })
 
   it('应接受 mobile target', () => {
-    const result = configSchema.safeParse({ target: 'mobile' })
+    const result = configSchema.safeParse({ app: { target: 'mobile' } })
     expect(result.success).toBe(true)
   })
 
   it('应拒绝无效 target', () => {
-    const result = configSchema.safeParse({ target: 'invalid' })
+    const result = configSchema.safeParse({ app: { target: 'invalid' } })
     expect(result.success).toBe(false)
   })
 })

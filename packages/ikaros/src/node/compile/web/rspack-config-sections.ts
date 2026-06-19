@@ -1,6 +1,6 @@
 import type { Configuration } from '@rspack/core'
 import { escapeRegExp, isString } from 'es-toolkit'
-import { join } from 'node:path'
+import { join, posix } from 'node:path'
 
 import type { NormalizedConfig } from '../../config/normalize-config'
 import {
@@ -46,6 +46,11 @@ function getOutDirPath(params: {
 
 function formatAssetsPath(assetsDir: string, path: string): string {
   return [assetsDir, path].filter(Boolean).join('/').replace(/\/+/g, '/')
+}
+
+function formatUrlPath(...parts: string[]): string {
+  const joined = posix.join(...parts)
+  return joined.startsWith('/') ? joined : `/${joined}`
 }
 
 export function createRspackTarget(
@@ -138,7 +143,7 @@ export function createRspackDevServerConfig(params: {
         },
         {
           from: new RegExp(`^${escapeRegExp(config.base)}`),
-          to: join(config.base, DEFAULT_HTML_TEMPLATE),
+          to: formatUrlPath(config.base, DEFAULT_HTML_TEMPLATE),
         },
       ],
     },

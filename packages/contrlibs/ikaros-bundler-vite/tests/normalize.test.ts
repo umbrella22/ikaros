@@ -185,11 +185,30 @@ describe('getOutDirPath', () => {
 // ─── resolveRollupInput ─────────────────────────────────────────────────────
 
 describe('resolveRollupInput', () => {
+  const context = '/project'
+
   it('should return undefined for single page', () => {
-    const pages = { index: { html: '/index.html', entry: '/src/index.ts' } }
+    const pages = {
+      index: { html: '/project/index.html', entry: '/src/index.ts' },
+    }
     expect(
-      resolveRollupInput({ pages, enablePages: undefined }),
+      resolveRollupInput({ pages, enablePages: undefined, context }),
     ).toBeUndefined()
+  })
+
+  it('should return input map for a single custom html page', () => {
+    const pages = {
+      index: {
+        html: '/project/src/renderer/index.html',
+        entry: '/src/index.ts',
+      },
+    }
+
+    expect(
+      resolveRollupInput({ pages, enablePages: undefined, context }),
+    ).toEqual({
+      index: '/project/src/renderer/index.html',
+    })
   })
 
   it('should return input map for multiple pages', () => {
@@ -197,7 +216,9 @@ describe('resolveRollupInput', () => {
       index: { html: '/index.html', entry: '/src/index.ts' },
       about: { html: '/about.html', entry: '/src/about.ts' },
     }
-    expect(resolveRollupInput({ pages, enablePages: undefined })).toEqual({
+    expect(
+      resolveRollupInput({ pages, enablePages: undefined, context }),
+    ).toEqual({
       index: '/index.html',
       about: '/about.html',
     })
@@ -210,7 +231,11 @@ describe('resolveRollupInput', () => {
       contact: { html: '/contact.html', entry: '/src/contact.ts' },
     }
     expect(
-      resolveRollupInput({ pages, enablePages: ['index', 'contact'] }),
+      resolveRollupInput({
+        pages,
+        enablePages: ['index', 'contact'],
+        context,
+      }),
     ).toEqual({
       index: '/index.html',
       contact: '/contact.html',
@@ -219,12 +244,28 @@ describe('resolveRollupInput', () => {
 
   it('should return undefined if enablePages filters to single page', () => {
     const pages = {
-      index: { html: '/index.html', entry: '/src/index.ts' },
+      index: { html: '/project/index.html', entry: '/src/index.ts' },
       about: { html: '/about.html', entry: '/src/about.ts' },
     }
     expect(
-      resolveRollupInput({ pages, enablePages: ['index'] }),
+      resolveRollupInput({ pages, enablePages: ['index'], context }),
     ).toBeUndefined()
+  })
+
+  it('should keep custom html when enablePages filters to a single page', () => {
+    const pages = {
+      index: { html: '/project/index.html', entry: '/src/index.ts' },
+      renderer: {
+        html: '/project/src/renderer/index.html',
+        entry: '/src/renderer.ts',
+      },
+    }
+
+    expect(
+      resolveRollupInput({ pages, enablePages: ['renderer'], context }),
+    ).toEqual({
+      renderer: '/project/src/renderer/index.html',
+    })
   })
 
   it('should use all pages when enablePages is false', () => {
@@ -232,10 +273,12 @@ describe('resolveRollupInput', () => {
       index: { html: '/index.html', entry: '/src/index.ts' },
       about: { html: '/about.html', entry: '/src/about.ts' },
     }
-    expect(resolveRollupInput({ pages, enablePages: false })).toEqual({
-      index: '/index.html',
-      about: '/about.html',
-    })
+    expect(resolveRollupInput({ pages, enablePages: false, context })).toEqual(
+      {
+        index: '/index.html',
+        about: '/about.html',
+      },
+    )
   })
 })
 
@@ -248,8 +291,65 @@ describe('toViteProxy', () => {
     expect(toViteProxy('')).toBeUndefined()
   })
 
-  it('should return undefined for arrays', () => {
-    expect(toViteProxy([1, 2])).toBeUndefined()
+  it('should map proxy arrays with string context', () => {
+    expect(
+      toViteProxy([
+        {
+          context: '/api',
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+        },
+      ]),
+    ).toEqual({
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    })
+  })
+
+  it('should map proxy arrays with context arrays', () => {
+    expect(
+      toViteProxy([
+        {
+          context: ['/api', '/auth'],
+          target: 'http://localhost:3000',
+        },
+      ]),
+    ).toEqual({
+      '/api': {
+        target: 'http://localhost:3000',
+      },
+      '/auth': {
+        target: 'http://localhost:3000',
+      },
+    })
+  })
+
+  it('should prefer pathFilter when provided', () => {
+    expect(
+      toViteProxy([
+        {
+          context: '/ignored',
+          pathFilter: '/api',
+          target: 'http://localhost:3000',
+        },
+      ]),
+    ).toEqual({
+      '/api': {
+        target: 'http://localhost:3000',
+      },
+    })
+  })
+
+  it('should skip dynamic or unmappable proxy array items', () => {
+    expect(
+      toViteProxy([
+        1,
+        () => ({ context: '/api', target: 'http://localhost:3000' }),
+        { context: /^\/api/, target: 'http://localhost:3000' },
+      ]),
+    ).toBeUndefined()
   })
 
   it('should pass through valid proxy objects', () => {

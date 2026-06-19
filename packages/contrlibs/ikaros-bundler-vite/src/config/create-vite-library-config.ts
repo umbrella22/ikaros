@@ -5,6 +5,7 @@ import type { InlineConfig, LibraryFormats } from 'vite'
 import type { CreateConfigParams, LibraryConfig, LibraryFormat } from '../types'
 import {
   normalizeDefine,
+  normalizeEnvDefine,
   sanitizeViteExtensions,
   getOutDirPath,
   toPluginsArray,
@@ -124,13 +125,17 @@ export const createViteLibraryConfig = (
   const external = resolveViteExternals(library.externals)
   const globals = resolveViteGlobals(library.globals)
 
+  // 库模式仅在 build 命令下走到这里。Electron 下产物经 file:// 加载,
+  // 绝对路径 base 会使资源引用失效,需置为相对路径,与 create-vite-config 对齐。
+  const base = config.isElectron ? './' : config.build.base
+
   return {
     root: context,
-    base: config.build.base,
+    base,
     mode,
     plugins,
     define: {
-      ...normalizeDefine(envVars),
+      ...normalizeEnvDefine(envVars),
       ...normalizeDefine(config.define),
     },
     resolve: {
