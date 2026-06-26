@@ -1,0 +1,68 @@
+{
+    "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+    "release-type": "node",
+    "include-v-in-tag": true,
+    "include-component-in-tag": true,
+    "bump-minor-pre-major": true,
+    "separate-pull-requests": true,
+    "tag-separator": "@",
+    "changelog-sections": [
+        {
+            "type": "feat",
+            "section": "Features"
+        },
+        {
+            "type": "fix",
+            "section": "Bug Fixes"
+        },
+        {
+            "type": "perf",
+            "section": "Performance Improvements"
+        },
+        {
+            "type": "revert",
+            "section": "Reverts"
+        },
+        {
+            "type": "docs",
+            "section": "Documentation",
+            "hidden": false
+        },
+        {
+            "type": "chore",
+            "section": "Miscellaneous",
+            "hidden": true
+        },
+        {
+            "type": "deps",
+            "section": "Dependencies",
+            "hidden": false
+        }
+    ],
+    "packages": {
+        "packages/ikaros": {
+            "component": "@ikaros-cli/ikaros",
+            "changelog-path": "CHANGELOG.md"
+        },
+        "packages/eslint-plugin": {
+            "component": "@ikaros-cli/eslint-plugin",
+            "changelog-path": "CHANGELOG.md"
+        },
+        "packages/prettier-config": {
+            "component": "@ikaros-cli/prettier-config",
+            "changelog-path": "CHANGELOG.md"
+        },
+        "packages/stylelint-config": {
+            "component": "@ikaros-cli/stylelint-config",
+            "changelog-path": "CHANGELOG.md"
+        },
+        "packages/contrlibs/ikaros-bundler-vite": {
+            "component": "@ikaros-cli/ikaros-bundler-vite",
+            "changelog-path": "CHANGELOG.md"
+        },
+        "packages/contrlibs/ikaros-platform-desktop-client": {
+            "component": "@ikaros-cli/ikaros-platform-desktop-client",
+            "changelog-path": "CHANGELOG.md"
+        }
+    }
+}

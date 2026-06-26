@@ -1,0 +1,94 @@
+name: Rescue Publish
+
+# 手动重新发布某个已存在的 tag。用于 release.yml 的 publish 步骤失败后重试，
+# 或对历史 tag 补发 npm 包。tag 形如 @ikaros-cli/ikaros@3.1.0。
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_path:
+        description: 'Package directory to publish, e.g. packages/ikaros'
+        required: true
+        type: string
+      tag_name:
+        description: 'Existing tag to publish, e.g. @ikaros-cli/ikaros@3.1.0'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Republish ${{ inputs.package_path }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    concurrency:
+      group: rescue-${{ inputs.tag_name }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ inputs.tag_name }}
+          persist-credentials: false
+
+      - name: Validate tag matches checkout
+        shell: bash
+        run: |
+          git fetch --force --tags
+          tag_ref="refs/tags/${{ inputs.tag_name }}"
+          if ! git rev-parse --verify "${tag_ref}" >/dev/null 2>&1; then
+            echo "Tag ${tag_ref} does not exist." >&2
+            exit 1
+          fi
+          head_commit="$(git rev-parse HEAD)"
+          tag_commit="$(git rev-list -n 1 "${tag_ref}")"
+          if [ "${head_commit}" != "${tag_commit}" ]; then
+            echo "Checked out commit ${head_commit} does not match tag ${tag_ref} (${tag_commit})." >&2
+            exit 1
+          fi
+
+      - name: Verify package path exists
+        shell: bash
+        run: |
+          if [ ! -f "${{ inputs.package_path }}/package.json" ]; then
+            echo "No package.json found at ${{ inputs.package_path }}" >&2
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+
+      - name: Install dependencies
+        # 历史 tag 的 lockfile 可能与依赖不一致，这里允许 pnpm 适当调整。
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build package
+        working-directory: ${{ inputs.package_path }}
+        run: pnpm build
+
+      - name: Resolve package name
+        id: pkg
+        working-directory: ${{ inputs.package_path }}
+        shell: bash
+        run: echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to npm
+        working-directory: ${{ inputs.package_path }}
+        run: pnpm publish --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "Republished \`${{ steps.pkg.outputs.name }}\` from tag \`${{ inputs.tag_name }}\`" >> "$GITHUB_STEP_SUMMARY"

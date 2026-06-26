@@ -8,15 +8,13 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "postinstall": "node scripts/postinstall.mjs",
-    "changeset:add": "changeset add",
-    "changeset:version": "changeset version && node scripts/postinstall.mjs",
-    "changeset:publish": "changeset publish",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
     "upgrade": "pnpm up -r && pnpm up -r -w",
     "lint:fix": "eslint \"packages/**/*.{js,jsx,ts,tsx,vue}\" --fix && prettier --write \"packages/**/*.{js,jsx,ts,tsx,vue}\""
   },
   "license": "MIT",
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
     "@ikaros-cli/eslint-plugin": "workspace:*",
     "@ikaros-cli/prettier-config": "workspace:*",
     "@types/node": "^25.9.1",
