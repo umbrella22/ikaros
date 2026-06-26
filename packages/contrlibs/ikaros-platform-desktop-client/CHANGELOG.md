@@ -1,5 +1,14 @@
 # @ikaros-cli/ikaros-platform-desktop-client
 
+## [3.1.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/ikaros-platform-desktop-client@v3.0.0...@ikaros-cli/ikaros-platform-desktop-client@v3.1.0) (2026-06-26)
+
+
+### Features
+
+* update pnpm workspace configuration and enhance readme with new features and usage instructions ([fea959a](https://github.com/umbrella22/ikaros/commit/fea959abc3de4fb53ab05b35baaab5aad3407095))
+* 新增静默模式并重构警告处理 ([ba97705](https://github.com/umbrella22/ikaros/commit/ba977059d548a8a0b791023b83526bbd827c1fe2))
+* 重构cli ([e27a675](https://github.com/umbrella22/ikaros/commit/e27a6759c3af3b25106a385d3f76e1f18d0e8165))
+
 ## 2.3.0
 
 ### Minor Changes
