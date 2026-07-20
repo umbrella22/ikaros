@@ -3,6 +3,7 @@
 import type { InlineConfig, LibraryFormats } from 'vite'
 
 import type { CreateConfigParams, LibraryConfig, LibraryFormat } from '../types'
+import { createIkarosViteBuildPlugin } from '../plugins/vite-build-plugin'
 import {
   normalizeDefine,
   normalizeEnvDefine,
@@ -10,6 +11,7 @@ import {
   getOutDirPath,
   toPluginsArray,
 } from './normalize'
+import { applyViteAdvancedConfig } from './apply-vite-advanced-config'
 
 // ─── Format Mapping ─────────────────────────────────────────────────────────
 
@@ -114,6 +116,11 @@ export const createViteLibraryConfig = (
 
   const userVitePlugins = config.vite?.plugins
   const plugins = toPluginsArray(userVitePlugins)
+  const ikarosBuildPlugin = createIkarosViteBuildPlugin({
+    gzip: config.build.gzip,
+    outReport: config.build.outReport,
+    dependencyCycleCheck: config.build.dependencyCycleCheck,
+  })
 
   const multi = isMultiEntry(library.entry)
   const formats = (
@@ -129,11 +136,11 @@ export const createViteLibraryConfig = (
   // 绝对路径 base 会使资源引用失效,需置为相对路径,与 create-vite-config 对齐。
   const base = config.isElectron ? './' : config.build.base
 
-  return {
+  const generatedConfig: InlineConfig = {
     root: context,
     base,
     mode,
-    plugins,
+    plugins: [...plugins, ikarosBuildPlugin],
     define: {
       ...normalizeEnvDefine(envVars),
       ...normalizeDefine(config.define),
@@ -165,4 +172,6 @@ export const createViteLibraryConfig = (
       },
     },
   }
+
+  return applyViteAdvancedConfig(generatedConfig, { context, config })
 }

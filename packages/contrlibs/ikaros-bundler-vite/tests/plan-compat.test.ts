@@ -42,8 +42,11 @@ const createPlan = (entryImport: string | string[]): BuildPlan => ({
   adapterOptions: {
     vite: {
       plugins: [],
+      config: {},
+      configFile: false,
     },
   },
+  capabilities: [],
   provenance: [],
   diagnostics: [],
 })

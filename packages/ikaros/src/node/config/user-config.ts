@@ -213,6 +213,20 @@ export interface ViteConfig {
    * @see {@link https://vite.dev/guide/api-plugin}
    */
   plugins?: unknown
+
+  /**
+   * 原生 Vite InlineConfig 高级出口。
+   *
+   * 该对象在 ikaros 生成的配置之后合并，因此可以覆盖底层 Vite 选项。
+   * 如需类型提示，可从 @ikaros-cli/ikaros-bundler-vite 导入
+   * `defineViteConfig`。
+   */
+  config?: Record<string, unknown>
+
+  /**
+   * 可选的原生 vite.config.* 文件。默认不加载，避免隐式引入第二套配置源。
+   */
+  configFile?: string | false
 }
 
 export interface AppConfig {

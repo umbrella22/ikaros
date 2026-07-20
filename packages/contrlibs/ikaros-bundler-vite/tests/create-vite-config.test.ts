@@ -211,4 +211,41 @@ describe('createViteConfig', () => {
     )
     expect(config.server?.https).toEqual({})
   })
+
+  it('should merge raw Vite options after generated defaults', () => {
+    const config = createViteConfig(
+      createMinimalParams({
+        config: {
+          vite: {
+            config: {
+              server: {
+                host: '127.0.0.1',
+              },
+              build: {
+                target: 'esnext',
+              },
+            },
+          },
+        },
+      }),
+    )
+
+    expect(config.server?.host).toBe('127.0.0.1')
+    expect(config.server?.strictPort).toBe(true)
+    expect(config.build?.target).toBe('esnext')
+  })
+
+  it('should resolve the configured native Vite config file', () => {
+    const config = createViteConfig(
+      createMinimalParams({
+        config: {
+          vite: {
+            configFile: './vite.config.ts',
+          },
+        },
+      }),
+    )
+
+    expect(config.configFile).toBe('/test/project/vite.config.ts')
+  })
 })

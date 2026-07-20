@@ -40,6 +40,7 @@ const createPlan = (entryImport: string | string[]): BuildPlan => ({
     checkCycles: false,
   },
   adapterOptions: {},
+  capabilities: [],
   provenance: [],
   diagnostics: [],
 })

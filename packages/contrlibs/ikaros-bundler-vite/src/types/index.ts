@@ -7,7 +7,7 @@ import type {
   BundlerDevOptions,
 } from '@ikaros-cli/ikaros/adapter'
 import type { ServerOptions as HttpsServerOptions } from 'node:https'
-import type { PluginOption, ProxyOptions } from 'vite'
+import type { InlineConfig, PluginOption, ProxyOptions } from 'vite'
 
 export type {
   BuildPlan,
@@ -66,6 +66,8 @@ export interface NormalizedConfig {
   }
   vite?: {
     plugins?: PluginOption | PluginOption[]
+    config?: InlineConfig
+    configFile?: string | false
   }
   library: LibraryConfig | null
   base: string

@@ -43,6 +43,8 @@ const createNormalizedConfig = (
     },
     vite: {
       plugins: [],
+      config: {},
+      configFile: false,
     },
     server: {
       port: 8080,

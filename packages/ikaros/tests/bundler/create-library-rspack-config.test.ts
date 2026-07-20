@@ -78,6 +78,8 @@ const createMinimalConfig = (
     },
     vite: {
       plugins: [],
+      config: {},
+      configFile: false,
     },
     server: {
       port: 3000,
@@ -499,7 +501,7 @@ describe('createLibraryRspackConfigs', () => {
             loaders: [
               {
                 test: /\.vue$/,
-                loader: 'rspack-vue-loader',
+                loader: '@vizejs/rspack-plugin/loader',
               } as never,
             ],
           },
@@ -511,7 +513,7 @@ describe('createLibraryRspackConfigs', () => {
       expect.arrayContaining([
         expect.objectContaining({
           test: /\.vue$/,
-          loader: 'rspack-vue-loader',
+          loader: '@vizejs/rspack-plugin/loader',
         }),
       ]),
     )

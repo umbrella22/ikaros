@@ -73,6 +73,8 @@ export interface RspackAdapterOptions {
 
 export interface ViteAdapterOptions {
   plugins: unknown
+  config: Record<string, unknown>
+  configFile: string | false
 }
 
 export interface BuildPlanTrace {
@@ -85,6 +87,14 @@ export interface BuildPlanTrace {
 export interface BuildPlanDiagnostic {
   level: 'info' | 'warning' | 'error'
   source: string
+  message: string
+}
+
+export type AdapterCapabilityStatus = 'supported' | 'unsupported'
+
+export interface AdapterCapability {
+  id: 'output.cache' | 'output.gzip' | 'output.report' | 'output.checkCycles'
+  status: AdapterCapabilityStatus
   message: string
 }
 
@@ -108,6 +118,7 @@ export interface BuildPlan {
     rspack?: RspackAdapterOptions
     vite?: ViteAdapterOptions
   }
+  capabilities: AdapterCapability[]
   provenance: BuildPlanTrace[]
   diagnostics: BuildPlanDiagnostic[]
 }

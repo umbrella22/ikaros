@@ -1,16 +1,6 @@
 import { defineConfig } from '@ikaros-cli/ikaros'
-import { VueLoaderPlugin } from 'rspack-vue-loader'
+import { vue } from '@ikaros-cli/plugin-vue'
 
 export default defineConfig({
-  bundle: {
-    rspack: {
-      loaders: [
-        {
-          test: /\.vue$/,
-          loader: 'rspack-vue-loader',
-        },
-      ],
-      plugins: [new VueLoaderPlugin()],
-    },
-  },
+  plugins: [vue()],
 })

@@ -87,6 +87,8 @@ export interface PlatformAdapter {
 }
 
 export type {
+  AdapterCapability,
+  AdapterCapabilityStatus,
   BuildPlan,
   BuildPlanDev,
   BuildPlanDiagnostic,

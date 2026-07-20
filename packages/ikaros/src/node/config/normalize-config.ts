@@ -49,6 +49,8 @@ export interface NormalizedRspackConfig {
 
 export interface NormalizedViteConfig {
   plugins: unknown
+  config: Record<string, unknown>
+  configFile: string | false
 }
 
 export interface NormalizedServerConfig {
@@ -477,6 +479,8 @@ export async function normalizeConfig(
     rspack,
     vite: {
       plugins: userConfig.bundle?.vite?.plugins ?? [],
+      config: userConfig.bundle?.vite?.config ?? {},
+      configFile: userConfig.bundle?.vite?.configFile ?? false,
     },
     server,
     build,

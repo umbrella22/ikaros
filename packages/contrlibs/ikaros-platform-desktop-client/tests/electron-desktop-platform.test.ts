@@ -82,6 +82,7 @@ const createPlan = (
     checkCycles: false,
   },
   adapterOptions: {},
+  capabilities: [],
   provenance: [],
   diagnostics: [],
 })

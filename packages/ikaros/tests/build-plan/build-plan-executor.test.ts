@@ -59,6 +59,7 @@ const createPlan = (): BuildPlan => ({
     checkCycles: false,
   },
   adapterOptions: {},
+  capabilities: [],
   provenance: [],
   diagnostics: [],
 })

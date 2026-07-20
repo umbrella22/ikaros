@@ -167,6 +167,26 @@ describe('Watchdog', () => {
     ).toBe('config')
   })
 
+  it('应将 adapter 原生配置文件视为配置依赖', async () => {
+    const plan = await resolveWatchdogWatchPlan({
+      context: tempDir,
+      additionalConfigFiles: ['./vite.config.ts'],
+    })
+
+    const viteConfig = join(tempDir, 'vite.config.ts')
+    expect(plan.additionalConfigFiles).toEqual([viteConfig])
+    expect(plan.trackedFiles).toContain(viteConfig)
+    expect(
+      classifyWatchdogRestartReason(
+        {
+          file: viteConfig,
+          event: 'change',
+        },
+        plan,
+      ),
+    ).toBe('config')
+  })
+
   it('非配置文件变更不应触发 onRestart', async () => {
     // 使用独立的临时目录，不含 env 目录，避免干扰
     const isolatedDir = mkdtempSync(join(tmpdir(), 'watchdog-isolated-'))

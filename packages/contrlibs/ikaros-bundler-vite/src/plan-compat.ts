@@ -48,6 +48,10 @@ export function buildPlanToNormalizedConfig(plan: BuildPlan): NormalizedConfig {
       plugins: plan.adapterOptions.vite?.plugins as NonNullable<
         NormalizedConfig['vite']
       >['plugins'],
+      config: plan.adapterOptions.vite?.config as NonNullable<
+        NormalizedConfig['vite']
+      >['config'],
+      configFile: plan.adapterOptions.vite?.configFile,
     },
     library: plan.library ?? null,
     base: plan.output.base,

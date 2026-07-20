@@ -37,6 +37,7 @@ export class DefaultIkarosInstance implements IkarosInstance {
 
   private readonly cleanupRegistry: CleanupRegistry = createCleanupRegistry()
   private readonly signalHandlers = new Map<NodeJS.Signals, () => void>()
+  private adapterConfigFiles: string[] = []
 
   private watchdog: WatchdogInstance | undefined
   private operation: Promise<void> = Promise.resolve()
@@ -98,7 +99,7 @@ export class DefaultIkarosInstance implements IkarosInstance {
   }
 
   private async runCommand(command: Command): Promise<void> {
-    await runCompile({
+    const result = await runCompile({
       command,
       options: this.options.options,
       configFile: this.options.configFile,
@@ -106,6 +107,7 @@ export class DefaultIkarosInstance implements IkarosInstance {
       onBuildStatus: this.options.onBuildStatus,
       registerCleanup: this.cleanupRegistry.register,
     })
+    this.adapterConfigFiles = result?.watchFiles ?? []
   }
 
   private ensureWatchdog(): void {
@@ -117,6 +119,7 @@ export class DefaultIkarosInstance implements IkarosInstance {
       context: this.options.context ?? process.cwd(),
       configFile: this.options.configFile,
       mode: this.options.options.mode,
+      getAdditionalConfigFiles: () => this.adapterConfigFiles,
       onRestart: async () => {
         await this.enqueue(async () => {
           await this.restartDevRuntime()

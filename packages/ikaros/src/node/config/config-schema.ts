@@ -98,6 +98,8 @@ const rspackNamespaceSchema = z
 const viteNamespaceSchema = z
   .object({
     plugins: z.unknown().optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
+    configFile: z.union([z.string().min(1), z.literal(false)]).optional(),
   })
   .strict()
 

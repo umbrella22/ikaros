@@ -1,4 +1,5 @@
 import type { NormalizedConfig } from '../config/normalize-config'
+import { getAdapterCapabilities } from './adapter-capabilities'
 import type { BuildPlan, BuildTargetKind } from './types'
 
 function resolveFramework(config: NormalizedConfig): BuildPlan['source']['framework'] {
@@ -83,8 +84,13 @@ export function createBuildPlan(params: CreateBuildPlanParams): BuildPlan {
       },
       vite: {
         plugins: config.vite.plugins,
+        config: config.vite.config,
+        configFile: config.vite.configFile,
       },
     },
+    capabilities: getAdapterCapabilities({
+      bundler: params.bundler ?? config.bundler,
+    }),
     provenance: [
       {
         source: 'platform.createPlans',

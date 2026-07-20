@@ -7,7 +7,13 @@ export {
   buildPlanToCreateConfigParams,
   buildPlanToNormalizedConfig,
 } from './build-plan-compat'
+export {
+  applyAdapterCapabilities,
+  getAdapterCapabilities,
+} from './adapter-capabilities'
 export type {
+  AdapterCapability,
+  AdapterCapabilityStatus,
   BuildPlan,
   BuildPlanDev,
   BuildPlanDiagnostic,

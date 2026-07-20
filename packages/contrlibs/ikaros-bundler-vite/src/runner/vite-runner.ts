@@ -28,7 +28,7 @@ export const runViteBuild = async (
   try {
     const result = await build({
       ...config,
-      configFile: false,
+      configFile: config.configFile ?? false,
     })
 
     const outDir = config.build?.outDir
@@ -62,7 +62,7 @@ export const startViteDevServer = async (
   try {
     server = await createServer({
       ...config,
-      configFile: false,
+      configFile: config.configFile ?? false,
       server: {
         ...(config.server ?? {}),
         port: port ?? config.server?.port,

@@ -15,11 +15,10 @@
   },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
-    "@rspack/plugin-react-refresh": "^2.0.0",
-    "axios": "^1.16.1",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-refresh": "0.18.0",
+    "@ikaros-cli/plugin-react": "workspace:*",
+    "axios": "^1.18.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "sass-embedded": "^1.100.0"
   }
 }

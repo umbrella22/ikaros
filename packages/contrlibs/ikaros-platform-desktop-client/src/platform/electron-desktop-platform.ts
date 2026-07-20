@@ -247,8 +247,11 @@ export class ElectronDesktopPlatform implements PlatformAdapter {
         },
         vite: {
           plugins: config.vite.plugins,
+          config: config.vite.config,
+          configFile: config.vite.configFile,
         },
       },
+      capabilities: [],
       provenance: [
         {
           source: 'electron-platform',

@@ -37,10 +37,10 @@
     "@ikaros-cli/ikaros": "^3.0.0"
   },
   "dependencies": {
-    "vite": "^8.0.14"
+    "vite": "^8.1.5"
   },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.10"
   }
 }

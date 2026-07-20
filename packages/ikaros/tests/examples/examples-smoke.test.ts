@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -17,6 +17,11 @@ const examples: ExampleCase[] = [
   { name: 'rspack vue3', dir: 'examples/vue3' },
   { name: 'rspack react', dir: 'examples/react' },
   { name: 'vite vue3', dir: 'examples/vue3-vite' },
+]
+
+const libraryExamples: ExampleCase[] = [
+  { name: 'rspack react library', dir: 'examples/react-lib' },
+  { name: 'rspack vue3 library', dir: 'examples/vue3-lib' },
 ]
 
 afterEach(() => {
@@ -45,6 +50,18 @@ describe('examples smoke', () => {
     })
 
     await waitForHttp('http://127.0.0.1:3000/', 30_000)
+  }, 60_000)
+
+  smokeIt.each(libraryExamples)('$name build 输出库文件', async (example) => {
+    const cwd = join(repoRoot, example.dir)
+
+    await runCommand('pnpm', ['exec', 'ikaros', 'build', '-m', 'dev'], cwd)
+
+    const outputDir = join(cwd, 'dist')
+    expect(existsSync(outputDir)).toBe(true)
+    expect(
+      readdirSync(outputDir).some((file) => /\.(mjs|cjs|js)$/.test(file)),
+    ).toBe(true)
   }, 60_000)
 })
 

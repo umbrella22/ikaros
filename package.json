@@ -17,9 +17,9 @@
   "devDependencies": {
     "@ikaros-cli/eslint-plugin": "workspace:*",
     "@ikaros-cli/prettier-config": "workspace:*",
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.5",
     "dotenv": "^17.4.2",
-    "tsdown": "^0.22.3",
-    "typescript": "^6.0.3"
+    "tsdown": "^0.22.12",
+    "typescript": "^7.0.2"
   }
 }

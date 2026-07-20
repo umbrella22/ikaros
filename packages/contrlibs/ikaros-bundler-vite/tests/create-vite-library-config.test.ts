@@ -235,6 +235,27 @@ describe('createViteLibraryConfig', () => {
     expect(config.build?.sourcemap).toBe(true)
   })
 
+  it('应在库模式保留 ikaros 输出插件', () => {
+    const config = createViteLibraryConfig(
+      createMinimalParams({
+        config: {
+          library: { entry: 'src/index.ts' },
+          build: {
+            gzip: true,
+            outReport: true,
+            dependencyCycleCheck: true,
+          },
+        },
+      }),
+    )
+
+    const pluginNames = (config.plugins as Array<{ name?: string }>)
+      .filter((plugin) => plugin && typeof plugin === 'object')
+      .map((plugin) => plugin.name)
+
+    expect(pluginNames).toContain('ikaros:vite-build')
+  })
+
   it('应正确处理 define', () => {
     const config = createViteLibraryConfig(
       createMinimalParams({

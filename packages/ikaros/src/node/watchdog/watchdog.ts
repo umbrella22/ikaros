@@ -30,7 +30,7 @@ export type WatchdogTrackedFileKind = 'config' | 'env'
 
 export type ResolveWatchdogWatchPlanOptions = Pick<
   WatchdogOptions,
-  'context' | 'configFile' | 'mode'
+  'context' | 'configFile' | 'mode' | 'additionalConfigFiles'
 >
 
 export type WatchdogWatchPlan = {
@@ -38,6 +38,7 @@ export type WatchdogWatchPlan = {
   envFiles: string[]
   configEntryFiles: string[]
   configDependencyFiles: string[]
+  additionalConfigFiles: string[]
   trackedFiles: string[]
   watchedPaths: string[]
   fileCategories: Record<string, WatchdogTrackedFileKind>
@@ -51,6 +52,10 @@ export type WatchdogOptions = {
   configFile?: string
   /** 当前 mode，用于推导实际生效的 env 文件 */
   mode?: string
+  /** adapter 提供的额外配置文件，例如 bundle.vite.configFile */
+  additionalConfigFiles?: string[]
+  /** 在服务重启后重新读取 adapter 配置文件列表。 */
+  getAdditionalConfigFiles?: () => string[]
   /** 变更后触发的重启回调 */
   onRestart: (reason: WatchdogRestartReason) => Promise<void>
   /** 防抖延迟（毫秒），默认 1000 */
@@ -107,6 +112,7 @@ function buildWatchdogWatchPlan(
     context,
     mode,
     configDependencyFiles,
+    additionalConfigFiles = [],
     configDependencyDiagnostics = [],
   } = options
   const envDir = resolveWatchPath(context, getEnvDir(context))
@@ -117,11 +123,15 @@ function buildWatchdogWatchPlan(
   const resolvedConfigDependencyFiles = configDependencyFiles.map((filePath) =>
     resolveWatchPath(context, filePath),
   )
+  const resolvedAdditionalConfigFiles = additionalConfigFiles.map((filePath) =>
+    resolveWatchPath(context, filePath),
+  )
   const trackedFiles = [
     ...new Set([
       ...configEntryFiles,
       ...envFiles,
       ...resolvedConfigDependencyFiles,
+      ...resolvedAdditionalConfigFiles,
     ]),
   ]
 
@@ -130,12 +140,16 @@ function buildWatchdogWatchPlan(
     envFiles,
     configEntryFiles,
     configDependencyFiles: resolvedConfigDependencyFiles,
+    additionalConfigFiles: resolvedAdditionalConfigFiles,
     trackedFiles,
     watchedPaths: [...new Set([...trackedFiles, envDir])],
     fileCategories: createFileCategories({
       envFiles,
       configEntryFiles,
-      configDependencyFiles: resolvedConfigDependencyFiles,
+      configDependencyFiles: [
+        ...resolvedConfigDependencyFiles,
+        ...resolvedAdditionalConfigFiles,
+      ],
     }),
     configDependencyDiagnostics,
   }
@@ -177,6 +191,8 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
     context,
     configFile,
     mode,
+    additionalConfigFiles = [],
+    getAdditionalConfigFiles,
     onRestart,
     debounceMs = 1000,
     watchOptions,
@@ -186,6 +202,7 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
     context,
     configFile,
     mode,
+    additionalConfigFiles,
     configDependencyFiles: [],
   })
 
@@ -212,6 +229,7 @@ export function createWatchdog(options: WatchdogOptions): WatchdogInstance {
       context,
       configFile,
       mode,
+      additionalConfigFiles: getAdditionalConfigFiles?.() ?? additionalConfigFiles,
     })
     const nextTrackedFiles = new Set(nextWatchPlan.trackedFiles)
     const nextWatchedPaths = new Set(nextWatchPlan.watchedPaths)

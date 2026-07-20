@@ -1,6 +1,6 @@
 // compile/compile-pipeline.ts — 统一编译管线入口
 
-import { createBuildPlanExecutor } from '../build-plan'
+import { applyAdapterCapabilities, createBuildPlanExecutor } from '../build-plan'
 import { createBuiltinPlugins } from '../core/builtin-plugins'
 import { createPluginManager } from '../core/plugin-manager'
 import { createPlatformAdapter } from '../platform/platform-factory'
@@ -13,6 +13,23 @@ import {
   type CompileServeParams,
 } from './compile-context'
 
+export interface CompileResult {
+  watchFiles: string[]
+}
+
+function collectAdapterConfigFiles(
+  plans: Awaited<ReturnType<typeof applyAdapterCapabilities>>,
+): string[] {
+  return [
+    ...new Set(
+      plans.flatMap((plan) => {
+        const configFile = plan.adapterOptions.vite?.configFile
+        return plan.bundler === 'vite' && configFile ? [configFile] : []
+      }),
+    ),
+  ]
+}
+
 /**
  * 统一编译执行入口
  *
@@ -24,7 +41,9 @@ import {
  *   5. createBundlerAdapter    — 根据 bundler 创建编译器适配器
  *   6. platform.compile        — 通过平台适配器执行编译
  */
-export async function runCompile(params: CompileServeParams): Promise<void> {
+export async function runCompile(
+  params: CompileServeParams,
+): Promise<CompileResult> {
   let ctx: CompileContext | undefined
 
   try {
@@ -65,7 +84,9 @@ export async function runCompile(params: CompileServeParams): Promise<void> {
       compileContext: resolvedCtx,
       config: preConfig,
     })
-    const plans = await pluginManager.applyBuildPlans(basePlans)
+    const plans = applyAdapterCapabilities(
+      await pluginManager.applyBuildPlans(basePlans),
+    )
     const executor = createBuildPlanExecutor({
       compileContext: resolvedCtx,
       pluginManager,
@@ -79,6 +100,10 @@ export async function runCompile(params: CompileServeParams): Promise<void> {
       executor,
       logger,
     })
+
+    return {
+      watchFiles: collectAdapterConfigFiles(plans),
+    }
   } finally {
     if (ctx && ctx.command !== Command.SERVER) {
       ctx.envCleanup()

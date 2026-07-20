@@ -12,6 +12,7 @@ import {
   toViteHttps,
   toViteProxy,
 } from './normalize'
+import { applyViteAdvancedConfig } from './apply-vite-advanced-config'
 
 /**
  * 创建 Vite 编译配置
@@ -54,7 +55,7 @@ export const createViteConfig = (params: CreateConfigParams): InlineConfig => {
   // 与 rspack output.publicPath 的 `isElectron && !isDev ? './' : config.base` 保持一致。
   const base = config.isElectron && command === 'build' ? './' : config.base
 
-  return {
+  const generatedConfig: InlineConfig = {
     root: context,
     base,
     mode,
@@ -88,4 +89,6 @@ export const createViteConfig = (params: CreateConfigParams): InlineConfig => {
         : undefined,
     },
   }
+
+  return applyViteAdvancedConfig(generatedConfig, { context, config })
 }

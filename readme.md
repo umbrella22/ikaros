@@ -37,6 +37,34 @@ export default defineConfig({
 })
 ```
 
+当项目需要 Vite 特有选项时，可在 `bundle.vite.config` 提供原生配置；需要复用
+已有配置文件时，显式设置 `bundle.vite.configFile`。默认不会加载 `vite.config.*`，
+因此项目始终只有一条默认配置路径。
+
+```js
+import { defineConfig } from '@ikaros-cli/ikaros'
+import { defineViteConfig } from '@ikaros-cli/ikaros-bundler-vite'
+
+export default defineConfig({
+  bundle: {
+    adapter: 'vite',
+    vite: {
+      config: defineViteConfig({
+        server: { host: '127.0.0.1' },
+      }),
+      configFile: './vite.config.ts',
+    },
+  },
+})
+```
+
+React/Vue 的 Rspack 编译配置由可选插件提供，避免 core 内置框架预设：
+
+```bash
+pnpm add -D @ikaros-cli/plugin-react
+pnpm add -D @ikaros-cli/plugin-vue
+```
+
 启动开发服务：
 
 ```bash

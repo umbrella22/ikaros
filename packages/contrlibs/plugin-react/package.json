@@ -1,0 +1,47 @@
+{
+  "name": "@ikaros-cli/plugin-react",
+  "version": "3.0.0",
+  "description": "Optional Rspack React support for @ikaros-cli/ikaros",
+  "type": "module",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "homepage": "https://github.com/umbrella22/ikaros#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/umbrella22/ikaros.git"
+  },
+  "bugs": {
+    "url": "https://github.com/umbrella22/ikaros/issues"
+  },
+  "license": "MIT",
+  "author": "sky <https://github.com/umbrella22>",
+  "main": "dist/index.mjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "files": [
+    "dist",
+    "readme.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "peerDependencies": {
+    "@ikaros-cli/ikaros": "^3.0.0"
+  },
+  "dependencies": {
+    "@rspack/plugin-react-refresh": "^2.0.2",
+    "react-refresh": "^0.18.0"
+  },
+  "devDependencies": {
+    "@ikaros-cli/ikaros": "workspace:*",
+    "vitest": "^4.1.10"
+  }
+}

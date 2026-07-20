@@ -26,6 +26,8 @@ const run = (cmd, args) => {
 const builds = [
   '@ikaros-cli/ikaros-bundler-vite',
   '@ikaros-cli/ikaros-platform-desktop-client',
+  '@ikaros-cli/plugin-react',
+  '@ikaros-cli/plugin-vue',
   '@ikaros-cli/eslint-plugin',
   '@ikaros-cli/prettier-config',
   '@ikaros-cli/stylelint-config',

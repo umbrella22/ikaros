@@ -233,6 +233,24 @@ describe('configSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('vite 模式下允许原生 config 与显式 configFile 高级出口', () => {
+    const result = configSchema.safeParse({
+      bundle: {
+        adapter: 'vite',
+        vite: {
+          config: {
+            server: {
+              hmr: false,
+            },
+          },
+          configFile: './vite.config.ts',
+        },
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
   // ─── Target ────────────────────────────────────────────────────────────
 
   it('应接受 pc target', () => {

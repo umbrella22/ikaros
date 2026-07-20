@@ -114,6 +114,37 @@ describe('normalizeConfig', () => {
     expect(config.browserslist).toBe(BROWSERSLIST.mobile.join(','))
   })
 
+  it('应保留 Vite 原生高级配置出口', async () => {
+    const config = await normalizeConfig({
+      command: Command.BUILD,
+      context: '/test/project',
+      resolveContext: resolveTestContext,
+      userConfig: {
+        bundle: {
+          adapter: 'vite',
+          vite: {
+            config: {
+              server: {
+                hmr: false,
+              },
+            },
+            configFile: './vite.config.ts',
+          },
+        },
+      },
+    })
+
+    expect(config.vite).toEqual({
+      plugins: [],
+      config: {
+        server: {
+          hmr: false,
+        },
+      },
+      configFile: './vite.config.ts',
+    })
+  })
+
   it('开发模式下应拒绝外部 output.base', async () => {
     await expect(
       normalizeConfig({

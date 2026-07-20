@@ -39,6 +39,8 @@ export function buildPlanToNormalizedConfig(plan: BuildPlan): NormalizedConfig {
     },
     vite: {
       plugins: plan.adapterOptions.vite?.plugins ?? [],
+      config: plan.adapterOptions.vite?.config ?? {},
+      configFile: plan.adapterOptions.vite?.configFile ?? false,
     },
     server: {
       port: plan.dev.port,

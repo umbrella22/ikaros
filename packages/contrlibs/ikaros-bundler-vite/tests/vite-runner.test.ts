@@ -58,6 +58,19 @@ describe('startViteDevServer', () => {
     expect(viteMocks.closeSpy).toHaveBeenCalledOnce()
   })
 
+  it('应将显式 configFile 传给 Vite', async () => {
+    await startViteDevServer({
+      root: '/test/project',
+      configFile: '/test/project/vite.config.ts',
+    })
+
+    expect(viteMocks.createServerSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configFile: '/test/project/vite.config.ts',
+      }),
+    )
+  })
+
   it('listen 失败时应关闭已创建的 server', async () => {
     const listenError = new Error('EADDRINUSE')
     viteMocks.listenSpy.mockRejectedValueOnce(listenError)

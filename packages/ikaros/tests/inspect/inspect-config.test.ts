@@ -282,6 +282,7 @@ describe('inspectConfig', () => {
               css: config.rspack.css,
             },
           },
+          capabilities: [],
           provenance: [
             {
               source: 'test-platform',
@@ -453,6 +454,7 @@ describe('inspectConfig', () => {
       context: tempDir,
       configFile: 'ikaros.config.mjs',
       mode: 'production',
+      additionalConfigFiles: [],
     })
 
     expect(result.outputFile).toBeDefined()

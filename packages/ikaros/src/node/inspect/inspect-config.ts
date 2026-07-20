@@ -2,7 +2,11 @@ import { isAbsolute, resolve } from 'node:path'
 
 import fse from 'fs-extra'
 
-import { createBuildPlanExecutor, type BuildPlan } from '../build-plan'
+import {
+  applyAdapterCapabilities,
+  createBuildPlanExecutor,
+  type BuildPlan,
+} from '../build-plan'
 import type { BundlerAdapter } from '../bundler/types'
 import {
   Command,
@@ -70,6 +74,7 @@ export interface InspectConfigResult {
     bundlerPluginNames: string[]
     planBundlers: Record<string, BundlerAdapter['name']>
     planBundlerPluginNames: Record<string, string[]>
+    planCapabilities: SerializedInspectValue
     planProvenance: SerializedInspectValue
     planDiagnostics: SerializedInspectValue
     pluginTraces: PluginTraceEntry[]
@@ -153,6 +158,17 @@ function getPrimaryBundlerName(plans: BuildPlan[]): BundlerAdapter['name'] | 'mi
   return 'mixed'
 }
 
+function collectAdapterConfigFiles(plans: BuildPlan[]): string[] {
+  return [
+    ...new Set(
+      plans.flatMap((plan) => {
+        const configFile = plan.adapterOptions.vite?.configFile
+        return plan.bundler === 'vite' && configFile ? [configFile] : []
+      }),
+    ),
+  ]
+}
+
 function resolveInspectOutputFile(params: {
   context: string
   outputFile?: string
@@ -201,11 +217,6 @@ export async function inspectConfig(
       ...compileContext,
       userConfig: currentUserConfig,
     }
-    const watchDiagnostics = await resolveWatchdogWatchPlan({
-      context: compileContext.context,
-      configFile: compileContext.configFile,
-      mode: compileContext.options.mode,
-    })
     const baseNormalizedConfig = await resolveWebPreConfig({
       command,
       context: compileContext.context,
@@ -221,7 +232,15 @@ export async function inspectConfig(
       compileContext: resolvedCompileContext,
       config: normalizedConfig,
     })
-    const plans = await pluginManager.applyBuildPlans(basePlans)
+    const plans = applyAdapterCapabilities(
+      await pluginManager.applyBuildPlans(basePlans),
+    )
+    const watchDiagnostics = await resolveWatchdogWatchPlan({
+      context: compileContext.context,
+      configFile: compileContext.configFile,
+      mode: compileContext.options.mode,
+      additionalConfigFiles: collectAdapterConfigFiles(plans),
+    })
     const executor = createBuildPlanExecutor({
       compileContext: resolvedCompileContext,
       pluginManager,
@@ -268,6 +287,11 @@ export async function inspectConfig(
           plans.map((plan) => [plan.id, plan.bundler]),
         ),
         planBundlerPluginNames,
+        planCapabilities: serializeConfig(
+          Object.fromEntries(
+            plans.map((plan) => [plan.id, plan.capabilities]),
+          ),
+        ),
         planProvenance: serializeConfig(
           Object.fromEntries(
             plans.map((plan) => [plan.id, plan.provenance]),

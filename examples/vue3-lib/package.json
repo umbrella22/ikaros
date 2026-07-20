@@ -24,9 +24,9 @@
     },
     "devDependencies": {
         "@ikaros-cli/ikaros": "workspace:*",
-        "rspack-vue-loader": "^17.5.0",
+        "@ikaros-cli/plugin-vue": "workspace:*",
         "sass-embedded": "^1.100.0",
-        "vue": "^3.5.34"
+        "vue": "^3.5.40"
     },
     "peerDependencies": {
         "vue": "^3.5.0"

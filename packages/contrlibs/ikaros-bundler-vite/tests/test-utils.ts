@@ -48,6 +48,8 @@ export const createNormalizedConfig = (
     },
     vite: {
       plugins: [],
+      config: {},
+      configFile: false,
     },
     library: null,
     base: '/',
@@ -168,8 +170,11 @@ export const createMinimalPlan = (
     adapterOptions: {
       vite: {
         plugins: params.config.vite?.plugins,
+        config: params.config.vite?.config ?? {},
+        configFile: params.config.vite?.configFile ?? false,
       },
     },
+    capabilities: [],
     provenance: [],
     diagnostics: [],
   }
