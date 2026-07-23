@@ -1,5 +1,12 @@
 # @ikaros-cli/prettier-config
 
+## [1.3.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/eslint-plugin@v1.2.0...@ikaros-cli/eslint-plugin@v1.3.0) (2026-07-23)
+
+
+### Features
+
+* update minimum release versions and add new dependencies ([9720311](https://github.com/umbrella22/ikaros/commit/9720311fc0f266b0cce8eac07193a169fceea850))
+
 ## [1.3.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/eslint-plugin@v1.2.0...@ikaros-cli/eslint-plugin@v1.3.0) (2026-07-20)
 
 
