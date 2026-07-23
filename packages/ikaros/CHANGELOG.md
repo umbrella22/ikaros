@@ -1,5 +1,12 @@
 # @ikaros-cli/ikaros
 
+## [3.2.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/ikaros@v3.1.0...@ikaros-cli/ikaros@v3.2.0) (2026-07-23)
+
+
+### Features
+
+* update minimum release versions and add new dependencies ([9720311](https://github.com/umbrella22/ikaros/commit/9720311fc0f266b0cce8eac07193a169fceea850))
+
 ## [3.1.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/ikaros@v3.0.0...@ikaros-cli/ikaros@v3.1.0) (2026-07-16)
 
 
