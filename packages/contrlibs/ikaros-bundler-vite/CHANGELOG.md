@@ -1,5 +1,19 @@
 # @ikaros-cli/ikaros-bundler-vite
 
+## [3.1.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/ikaros-bundler-vite@v3.0.0...@ikaros-cli/ikaros-bundler-vite@v3.1.0) (2026-07-20)
+
+
+### Features
+
+* update minimum release versions and add new dependencies ([9720311](https://github.com/umbrella22/ikaros/commit/9720311fc0f266b0cce8eac07193a169fceea850))
+* update pnpm workspace configuration and enhance readme with new features and usage instructions ([fea959a](https://github.com/umbrella22/ikaros/commit/fea959abc3de4fb53ab05b35baaab5aad3407095))
+* **vite:** 重构并添加 Vite bundler 适配器与测试 ([26f7c9c](https://github.com/umbrella22/ikaros/commit/26f7c9c0a2f9f748440ef9a3ef11bbf909ebac2f))
+* **watchdog:** 添加看门狗机制支持配置文件和环境变量热重载 ([81faf3e](https://github.com/umbrella22/ikaros/commit/81faf3ecb8fcb1cfccf880b5d39d834e7a4e173c))
+* 扩展 Vite 默认扩展名支持 rspack 的 '...' 展开语法，并更新相关测试 ([ad946c4](https://github.com/umbrella22/ikaros/commit/ad946c48298fabdaf5f472124b8bbd8a263c1a63))
+* 新增库模式支持，为 React 和 Vue 添加示例项目 ([918bc82](https://github.com/umbrella22/ikaros/commit/918bc821a4eef24c3232a01482aec8aff997d389))
+* 新增静默模式并重构警告处理 ([ba97705](https://github.com/umbrella22/ikaros/commit/ba977059d548a8a0b791023b83526bbd827c1fe2))
+* 重构cli ([e27a675](https://github.com/umbrella22/ikaros/commit/e27a6759c3af3b25106a385d3f76e1f18d0e8165))
+
 ## 2.3.0
 
 ### Minor Changes
