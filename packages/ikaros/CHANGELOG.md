@@ -1,5 +1,12 @@
 # @ikaros-cli/ikaros
 
+## [3.3.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/ikaros@v3.2.0...@ikaros-cli/ikaros@v3.3.0) (2026-08-26)
+
+
+### Features
+
+* 重构插件系统与BuildPlan校验，升级各类依赖 ([c3aa87b](https://github.com/umbrella22/ikaros/commit/c3aa87b2c77d03eb8fcf8544c1bd502013acec72))
+
 ## [3.2.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/ikaros@v3.1.0...@ikaros-cli/ikaros@v3.2.0) (2026-07-23)
 
 
