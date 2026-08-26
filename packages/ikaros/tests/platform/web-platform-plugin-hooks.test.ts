@@ -38,6 +38,8 @@ function createNormalizedConfig(
     },
     vite: {
       plugins: [],
+      config: {},
+      configFile: false,
     },
     server: {
       port: 3000,

@@ -1,4 +1,8 @@
-import type { BuildPlan, CreateConfigParams, NormalizedConfig } from '../src/types'
+import type {
+  BuildPlan,
+  CreateConfigParams,
+  NormalizedConfig,
+} from '../src/types'
 
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends Array<unknown>
@@ -170,7 +174,7 @@ export const createMinimalPlan = (
     adapterOptions: {
       vite: {
         plugins: params.config.vite?.plugins,
-        config: params.config.vite?.config ?? {},
+        config: (params.config.vite?.config ?? {}) as Record<string, unknown>,
         configFile: params.config.vite?.configFile ?? false,
       },
     },

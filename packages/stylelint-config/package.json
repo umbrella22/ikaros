@@ -2,12 +2,15 @@
   "name": "@ikaros-cli/stylelint-config",
   "version": "1.3.0",
   "type": "module",
+  "engines": {
+    "node": "^22.12 || >=24"
+  },
   "license": "MIT",
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
   "author": "sky <https://github.com/umbrella22>",
   "exports": {
-    ".": "./dist/index.js",
-    "./*": "./dist/*.js"
+    ".": "./dist/index.mjs",
+    "./*": "./dist/*.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -29,17 +32,18 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "postcss-html": "^1.8.1",
-    "postcss-less": "^6.0.0",
+    "postcss-html": "^2.0.0",
     "postcss-scss": "^4.0.9",
-    "stylelint-config-recess-order": "^7.7.0",
+    "stylelint-config-recess-order": "^7.8.0",
+    "stylelint-config-html": "^2.0.0",
+    "stylelint-config-recommended-vue": "^2.0.0",
     "stylelint-config-standard": "^40.0.0",
     "stylelint-config-standard-scss": "^17.0.0",
-    "stylelint-config-standard-vue": "^1.0.0",
+    "stylelint-config-standard-vue": "^2.0.0",
     "stylelint-order": "8.1.1"
   },
   "devDependencies": {
-    "postcss": "^8.5.20",
-    "stylelint": "^17.14.0"
+    "postcss": "^8.5.26",
+    "stylelint": "^17.14.1"
   }
 }

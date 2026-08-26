@@ -38,11 +38,11 @@
     "vue": "^3.5.0"
   },
   "dependencies": {
-    "@vizejs/rspack-plugin": "^0.291.0"
+    "@vizejs/rspack-plugin": "^0.380.0"
   },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
-    "vitest": "^4.1.10",
-    "vue": "^3.5.40"
+    "vitest": "^4.1.11",
+    "vue": "^3.5.41"
   }
 }

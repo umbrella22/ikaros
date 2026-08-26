@@ -41,7 +41,7 @@ const mocked = vi.hoisted(() => {
         sourceMap: config.build.sourceMap,
         report: config.build.outReport,
         cache: config.build.cache,
-          checkCycles: config.build.dependencyCycleCheck,
+        checkCycles: config.build.dependencyCycleCheck,
       },
       contextPkg: {
         name: 'test-app',
@@ -130,47 +130,49 @@ function createCompileContext(
 describe('runCompile', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocked.createPlansSpy.mockImplementation(async ({ compileContext: ctx, config }) => [
-      {
-        id: 'web',
-        command: ctx.command,
-        platform: 'web',
-        target: 'web',
-        bundler: config.bundler,
-        mode: ctx.options.mode,
-        context: ctx.context,
-        contextPkg: ctx.contextPkg,
-        env: ctx.env,
-        entries: {},
-        source: {
-          define: config.define,
-          alias: config.resolve.alias,
-          extensions: config.resolve.extensions,
-          framework: 'none',
-          browserslist: config.browserslist,
+    mocked.createPlansSpy.mockImplementation(
+      async ({ compileContext: ctx, config }) => [
+        {
+          id: 'web',
+          command: ctx.command,
+          platform: 'web',
+          target: 'web',
+          bundler: config.bundler,
+          mode: ctx.options.mode,
+          context: ctx.context,
+          contextPkg: ctx.contextPkg,
+          env: ctx.env,
+          entries: {},
+          source: {
+            define: config.define,
+            alias: config.resolve.alias,
+            extensions: config.resolve.extensions,
+            framework: 'none',
+            browserslist: config.browserslist,
+          },
+          dev: {
+            port: config.port,
+            proxy: config.server.proxy,
+            https: config.server.https,
+            pages: config.enablePages,
+          },
+          output: {
+            base: config.base,
+            dir: config.build.outDirName,
+            assetsDir: config.build.assetsDir,
+            gzip: config.build.gzip,
+            sourceMap: config.build.sourceMap,
+            report: config.build.outReport,
+            cache: config.build.cache,
+            checkCycles: config.build.dependencyCycleCheck,
+          },
+          adapterOptions: {},
+          capabilities: [],
+          provenance: [],
+          diagnostics: [],
         },
-        dev: {
-          port: config.port,
-          proxy: config.server.proxy,
-          https: config.server.https,
-          pages: config.enablePages,
-        },
-        output: {
-          base: config.base,
-          dir: config.build.outDirName,
-          assetsDir: config.build.assetsDir,
-          gzip: config.build.gzip,
-          sourceMap: config.build.sourceMap,
-          report: config.build.outReport,
-          cache: config.build.cache,
-          checkCycles: config.build.dependencyCycleCheck,
-        },
-        adapterOptions: {},
-        capabilities: [],
-        provenance: [],
-        diagnostics: [],
-      },
-    ])
+      ],
+    )
   })
 
   it('应在平台 resolvePreConfig 前后执行插件配置 hooks', async () => {
@@ -227,10 +229,10 @@ describe('runCompile', () => {
             platform: 'web',
             target: 'web',
             bundler: config.bundler,
-              mode: ctx.options.mode,
-              context: ctx.context,
-              contextPkg: ctx.contextPkg,
-              env: ctx.env,
+            mode: ctx.options.mode,
+            context: ctx.context,
+            contextPkg: ctx.contextPkg,
+            env: ctx.env,
             entries: {},
             source: {
               define: config.define,
@@ -254,10 +256,10 @@ describe('runCompile', () => {
               report: config.build.outReport,
               cache: config.build.cache,
               checkCycles: config.build.dependencyCycleCheck,
-          },
-          adapterOptions: {},
-          capabilities: [],
-          provenance: [],
+            },
+            adapterOptions: {},
+            capabilities: [],
+            provenance: [],
             diagnostics: [],
           },
         ]
@@ -313,7 +315,7 @@ describe('runCompile', () => {
     expect(ctx.envCleanup).not.toHaveBeenCalled()
   })
 
-  it('modifyIkarosConfig 注入的插件应参与后续配置阶段', async () => {
+  it('modifyIkarosConfig 不能在会话中注入未初始化的插件', async () => {
     const injectedPlugin: IkarosPlugin = {
       name: 'injected-plugin',
       setup(api: IkarosPluginAPI) {
@@ -338,17 +340,17 @@ describe('runCompile', () => {
         plugins: [plugin],
       }),
     )
-    await runCompile({
-      command: 'build' as never,
-      options: {
-        platform: 'web',
-      },
-    })
-
-    expect(mocked.runSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        plans: expect.any(Array),
+    await expect(
+      runCompile({
+        command: 'build' as never,
+        options: {
+          platform: 'web',
+        },
       }),
-    )
+    ).rejects.toMatchObject({
+      name: 'PluginSetMutationError',
+      code: 'PLUGIN_SET_IMMUTABLE',
+    })
+    expect(mocked.runSpy).not.toHaveBeenCalled()
   })
 })

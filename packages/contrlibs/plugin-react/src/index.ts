@@ -1,12 +1,16 @@
 import { ReactRefreshRspackPlugin } from '@rspack/plugin-react-refresh'
 
-import type { IkarosPlugin } from '@ikaros-cli/ikaros/plugin'
+import type { BuildPlan, IkarosPlugin } from '@ikaros-cli/ikaros/plugin'
 
 export type ReactPluginOptions = {
   refresh?: boolean
 }
 
 type PlainRecord = Record<string, unknown>
+
+function isRendererPlan(plan: BuildPlan | undefined): boolean {
+  return plan?.target === 'web' || plan?.target === 'electron-renderer'
+}
 
 function asPlainRecord(value: unknown): PlainRecord {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -68,8 +72,8 @@ export const react = (options: ReactPluginOptions = {}): IkarosPlugin => ({
     })
 
     if (isDev && refresh) {
-      api.modifyRspackPlugins((plugins, { config }) => {
-        if (config.bundler === 'rspack') {
+      api.modifyRspackPlugins((plugins, { config, plan }) => {
+        if (config.bundler === 'rspack' && isRendererPlan(plan)) {
           plugins.append('react-refresh', new ReactRefreshRspackPlugin())
         }
       })

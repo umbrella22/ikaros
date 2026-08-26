@@ -1,34 +1,34 @@
 {
-    "private": true,
-    "name": "ikaros-vue3-lib-example",
-    "version": "1.0.0",
-    "type": "module",
-    "main": "./dist/ikaros-vue3-lib-example.umd.cjs",
-    "module": "./dist/ikaros-vue3-lib-example.mjs",
-    "exports": {
-        ".": {
-            "import": "./dist/ikaros-vue3-lib-example.mjs",
-            "require": "./dist/ikaros-vue3-lib-example.umd.cjs"
-        },
-        "./style.css": "./dist/ikaros-vue3-lib-example.css"
+  "private": true,
+  "name": "ikaros-vue3-lib-example",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/ikaros-vue3-lib-example.umd.cjs",
+  "module": "./dist/ikaros-vue3-lib-example.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/ikaros-vue3-lib-example.mjs",
+      "require": "./dist/ikaros-vue3-lib-example.umd.cjs"
     },
-    "files": [
-        "dist"
-    ],
-    "scripts": {
-        "dev": "ikaros -m dev",
-        "build:lib": "ikaros build -m master"
-    },
-    "engines": {
-        "node": ">=22.12.0"
-    },
-    "devDependencies": {
-        "@ikaros-cli/ikaros": "workspace:*",
-        "@ikaros-cli/plugin-vue": "workspace:*",
-        "sass-embedded": "^1.100.0",
-        "vue": "^3.5.40"
-    },
-    "peerDependencies": {
-        "vue": "^3.5.0"
-    }
+    "./style.css": "./dist/ikaros-vue3-lib-example.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "ikaros -m dev",
+    "build:lib": "ikaros build -m master"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "@ikaros-cli/ikaros": "workspace:*",
+    "@ikaros-cli/plugin-vue": "workspace:*",
+    "sass-embedded": "^1.103.1",
+    "vue": "^3.5.41"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  }
 }

@@ -12,7 +12,6 @@ type HookTap<THandler> = {
 
 export interface AsyncHook<TArgs> {
   tap: (name: string, handler: AsyncHookHandler<TArgs>) => void
-  untap: (name: string) => void
   sort: (names: string[]) => void
   call: (args: TArgs) => Promise<void>
   getTapNames: () => string[]
@@ -23,7 +22,6 @@ export interface AsyncWaterfallHook<TValue, TContext = void> {
     name: string,
     handler: AsyncWaterfallHookHandler<TValue, TContext>,
   ) => void
-  untap: (name: string) => void
   sort: (names: string[]) => void
   call: (value: TValue, context: TContext) => Promise<TValue>
   getTapNames: () => string[]
@@ -33,20 +31,11 @@ export function createAsyncHook<TArgs>(): AsyncHook<TArgs> {
   const taps: HookTap<AsyncHookHandler<TArgs>>[] = []
   const sort = (names: string[]) => sortTaps(taps, names)
 
-  const untap = (name: string) => {
-    for (let index = taps.length - 1; index >= 0; index -= 1) {
-      if (taps[index].name === name) {
-        taps.splice(index, 1)
-      }
-    }
-  }
-
   return {
     tap(name, handler) {
       taps.push({ name, handler })
     },
 
-    untap,
     sort,
 
     async call(args) {
@@ -68,20 +57,11 @@ export function createAsyncWaterfallHook<
   const taps: HookTap<AsyncWaterfallHookHandler<TValue, TContext>>[] = []
   const sort = (names: string[]) => sortTaps(taps, names)
 
-  const untap = (name: string) => {
-    for (let index = taps.length - 1; index >= 0; index -= 1) {
-      if (taps[index].name === name) {
-        taps.splice(index, 1)
-      }
-    }
-  }
-
   return {
     tap(name, handler) {
       taps.push({ name, handler })
     },
 
-    untap,
     sort,
 
     async call(value, context) {

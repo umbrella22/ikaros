@@ -15,6 +15,7 @@ vi.mock('../../src/node/shared/logger', () => ({
 }))
 
 import type { CompileContext } from '../../src/node/compile/compile-context'
+import { createBuildPlan } from '../../src/node/build-plan'
 import type { IkarosPluginAPI } from '../../src/node/core/plugin-api'
 import { createPluginManager } from '../../src/node/core/plugin-manager'
 import type { NormalizedConfig } from '../../src/node/config/normalize-config'
@@ -122,11 +123,8 @@ describe('PluginManager', () => {
     loggerMocks.warning.mockClear()
   })
 
-  it('应支持 addPlugins、removePlugins 与 isPluginExists', async () => {
+  it('应在 CLI 编译会话开始时一次性注册插件', async () => {
     const ctx = createCompileContext()
-    const manager = createPluginManager({
-      compileContext: ctx,
-    })
 
     const configPlugin: IkarosPlugin = {
       name: 'config-plugin',
@@ -141,26 +139,30 @@ describe('PluginManager', () => {
     const bundlerPlugin: IkarosPlugin = {
       name: 'bundler-plugin',
       setup(api: IkarosPluginAPI) {
-        api.modifyRspackConfig((bundlerConfig) => ({
-          ...bundlerConfig,
-          fromRuntimePlugin: true,
-        } as never))
+        api.modifyRspackConfig(
+          (bundlerConfig) =>
+            ({
+              ...bundlerConfig,
+              fromRuntimePlugin: true,
+            }) as never,
+        )
       },
     }
 
-    expect(manager.isPluginExists('config-plugin')).toBe(false)
-
-    await manager.addPlugins([configPlugin])
-    expect(manager.isPluginExists('config-plugin')).toBe(true)
-
+    const manager = createPluginManager({
+      compileContext: ctx,
+      plugins: [configPlugin, bundlerPlugin],
+    })
     await manager.init()
 
-    expect(await manager.applyIkarosConfig(undefined)).toEqual({
+    expect(
+      await manager.applyIkarosConfig({
+        plugins: [configPlugin, bundlerPlugin],
+      }),
+    ).toMatchObject({
       log: { level: 'quiet' },
+      plugins: [configPlugin, bundlerPlugin],
     })
-
-    await manager.addPlugins([bundlerPlugin])
-    expect(manager.isPluginExists('bundler-plugin')).toBe(true)
 
     await manager.applyNormalizedConfig(createNormalizedConfig())
 
@@ -171,22 +173,14 @@ describe('PluginManager', () => {
       fromRuntimePlugin: true,
     })
 
-    manager.removePlugins(['bundler-plugin'])
-
-    expect(manager.isPluginExists('bundler-plugin')).toBe(false)
-    expect(
-      await manager.applyBundlerConfig('rspack', { entry: 'index' }),
-    ).toEqual({
-      entry: 'index',
-    })
+    expect(manager.getPluginNames()).toEqual([
+      'config-plugin',
+      'bundler-plugin',
+    ])
   })
 
   it('应按插件名去重，避免重复注册相同插件', async () => {
     const ctx = createCompileContext()
-    const manager = createPluginManager({
-      compileContext: ctx,
-    })
-
     const plugin: IkarosPlugin = {
       name: 'dedupe-plugin',
       setup(api: IkarosPluginAPI) {
@@ -201,7 +195,10 @@ describe('PluginManager', () => {
       },
     }
 
-    await manager.addPlugins([plugin, plugin])
+    const manager = createPluginManager({
+      compileContext: ctx,
+      plugins: [plugin, plugin],
+    })
     await manager.init()
 
     const config = await manager.applyNormalizedConfig(createNormalizedConfig())
@@ -216,23 +213,25 @@ describe('PluginManager', () => {
     const ctx = createCompileContext()
     const setupBuiltin = vi.fn()
     const setupUser = vi.fn()
+    const builtinPlugin: IkarosPlugin = {
+      name: 'duplicate-plugin',
+      setup: setupBuiltin,
+    }
+    const userPlugin: IkarosPlugin = {
+      name: 'duplicate-plugin',
+      setup: setupUser,
+    }
     const manager = createPluginManager({
       compileContext: ctx,
-      builtinPlugins: [
-        {
-          name: 'duplicate-plugin',
-          setup: setupBuiltin,
-        },
-      ],
-      plugins: [
-        {
-          name: 'duplicate-plugin',
-          setup: setupUser,
-        },
-      ],
+      builtinPlugins: [builtinPlugin],
+      plugins: [userPlugin],
     })
 
     await manager.init()
+
+    await expect(
+      manager.applyIkarosConfig({ plugins: [userPlugin] }),
+    ).resolves.toMatchObject({ plugins: [userPlugin] })
 
     expect(setupBuiltin).toHaveBeenCalledOnce()
     expect(setupUser).not.toHaveBeenCalled()
@@ -255,11 +254,8 @@ describe('PluginManager', () => {
     const ctx = createCompileContext()
     const firstSetup = vi.fn()
     const secondSetup = vi.fn()
-    const manager = createPluginManager({
-      compileContext: ctx,
-    })
 
-    await manager.addPlugins([
+    const plugins = [
       {
         name: 'same-user-plugin',
         setup: firstSetup,
@@ -268,15 +264,19 @@ describe('PluginManager', () => {
         name: 'same-user-plugin',
         setup: secondSetup,
       },
-    ])
-    await manager.init()
+    ] satisfies IkarosPlugin[]
+    const configuredManager = createPluginManager({
+      compileContext: ctx,
+      plugins,
+    })
+    await configuredManager.init()
 
     expect(firstSetup).toHaveBeenCalledOnce()
     expect(secondSetup).not.toHaveBeenCalled()
     expect(loggerMocks.warning).toHaveBeenCalledWith({
       text: expect.stringContaining('建议运行 inspect 查看插件诊断'),
     })
-    expect(manager.getPluginTraces()).toEqual([
+    expect(configuredManager.getPluginTraces()).toEqual([
       expect.objectContaining({
         hook: 'registerPlugin',
         plugin: 'same-user-plugin',
@@ -289,21 +289,23 @@ describe('PluginManager', () => {
 
   it('应逐项处理多配置 bundler config 并保留数组结构', async () => {
     const ctx = createCompileContext()
-    const manager = createPluginManager({
-      compileContext: ctx,
-    })
-
     const plugin: IkarosPlugin = {
       name: 'multi-config-plugin',
       setup(api: IkarosPluginAPI) {
-        api.modifyRspackConfig((bundlerConfig) => ({
-          ...bundlerConfig,
-          fromMultiConfigPlugin: true,
-        } as never))
+        api.modifyRspackConfig(
+          (bundlerConfig) =>
+            ({
+              ...bundlerConfig,
+              fromMultiConfigPlugin: true,
+            }) as never,
+        )
       },
     }
 
-    await manager.addPlugins([plugin])
+    const manager = createPluginManager({
+      compileContext: ctx,
+      plugins: [plugin],
+    })
     await manager.init()
     await manager.applyNormalizedConfig(createNormalizedConfig())
 
@@ -327,10 +329,6 @@ describe('PluginManager', () => {
 
   it('应暴露插件与 hook 的诊断信息', async () => {
     const ctx = createCompileContext()
-    const manager = createPluginManager({
-      compileContext: ctx,
-    })
-
     const plugin: IkarosPlugin = {
       name: 'diagnostic-plugin',
       setup(api: IkarosPluginAPI) {
@@ -339,7 +337,10 @@ describe('PluginManager', () => {
       },
     }
 
-    await manager.addPlugins([plugin])
+    const manager = createPluginManager({
+      compileContext: ctx,
+      plugins: [plugin],
+    })
     await manager.init()
 
     expect(manager.getPluginNames()).toEqual(['diagnostic-plugin'])
@@ -391,6 +392,43 @@ describe('PluginManager', () => {
       'builtin-post',
     ])
     expect(manager.getPluginNames()).toEqual(calls)
+  })
+
+  it('应拒绝 modifyBuildPlan 在最终集合中制造重复 plan id', async () => {
+    const ctx = createCompileContext()
+    const config = createNormalizedConfig()
+    const manager = createPluginManager({
+      compileContext: ctx,
+      plugins: [
+        {
+          name: 'duplicate-plan-id',
+          setup(api) {
+            api.modifyBuildPlan((plan) => ({ ...plan, id: 'same' }))
+          },
+        },
+      ],
+    })
+    await manager.init()
+    await manager.applyNormalizedConfig(config)
+
+    const plans = ['first', 'second'].map((id) =>
+      createBuildPlan({
+        id,
+        command: 'build',
+        platform: 'web',
+        target: 'web',
+        context: ctx.context,
+        contextPkg: ctx.contextPkg,
+        env: ctx.env,
+        config,
+      }),
+    )
+
+    await expect(manager.applyBuildPlans(plans)).rejects.toMatchObject({
+      code: 'BUILD_PLAN_INVALID',
+      entry: 'plugin.modifyBuildPlans',
+      violations: [expect.stringContaining("duplicate id 'same'")],
+    })
   })
 
   it('应支持按稳定 ID 修改 Rspack rules 和 plugins 并记录来源', async () => {

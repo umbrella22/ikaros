@@ -11,6 +11,7 @@ export type {
   ModifyRspackRulesHandler,
   ModifyViteConfigHandler,
 } from '../core/plugin-api'
+export { PluginSetMutationError } from '../core/plugin-manager'
 export type { IkarosPlugin } from '../config/user-config'
 export type {
   BuildPlan,

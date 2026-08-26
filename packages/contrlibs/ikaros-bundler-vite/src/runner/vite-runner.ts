@@ -72,8 +72,9 @@ export const startViteDevServer = async (
 
     await server.listen()
 
+    const runningServer = server
     registerCleanup?.(async () => {
-      await server.close()
+      await runningServer.close()
     })
 
     const resolvedPort = server.config.server.port

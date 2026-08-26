@@ -4,6 +4,7 @@ import fse from 'fs-extra'
 
 import {
   applyAdapterCapabilities,
+  assertBuildPlansFromPlatform,
   createBuildPlanExecutor,
   type BuildPlan,
 } from '../build-plan'
@@ -149,7 +150,9 @@ function collectBundlerPluginNames(config: unknown): string[] {
   return names
 }
 
-function getPrimaryBundlerName(plans: BuildPlan[]): BundlerAdapter['name'] | 'mixed' {
+function getPrimaryBundlerName(
+  plans: BuildPlan[],
+): BundlerAdapter['name'] | 'mixed' {
   const names = new Set(plans.map((plan) => plan.bundler))
   if (names.size === 1) {
     return plans[0]?.bundler ?? 'rspack'
@@ -207,7 +210,6 @@ export async function inspectConfig(
     const currentUserConfig = await pluginManager.applyIkarosConfig(
       compileContext.userConfig,
     )
-    await pluginManager.addPlugins(currentUserConfig?.plugins ?? [])
     const currentConfig = serializeConfig(currentUserConfig)
 
     const platform = createPlatformAdapter(compileContext.options.platform, {
@@ -232,6 +234,7 @@ export async function inspectConfig(
       compileContext: resolvedCompileContext,
       config: normalizedConfig,
     })
+    assertBuildPlansFromPlatform(basePlans)
     const plans = applyAdapterCapabilities(
       await pluginManager.applyBuildPlans(basePlans),
     )
@@ -288,19 +291,13 @@ export async function inspectConfig(
         ),
         planBundlerPluginNames,
         planCapabilities: serializeConfig(
-          Object.fromEntries(
-            plans.map((plan) => [plan.id, plan.capabilities]),
-          ),
+          Object.fromEntries(plans.map((plan) => [plan.id, plan.capabilities])),
         ),
         planProvenance: serializeConfig(
-          Object.fromEntries(
-            plans.map((plan) => [plan.id, plan.provenance]),
-          ),
+          Object.fromEntries(plans.map((plan) => [plan.id, plan.provenance])),
         ),
         planDiagnostics: serializeConfig(
-          Object.fromEntries(
-            plans.map((plan) => [plan.id, plan.diagnostics]),
-          ),
+          Object.fromEntries(plans.map((plan) => [plan.id, plan.diagnostics])),
         ),
         pluginTraces: pluginManager.getPluginTraces(),
         resolution: explainNormalizedConfig({

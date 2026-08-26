@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 
 import { VizePlugin } from '@vizejs/rspack-plugin'
 
-import type { IkarosPlugin } from '@ikaros-cli/ikaros/plugin'
+import type { BuildPlan, IkarosPlugin } from '@ikaros-cli/ikaros/plugin'
 
 const require = createRequire(import.meta.url)
 const VIZE_LOADER = '@vizejs/rspack-plugin/loader'
@@ -15,6 +15,10 @@ const VIZE_LOADER_ALIASES = Object.fromEntries(
   ].map((loader) => [loader, require.resolve(loader)]),
 )
 const VIZE_LOADER_PATH = VIZE_LOADER_ALIASES[VIZE_LOADER]
+
+function isRendererPlan(plan: BuildPlan | undefined): boolean {
+  return plan?.target === 'web' || plan?.target === 'electron-renderer'
+}
 
 const hasVizeLoader = (loaders: unknown[]): boolean =>
   loaders.some(
@@ -53,13 +57,14 @@ export const vue = (): IkarosPlugin => ({
       }
     })
 
-    api.modifyRspackPlugins((plugins, { config }) => {
-      if (config.bundler === 'rspack') {
+    api.modifyRspackPlugins((plugins, { config, plan }) => {
+      if (config.bundler === 'rspack' && isRendererPlan(plan)) {
         plugins.append('vue:vize', new VizePlugin())
       }
     })
 
-    api.modifyRspackConfig((config) => {
+    api.modifyRspackConfig((config, { bundler, plan }) => {
+      if (bundler !== 'rspack' || !isRendererPlan(plan)) return config
       const existingAliases = config.resolveLoader?.alias
 
       return {

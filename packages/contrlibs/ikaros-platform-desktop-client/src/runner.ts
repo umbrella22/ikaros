@@ -184,7 +184,7 @@ export const runDesktopClientDev = async (
     ignoredCloseProcesses.add(restartingProcess)
 
     try {
-      process.kill(restartingProcess.pid)
+      process.kill(restartingProcess.pid!)
     } catch {
       // ignore
     }

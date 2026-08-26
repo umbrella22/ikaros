@@ -1,5 +1,9 @@
 import type { Configuration } from '@rspack/core'
 import type { BuildPlan } from '../build-plan'
+import {
+  assertBuildPlanShape,
+  assertBuildPlansShape,
+} from '../build-plan/build-plan-shape'
 import type { CompileContext } from '../compile/compile-context'
 import type { NormalizedConfig } from '../config/normalize-config'
 import type {
@@ -51,14 +55,26 @@ type PluginRecord = {
 
 export type PluginTraceEntry = IkarosPluginTraceEntry
 
+export class PluginSetMutationError extends Error {
+  readonly code = 'PLUGIN_SET_IMMUTABLE'
+
+  constructor() {
+    super(
+      '[ikaros] plugin set is fixed when the CLI compilation session starts; register plugins in the loaded config instead of modifyIkarosConfig',
+    )
+    this.name = 'PluginSetMutationError'
+  }
+}
+
 export class PluginManager {
   private readonly compileContext: CompileContext
-  private pluginRecords: PluginRecord[]
+  private readonly pluginRecords: PluginRecord[] = []
+  private readonly configuredUserPlugins: IkarosPlugin[]
+  private readonly userPluginsWereConfigured: boolean
 
   private userConfig: ResolvedUserConfig | undefined
   private normalizedConfig: NormalizedConfig | undefined
   private initialized = false
-  private nextPluginIndex = 0
   private readonly traces: PluginTraceEntry[] = []
 
   private readonly hooks: IkarosPluginHooks = {
@@ -105,11 +121,12 @@ export class PluginManager {
 
   constructor(options: CreatePluginManagerOptions) {
     this.compileContext = options.compileContext
-    this.pluginRecords = []
     this.userConfig = options.compileContext.userConfig
+    this.configuredUserPlugins = [...(options.plugins ?? [])]
+    this.userPluginsWereConfigured = options.plugins !== undefined
 
     this.registerPlugins(options.builtinPlugins ?? [], 'builtin')
-    this.registerPlugins(options.plugins ?? [], 'user')
+    this.registerPlugins(this.configuredUserPlugins, 'user')
   }
 
   async init(): Promise<void> {
@@ -123,39 +140,6 @@ export class PluginManager {
       await this.setupPlugin(plugin)
     }
     this.sortHookTaps()
-  }
-
-  async addPlugins(plugins: IkarosPlugin[]): Promise<void> {
-    const added = this.registerPlugins(plugins, 'user')
-
-    if (this.initialized) {
-      for (const { plugin } of this.sortPluginRecords(added)) {
-        await this.setupPlugin(plugin)
-      }
-      this.sortHookTaps()
-    }
-  }
-
-  removePlugins(pluginNames: string[]): void {
-    if (pluginNames.length === 0) {
-      return
-    }
-
-    const names = new Set(pluginNames)
-    this.pluginRecords = this.pluginRecords.filter(
-      ({ plugin }) => !names.has(plugin.name),
-    )
-
-    for (const name of names) {
-      for (const hook of Object.values(this.hooks)) {
-        hook.untap(name)
-      }
-    }
-    this.sortHookTaps()
-  }
-
-  isPluginExists(pluginName: string): boolean {
-    return this.pluginRecords.some(({ plugin }) => plugin.name === pluginName)
   }
 
   private findPluginRecord(pluginName: string): PluginRecord | undefined {
@@ -178,9 +162,32 @@ export class PluginManager {
   async applyIkarosConfig(
     config: UserConfig | undefined,
   ): Promise<ResolvedUserConfig | undefined> {
-    this.userConfig = await this.hooks.modifyIkarosConfig.call(config, {
+    const nextConfig = await this.hooks.modifyIkarosConfig.call(config, {
       compileContext: this.compileContext,
     })
+
+    if (!nextConfig) {
+      this.userConfig = nextConfig
+      return nextConfig
+    }
+
+    const requestedPlugins = nextConfig.plugins ?? []
+    const changedPluginSet =
+      requestedPlugins.length !== this.configuredUserPlugins.length ||
+      requestedPlugins.some(
+        (plugin, index) => plugin !== this.configuredUserPlugins[index],
+      )
+
+    if (changedPluginSet) {
+      throw new PluginSetMutationError()
+    }
+
+    this.userConfig = {
+      ...nextConfig,
+      plugins: this.userPluginsWereConfigured
+        ? [...this.configuredUserPlugins]
+        : undefined,
+    }
 
     return this.userConfig
   }
@@ -202,12 +209,13 @@ export class PluginManager {
   async applyBundlerConfig<TConfig>(
     bundler: 'rspack' | 'vite',
     bundlerConfig: TConfig,
+    plan?: BuildPlan,
   ): Promise<TConfig> {
     if (Array.isArray(bundlerConfig)) {
       const nextConfigs = []
 
       for (const item of bundlerConfig) {
-        nextConfigs.push(await this.applyBundlerConfig(bundler, item))
+        nextConfigs.push(await this.applyBundlerConfig(bundler, item, plan))
       }
 
       return nextConfigs as TConfig
@@ -219,6 +227,7 @@ export class PluginManager {
       config,
       bundler,
       bundlerConfig,
+      plan,
     }
 
     if (bundler === 'vite') {
@@ -232,6 +241,7 @@ export class PluginManager {
     const semanticConfig = await applyRspackSemanticHooks(
       bundlerConfig as Configuration,
       this,
+      plan,
     )
     const nextConfig = (await this.hooks.modifyRspackConfig.call(
       semanticConfig,
@@ -249,31 +259,41 @@ export class PluginManager {
       plans,
     }
     const nextPlans = await this.hooks.modifyBuildPlans.call(plans, context)
+    assertBuildPlansShape(nextPlans, 'plugin.modifyBuildPlans')
     const result: BuildPlan[] = []
 
     for (const plan of nextPlans) {
-      result.push(
-        await this.hooks.modifyBuildPlan.call(plan, {
-          ...this.createLifecycleContext(),
-          plan,
-        }),
-      )
+      const nextPlan = await this.hooks.modifyBuildPlan.call(plan, {
+        ...this.createLifecycleContext(),
+        plan,
+      })
+      assertBuildPlanShape(nextPlan, 'plugin.modifyBuildPlan')
+      result.push(nextPlan)
     }
 
+    // Individual plan hooks may replace ids; validate the final collection as
+    // a whole so downstream adapters never receive ambiguous plan identities.
+    assertBuildPlansShape(result, 'plugin.modifyBuildPlans')
     return result
   }
 
-  async applyRspackRules(rules: RspackRuleRegistry): Promise<void> {
+  async applyRspackRules(
+    rules: RspackRuleRegistry,
+    plan?: BuildPlan,
+  ): Promise<void> {
     await this.hooks.modifyRspackRules.call({
       rules,
-      context: this.createLifecycleContext(),
+      context: this.createLifecycleContext(plan),
     })
   }
 
-  async applyRspackPlugins(plugins: RspackPluginRegistry): Promise<void> {
+  async applyRspackPlugins(
+    plugins: RspackPluginRegistry,
+    plan?: BuildPlan,
+  ): Promise<void> {
     await this.hooks.modifyRspackPlugins.call({
       plugins,
-      context: this.createLifecycleContext(),
+      context: this.createLifecycleContext(plan),
     })
   }
 
@@ -316,10 +336,11 @@ export class PluginManager {
     await this.hooks.onCloseDevServer.call(this.createLifecycleContext())
   }
 
-  private createLifecycleContext(): IkarosLifecycleContext {
+  private createLifecycleContext(plan?: BuildPlan): IkarosLifecycleContext {
     return {
       compileContext: this.compileContext,
       config: this.requireNormalizedConfig(),
+      plan,
     }
   }
 
@@ -344,12 +365,7 @@ export class PluginManager {
     return this.normalizedConfig
   }
 
-  private registerPlugins(
-    plugins: IkarosPlugin[],
-    origin: PluginOrigin,
-  ): PluginRecord[] {
-    const added: PluginRecord[] = []
-
+  private registerPlugins(plugins: IkarosPlugin[], origin: PluginOrigin): void {
     for (const plugin of plugins) {
       const existing = this.findPluginRecord(plugin.name)
       if (existing) {
@@ -371,14 +387,10 @@ export class PluginManager {
       const record = {
         plugin,
         origin,
-        index: this.nextPluginIndex,
+        index: this.pluginRecords.length,
       }
-      this.nextPluginIndex += 1
       this.pluginRecords.push(record)
-      added.push(record)
     }
-
-    return added
   }
 
   private getSortedPluginRecords(): PluginRecord[] {

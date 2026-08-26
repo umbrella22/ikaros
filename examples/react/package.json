@@ -16,9 +16,7 @@
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
     "@ikaros-cli/plugin-react": "workspace:*",
-    "axios": "^1.18.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "sass-embedded": "^1.100.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }

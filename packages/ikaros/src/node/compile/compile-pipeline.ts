@@ -1,6 +1,10 @@
 // compile/compile-pipeline.ts — 统一编译管线入口
 
-import { applyAdapterCapabilities, createBuildPlanExecutor } from '../build-plan'
+import {
+  applyAdapterCapabilities,
+  assertBuildPlansFromPlatform,
+  createBuildPlanExecutor,
+} from '../build-plan'
 import { createBuiltinPlugins } from '../core/builtin-plugins'
 import { createPluginManager } from '../core/plugin-manager'
 import { createPlatformAdapter } from '../platform/platform-factory'
@@ -60,7 +64,6 @@ export async function runCompile(
     const currentUserConfig = await pluginManager.applyIkarosConfig(
       ctx.userConfig,
     )
-    await pluginManager.addPlugins(currentUserConfig?.plugins ?? [])
 
     const platform = createPlatformAdapter(ctx.options.platform, {
       context: ctx.context,
@@ -84,6 +87,7 @@ export async function runCompile(
       compileContext: resolvedCtx,
       config: preConfig,
     })
+    assertBuildPlansFromPlatform(basePlans)
     const plans = applyAdapterCapabilities(
       await pluginManager.applyBuildPlans(basePlans),
     )

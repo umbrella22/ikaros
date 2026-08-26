@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { applyAdapterCapabilities } from '../../src/node/build-plan'
+import {
+  applyAdapterCapabilities,
+  assertBuildPlansFromPlatform,
+  BuildPlanShapeError,
+} from '../../src/node/build-plan'
 import type { BuildPlan } from '../../src/node/build-plan'
 
 const createPlan = (bundler: BuildPlan['bundler']): BuildPlan => ({
@@ -74,5 +78,24 @@ describe('applyAdapterCapabilities', () => {
       true,
     )
     expect(plan.diagnostics).toEqual([])
+  })
+})
+
+describe('BuildPlan CLI boundary', () => {
+  it('rejects malformed platform output with a typed error', () => {
+    expect(() => assertBuildPlansFromPlatform([null])).toThrowError(
+      expect.objectContaining({
+        name: 'BuildPlanShapeError',
+        code: 'BUILD_PLAN_INVALID',
+        entry: 'platform.createPlans',
+      }),
+    )
+  })
+
+  it('accepts the plan shape produced by the platform adapters', () => {
+    expect(() =>
+      assertBuildPlansFromPlatform([createPlan('rspack')]),
+    ).not.toThrow()
+    expect(BuildPlanShapeError).toBeTypeOf('function')
   })
 })

@@ -21,6 +21,8 @@ export interface ModifyNormalizedConfigContext {
 export interface IkarosLifecycleContext {
   readonly compileContext: CompileContext
   readonly config: NormalizedConfig
+  /** BuildPlan 级 hook 与多目标 CLI 平台调用时存在。 */
+  readonly plan?: BuildPlan
 }
 
 export interface ModifyBuildPlansContext extends IkarosLifecycleContext {
@@ -40,6 +42,8 @@ export interface ModifyBundlerConfigContext<
 > extends IkarosLifecycleContext {
   readonly bundler: 'rspack' | 'vite'
   readonly bundlerConfig: TConfig
+  /** The BuildPlan currently being converted to a bundler config. */
+  readonly plan?: BuildPlan
 }
 
 export type ModifyIkarosConfigHandler = (
@@ -50,12 +54,12 @@ export type ModifyIkarosConfigHandler = (
 export type ModifyNormalizedConfigHandler = (
   config: NormalizedConfig,
   context: ModifyNormalizedConfigContext,
-) => NormalizedConfig | Promise<NormalizedConfig>
+) => NormalizedConfig | void | Promise<NormalizedConfig | void>
 
 export type ModifyBundlerConfigHandler<TConfig = unknown> = (
   bundlerConfig: TConfig,
   context: ModifyBundlerConfigContext<TConfig>,
-) => TConfig | Promise<TConfig>
+) => TConfig | void | Promise<TConfig | void>
 
 export interface ViteConfigLike {
   root?: string
@@ -95,12 +99,12 @@ export type ModifyViteConfigHandler = ModifyBundlerConfigHandler<ViteConfigLike>
 export type ModifyBuildPlansHandler = (
   plans: BuildPlan[],
   context: ModifyBuildPlansContext,
-) => BuildPlan[] | Promise<BuildPlan[]>
+) => BuildPlan[] | void | Promise<BuildPlan[] | void>
 
 export type ModifyBuildPlanHandler = (
   plan: BuildPlan,
   context: ModifyBuildPlanContext,
-) => BuildPlan | Promise<BuildPlan>
+) => BuildPlan | void | Promise<BuildPlan | void>
 
 export type ModifyRspackRulesHandler = (
   rules: RspackRuleRegistry,
@@ -141,7 +145,10 @@ export interface IkarosPluginHooks {
     BuildPlan[],
     ModifyBuildPlansContext
   >
-  readonly modifyBuildPlan: AsyncWaterfallHook<BuildPlan, ModifyBuildPlanContext>
+  readonly modifyBuildPlan: AsyncWaterfallHook<
+    BuildPlan,
+    ModifyBuildPlanContext
+  >
   readonly modifyRspackRules: AsyncHook<{
     rules: RspackRuleRegistry
     context: IkarosLifecycleContext

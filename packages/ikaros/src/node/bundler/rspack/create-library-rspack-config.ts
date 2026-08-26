@@ -32,7 +32,9 @@ function normalizeDefineOptions(
   )
 }
 
-function normalizeEnvDefine(env: Record<string, unknown>): Record<string, string> {
+function normalizeEnvDefine(
+  env: Record<string, unknown>,
+): Record<string, string> {
   return Object.fromEntries(
     Object.entries(env).map(([key, value]) => [
       `import.meta.env.${key}`,
@@ -211,7 +213,8 @@ const createSingleFormatConfig = (params: {
   configParams: CreateConfigParams
 }): Configuration => {
   const { format, library, configParams } = params
-  const { mode, context, contextPkg, env, config, resolveContext } = configParams
+  const { mode, context, contextPkg, env, config, resolveContext } =
+    configParams
   const rspackConfig = config.rspack
 
   const isEsm = format === 'es'
@@ -292,8 +295,12 @@ const createSingleFormatConfig = (params: {
         ? [
             new rspack.DefinePlugin({
               ...normalizeEnvDefine(env),
-              ...normalizeDefineOptions(config.define as Record<string, unknown>),
-            }),
+              ...normalizeDefineOptions(
+                config.define as Record<string, unknown> as Parameters<
+                  typeof normalizeDefineOptions
+                >[0],
+              ),
+            } as never),
           ]
         : []),
       ...(rspackConfig?.plugins

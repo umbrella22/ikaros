@@ -37,7 +37,10 @@ describe('react', () => {
     })
 
     const plugins = { append: vi.fn() }
-    await modifyRspackPlugins.mock.calls[0][0](plugins, { config: normalized })
+    await modifyRspackPlugins.mock.calls[0][0](plugins, {
+      config: normalized,
+      plan: { target: 'web' },
+    })
     expect(plugins.append).toHaveBeenCalledWith(
       'react-refresh',
       expect.anything(),

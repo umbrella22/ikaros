@@ -32,17 +32,20 @@ describe('vue', () => {
     ])
 
     const plugins = { append: vi.fn() }
-    await modifyRspackPlugins.mock.calls[0][0](plugins, { config: normalized })
-    expect(plugins.append).toHaveBeenCalledWith(
-      'vue:vize',
-      expect.anything(),
-    )
-
-    const rspackConfig = modifyRspackConfig.mock.calls[0][0]({
-      resolveLoader: {
-        alias: { 'custom-loader': '/custom-loader.mjs' },
-      },
+    await modifyRspackPlugins.mock.calls[0][0](plugins, {
+      config: normalized,
+      plan: { target: 'web' },
     })
+    expect(plugins.append).toHaveBeenCalledWith('vue:vize', expect.anything())
+
+    const rspackConfig = modifyRspackConfig.mock.calls[0][0](
+      {
+        resolveLoader: {
+          alias: { 'custom-loader': '/custom-loader.mjs' },
+        },
+      },
+      { bundler: 'rspack', plan: { target: 'web' } },
+    )
     expect(rspackConfig.resolveLoader.alias).toMatchObject({
       '@vizejs/rspack-plugin/loader': expect.stringContaining(
         '@vizejs/rspack-plugin',
@@ -70,9 +73,7 @@ describe('vue', () => {
       modifyRspackPlugins: vi.fn(),
     } as never)
 
-    const loaders = [
-      { test: /\.vue$/, loader: '@vizejs/rspack-plugin/loader' },
-    ]
+    const loaders = [{ test: /\.vue$/, loader: '@vizejs/rspack-plugin/loader' }]
     const normalized = modifyNormalizedConfig.mock.calls[0][0]({
       bundler: 'rspack',
       rspack: { loaders },

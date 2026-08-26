@@ -1,6 +1,7 @@
 import type { Configuration, Plugin, RuleSetRule } from '@rspack/core'
 
 import type { PluginManager } from '../../core/plugin-manager'
+import type { BuildPlan } from '../../build-plan'
 import {
   createRspackSemanticRegistry,
   type RspackPluginValue,
@@ -9,11 +10,12 @@ import {
 export async function applyRspackSemanticHooks<TConfig>(
   config: TConfig,
   pluginManager: PluginManager,
+  plan?: BuildPlan,
 ): Promise<TConfig> {
   if (Array.isArray(config)) {
     const configs = []
     for (const item of config) {
-      configs.push(await applyRspackSemanticHooks(item, pluginManager))
+      configs.push(await applyRspackSemanticHooks(item, pluginManager, plan))
     }
     return configs as TConfig
   }
@@ -34,8 +36,8 @@ export async function applyRspackSemanticHooks<TConfig>(
     })),
   )
 
-  await pluginManager.applyRspackRules(rules)
-  await pluginManager.applyRspackPlugins(plugins)
+  await pluginManager.applyRspackRules(rules, plan)
+  await pluginManager.applyRspackPlugins(plugins, plan)
   const nextRules = rules.values()
   const nextPlugins = flattenRspackPlugins(plugins.values())
   const nextConfig: Configuration = { ...rspackConfig }

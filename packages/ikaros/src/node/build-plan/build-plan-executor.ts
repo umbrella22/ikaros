@@ -7,6 +7,7 @@ import type {
 import { createBundlerAdapter } from '../bundler/bundler-factory'
 import type { CompileContext } from '../compile/compile-context'
 import type { PluginManager } from '../core/plugin-manager'
+import { assertBuildPlanShape } from './build-plan-shape'
 import type { BuildPlan } from './types'
 
 export interface CreateBuildPlanExecutorParams {
@@ -45,15 +46,21 @@ export function createBuildPlanExecutor(
   }
 
   const createFinalConfig = async (plan: BuildPlan): Promise<unknown> => {
+    assertBuildPlanShape(plan, 'executor.createConfig')
     const adapter = getAdapter(plan)
     const baseConfig = await adapter.createConfig(plan)
-    return params.pluginManager.applyBundlerConfig(adapter.name, baseConfig)
+    return params.pluginManager.applyBundlerConfig(
+      adapter.name,
+      baseConfig,
+      plan,
+    )
   }
 
   return {
     createConfig: createFinalConfig,
 
     async runDev(plan: BuildPlan, options: PlanDevOptions = {}) {
+      assertBuildPlanShape(plan, 'executor.runDev')
       const adapter = getAdapter(plan)
       const config = await createFinalConfig(plan)
       await adapter.runDev(config, options)
@@ -69,12 +76,14 @@ export function createBuildPlanExecutor(
     },
 
     async runBuild(plan: BuildPlan, options: PlanBuildOptions = {}) {
+      assertBuildPlanShape(plan, 'executor.runBuild')
       const adapter = getAdapter(plan)
       const config = await createFinalConfig(plan)
       return adapter.runBuild(config, options)
     },
 
     async watchBuild(plan: BuildPlan, options: PlanBuildOptions = {}) {
+      assertBuildPlanShape(plan, 'executor.watchBuild')
       const adapter = getAdapter(plan)
       if (!adapter.watchBuild) {
         throw new Error(

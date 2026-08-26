@@ -42,11 +42,11 @@ pnpm exec ikaros migrate-config --config ./ikaros.config.mjs --output ./ikaros.c
 
 通用参数：
 
-| 参数 | 说明 |
-| --- | --- |
-| `-m, --mode <name>` | 运行模式，影响 env 文件和插件上下文 |
-| `-p, --platform <type>` | 平台，`web` 或 `desktopClient` |
-| `-c, --config <file>` | 指定配置文件 |
+| 参数                    | 说明                                |
+| ----------------------- | ----------------------------------- |
+| `-m, --mode <name>`     | 运行模式，影响 env 文件和插件上下文 |
+| `-p, --platform <type>` | 平台，`web` 或 `desktopClient`      |
+| `-c, --config <file>`   | 指定配置文件                        |
 
 ## v3 配置
 
@@ -111,16 +111,16 @@ export default defineConfig({
 
 常见可配置命名空间：
 
-| 字段 | 用途 |
-| --- | --- |
-| `app` | 应用目标，例如 `target: 'mobile'` |
-| `bundle` | 选择 Rspack/Vite，并传入对应 adapter 配置 |
-| `source` | define、alias、extensions |
-| `pages` | 多页面 html 与 entry |
-| `dev` | dev server 端口、代理、https、启用页面 |
-| `output` | base、输出目录、source map、gzip、报告等 |
-| `library` | 库模式 |
-| `electron` | desktopClient 平台配置 |
+| 字段       | 用途                                      |
+| ---------- | ----------------------------------------- |
+| `app`      | 应用目标，例如 `target: 'mobile'`         |
+| `bundle`   | 选择 Rspack/Vite，并传入对应 adapter 配置 |
+| `source`   | define、alias、extensions                 |
+| `pages`    | 多页面 html 与 entry                      |
+| `dev`      | dev server 端口、代理、https、启用页面    |
+| `output`   | base、输出目录、source map、gzip、报告等  |
+| `library`  | 库模式                                    |
+| `electron` | desktopClient 平台配置                    |
 
 配置函数：
 
@@ -308,10 +308,10 @@ pnpm exec ikaros build --platform desktopClient --mode release
 
 desktopClient 平台生成三个 BuildPlan：
 
-| Plan | Bundler |
-| --- | --- |
-| `electron-main` | `rspack` |
-| `electron-preload` | `rspack` |
+| Plan                | Bundler          |
+| ------------------- | ---------------- |
+| `electron-main`     | `rspack`         |
+| `electron-preload`  | `rspack`         |
 | `electron-renderer` | `bundle.adapter` |
 
 ## Inspect
@@ -391,6 +391,14 @@ modifyIkarosConfig
 
 底层 bundler config hook 会让插件直接依赖 Rspack/Vite 配置形状，适合少数必须改最终配置的场景。
 
+插件属于一次 CLI 编译会话：Ikaros 在加载配置时一次性注册并初始化插件，完成 build、dev server
+或 inspect 后结束本次会话。插件可以通过 hook 修改配置、BuildPlan 和 bundler registry，
+也可以参与 build/dev server 生命周期；插件集合在会话开始后不可新增、移除或重放。
+`modifyIkarosConfig` 可以修改 CLI 配置，但不能改变本次会话已经固定的插件集合。
+尝试改变该集合会抛出 `PLUGIN_SET_IMMUTABLE`，应直接在加载的配置文件中声明插件。
+bundler hook 的 context 在生成具体 BuildPlan 时提供 `plan`，Electron 插件可以据此区分
+`electron-main`、`electron-preload` 和 `electron-renderer`。
+
 ## 子路径入口
 
 ```ts
@@ -401,32 +409,32 @@ import type { BuildPlan, BundlerAdapter } from '@ikaros-cli/ikaros/adapter'
 
 公开入口：
 
-| 入口 | 用途 |
-| --- | --- |
-| `@ikaros-cli/ikaros` | 常用用户 API |
-| `@ikaros-cli/ikaros/config` | 配置与迁移工具 |
-| `@ikaros-cli/ikaros/plugin` | 插件作者 API |
+| 入口                         | 用途                           |
+| ---------------------------- | ------------------------------ |
+| `@ikaros-cli/ikaros`         | 常用用户 API                   |
+| `@ikaros-cli/ikaros/config`  | 配置与迁移工具                 |
+| `@ikaros-cli/ikaros/plugin`  | 插件作者 API                   |
 | `@ikaros-cli/ikaros/adapter` | optional adapter/platform 契约 |
-| `@ikaros-cli/ikaros/testing` | 测试辅助 |
+| `@ikaros-cli/ikaros/testing` | 测试辅助                       |
 
 ## v2 到 v3 字段映射
 
-| v2 字段 | v3 字段 |
-| --- | --- |
-| `target` | `app.target` |
-| `quiet` | `log.level = 'quiet'` |
-| `bundler` | `bundle.adapter` |
-| `define` | `source.define` |
-| `resolve.alias` | `source.alias` |
-| `resolve.extensions` | `source.extensions` |
-| `enablePages` | `dev.pages` |
-| `server` | `dev` |
-| `build.base` | `output.base` |
-| `build.outDirName` | `output.dir` |
-| `build.outReport` | `output.report` |
-| `build.dependencyCycleCheck` | `output.checkCycles` |
-| `rspack` | `bundle.rspack` |
-| `rspack.cdnOptions` | `bundle.rspack.cdn` |
-| `vite` | `bundle.vite` |
+| v2 字段                      | v3 字段               |
+| ---------------------------- | --------------------- |
+| `target`                     | `app.target`          |
+| `quiet`                      | `log.level = 'quiet'` |
+| `bundler`                    | `bundle.adapter`      |
+| `define`                     | `source.define`       |
+| `resolve.alias`              | `source.alias`        |
+| `resolve.extensions`         | `source.extensions`   |
+| `enablePages`                | `dev.pages`           |
+| `server`                     | `dev`                 |
+| `build.base`                 | `output.base`         |
+| `build.outDirName`           | `output.dir`          |
+| `build.outReport`            | `output.report`       |
+| `build.dependencyCycleCheck` | `output.checkCycles`  |
+| `rspack`                     | `bundle.rspack`       |
+| `rspack.cdnOptions`          | `bundle.rspack.cdn`   |
+| `vite`                       | `bundle.vite`         |
 
 旧字段会被 v3 schema 拒绝，并输出迁移建议。

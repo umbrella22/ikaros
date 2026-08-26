@@ -1,8 +1,24 @@
-import type {
-  AdapterCapability,
-  BuildPlan,
-  BuildPlanOutput,
-} from './types'
+import type { AdapterCapability, BuildPlan, BuildPlanOutput } from './types'
+import { assertBuildPlansShape } from './build-plan-shape'
+
+/**
+ * platform.createPlans 消费边界守卫——外部/动态加载的 PlatformAdapter
+ * 只被校验 createPlans/run 是函数（platform-factory），其产物在此前未
+ * 经过任何类型化校验：没有插件 hook 时 applyBuildPlans 原样放行，
+ * diagnostics/capabilities/provenance 缺失会在本模块的
+ * plan.diagnostics.filter 处触发裸 TypeError。compile 与 inspect 都在
+ * applyAdapterCapabilities 之前调用本守卫，违规抛带 platform.createPlans
+ * 来源的 BuildPlanShapeError。
+ *
+ * 接收 unknown 输入，逐步校验顶层类型、数组元素有效性
+ * 和嵌套数组元素（如 diagnostics: [null]），确保所有边界异常都是
+ * BuildPlanShapeError 而非裸 TypeError。
+ */
+export function assertBuildPlansFromPlatform(
+  plans: unknown,
+): asserts plans is BuildPlan[] {
+  assertBuildPlansShape(plans, 'platform.createPlans')
+}
 
 type CapabilityInput = Pick<BuildPlan, 'bundler' | 'output'>
 

@@ -175,7 +175,9 @@ function readPluginName(plugin: unknown): string {
   return 'unknown'
 }
 
-function readDefinePluginOptions(plugin: unknown): Record<string, unknown> | undefined {
+function readDefinePluginOptions(
+  plugin: unknown,
+): Record<string, unknown> | undefined {
   if (
     plugin &&
     typeof plugin === 'object' &&
@@ -191,9 +193,11 @@ function readDefinePluginOptions(plugin: unknown): Record<string, unknown> | und
 describe('builtin framework plugins', () => {
   it('应把 env 注入 import.meta.env 并保持 source.define 为裸 key', async () => {
     const ctx = createCompileContext()
-    ctx.env = {
-      FOO: 'from-env',
-    }
+    Object.assign(ctx, {
+      env: {
+        FOO: 'from-env',
+      },
+    })
     const pluginManager = createPluginManager({
       compileContext: ctx,
       plugins: createBuiltinPlugins(ctx),
