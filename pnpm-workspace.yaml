@@ -6,6 +6,9 @@ allowBuilds:
   '@parcel/watcher': true
   esbuild: true
   unrs-resolver: true
+overrides:
+  # This upstream version pins 0.6.0; 0.6.1 fixes GHSA-vwc7-r8mq-g2x9 and GHSA-7q85-xj36-vmfc.
+  '@module-federation/dts-plugin@2.9.1>adm-zip': 0.6.1
 minimumReleaseAgeExclude:
   - '@rsdoctor/client@1.5.17'
   - '@rsdoctor/core@1.5.17'
@@ -49,10 +52,9 @@ minimumReleaseAgeExclude:
   - '@typescript/typescript-sunos-x64@7.0.2'
   - '@typescript/typescript-win32-arm64@7.0.2'
   - '@typescript/typescript-win32-x64@7.0.2'
-  - tsdown@0.22.4
+  - tsdown@0.22.4 || 0.22.12
   - typescript@7.0.2
   - vite@8.1.4
-  - tsdown@0.22.12
   - verkit@0.1.0
   - '@rspack/binding-darwin-arm64@2.2.0'
   - '@rspack/binding-darwin-x64@2.2.0'
@@ -70,3 +72,13 @@ minimumReleaseAgeExclude:
   - '@rspack/binding-win32-x64-msvc@2.2.0'
   - '@rspack/binding@2.2.0'
   - '@rspack/core@2.2.0'
+  - '@vizejs/native-darwin-arm64@0.429.1'
+  - '@vizejs/native-darwin-x64@0.429.1'
+  - '@vizejs/native-linux-arm64-gnu@0.429.1'
+  - '@vizejs/native-linux-arm64-musl@0.429.1'
+  - '@vizejs/native-linux-x64-gnu@0.429.1'
+  - '@vizejs/native-linux-x64-musl@0.429.1'
+  - '@vizejs/native-win32-arm64-msvc@0.429.1'
+  - '@vizejs/native-win32-x64-msvc@0.429.1'
+  - '@vizejs/native@0.429.1'
+  - '@vizejs/rspack-plugin@0.429.1'

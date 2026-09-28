@@ -1,9 +1,9 @@
 {
   "name": "ikaros-infra",
   "description": "ikaros-infra",
-  "packageManager": "pnpm@11.7.0",
+  "packageManager": "pnpm@11.27.1",
   "engines": {
-    "node": ">=20"
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
@@ -17,8 +17,10 @@
   "devDependencies": {
     "@ikaros-cli/eslint-plugin": "workspace:*",
     "@ikaros-cli/prettier-config": "workspace:*",
-    "@types/node": "^25.9.5",
-    "tsdown": "^0.22.14",
+    "@types/node": "^22.20.4",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.8",
+    "tsdown": "^0.23.0",
     "typescript": "^7.0.2"
   }
 }

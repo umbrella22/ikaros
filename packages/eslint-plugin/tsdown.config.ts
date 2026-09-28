@@ -7,7 +7,7 @@ export default defineConfig(({ watch }) => ({
   target: 'esnext',
   format: ['esm'],
   outDir: 'dist',
-  skipNodeModulesBundle: true,
+  deps: { neverBundle: true },
   minify: !watch,
   dts: true,
 }))

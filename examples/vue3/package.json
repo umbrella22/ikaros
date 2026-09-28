@@ -16,9 +16,9 @@
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
     "@ikaros-cli/plugin-vue": "workspace:*",
-    "axios": "^1.19.0",
-    "sass-embedded": "^1.103.1",
-    "vue": "^3.5.41",
-    "vue-router": "^5.2.0"
+    "axios": "^1.20.0",
+    "sass-embedded": "^1.104.1",
+    "vue": "^3.5.43",
+    "vue-router": "^5.3.1"
   }
 }

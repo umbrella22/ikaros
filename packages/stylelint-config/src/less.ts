@@ -5,3 +5,5 @@ const _extends = [
 ]
 
 export { _extends as extends }
+
+export default { extends: _extends }

@@ -2,7 +2,8 @@
 
 how to use
 
-only eslint9
+Requires ESLint >= 10.4.0. The package uses the TypeScript 6 compiler API for
+parsing, independently of the TypeScript compiler used to build the project.
 
 eslint.config.mjs
 

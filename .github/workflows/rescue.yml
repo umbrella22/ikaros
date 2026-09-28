@@ -1,7 +1,7 @@
 name: Rescue Publish
 
-# 手动重新发布某个已存在的 tag。用于 release.yml 的 publish 步骤失败后重试，
-# 或对历史 tag 补发 npm 包。tag 形如 @ikaros-cli/ikaros@3.1.0。
+# Publish an existing release tag through the npm Trusted Publisher for rescue.yml.
+# release.yml dispatches this workflow; historical tags can also be retried manually.
 
 on:
   workflow_dispatch:
@@ -11,18 +11,24 @@ on:
         required: true
         type: string
       tag_name:
-        description: 'Existing tag to publish, e.g. @ikaros-cli/ikaros@3.1.0'
+        description: 'Existing tag to publish, e.g. @ikaros-cli/ikaros@v3.3.0'
         required: true
         type: string
+      frozen_lockfile:
+        description: 'Require an unchanged lockfile (enabled for automatic releases)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   publish:
-    name: Republish ${{ inputs.package_path }}
+    name: Publish ${{ inputs.package_path }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
     permissions:
       contents: read
+      id-token: write
     concurrency:
       group: rescue-${{ inputs.tag_name }}
       cancel-in-progress: false
@@ -31,64 +37,80 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: refs/tags/${{ inputs.tag_name }}
+          fetch-depth: 0
           persist-credentials: false
-
-      - name: Validate tag matches checkout
-        shell: bash
-        run: |
-          git fetch --force --tags
-          tag_ref="refs/tags/${{ inputs.tag_name }}"
-          if ! git rev-parse --verify "${tag_ref}" >/dev/null 2>&1; then
-            echo "Tag ${tag_ref} does not exist." >&2
-            exit 1
-          fi
-          head_commit="$(git rev-parse HEAD)"
-          tag_commit="$(git rev-list -n 1 "${tag_ref}")"
-          if [ "${head_commit}" != "${tag_commit}" ]; then
-            echo "Checked out commit ${head_commit} does not match tag ${tag_ref} (${tag_commit})." >&2
-            exit 1
-          fi
-
-      - name: Verify package path exists
-        shell: bash
-        run: |
-          if [ ! -f "${{ inputs.package_path }}/package.json" ]; then
-            echo "No package.json found at ${{ inputs.package_path }}" >&2
-            exit 1
-          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
+          check-latest: true
           package-manager-cache: false
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Enable pnpm
+      - name: Validate release tag and package
+        id: pkg
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag_name }}
+          PACKAGE_PATH: ${{ inputs.package_path }}
+        run: |
+          tag_commit="$(git rev-parse --verify "refs/tags/${RELEASE_TAG}^{commit}")"
+          head_commit="$(git rev-parse HEAD)"
+          if [[ "$head_commit" != "$tag_commit" ]]; then
+            echo "Checked out commit ${head_commit} does not match tag ${RELEASE_TAG} (${tag_commit})." >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs'
+          import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+
+          const packagesRoot = realpathSync('packages')
+          const packageDir = realpathSync(resolve(process.env.PACKAGE_PATH))
+          const packagePath = relative(packagesRoot, packageDir)
+          if (!packagePath || packagePath === '..' || packagePath.startsWith(`..${sep}`) || isAbsolute(packagePath)) {
+            throw new Error('Package directory must be inside packages/')
+          }
+          const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'))
+          if (pkg.private || typeof pkg.name !== 'string' || !pkg.name || typeof pkg.version !== 'string' || !pkg.version) {
+            throw new Error('Selected package must have a name and version and must not be private')
+          }
+          const expectedTag = `${pkg.name}@v${pkg.version}`
+          if (process.env.RELEASE_TAG !== expectedTag) {
+            throw new Error(`Release tag must be ${expectedTag} for the selected package`)
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `name=${pkg.name}\nversion=${pkg.version}\n`)
+          NODE
+
+      - name: Set up npm for trusted publishing
+        run: npm install --global npm@12.1.0
+
+      - name: Enable pnpm for the checked-out tag
         run: |
           corepack enable
-          corepack prepare pnpm@11.7.0 --activate
+          corepack install
 
       - name: Install dependencies
-        # 历史 tag 的 lockfile 可能与依赖不一致，这里允许 pnpm 适当调整。
-        run: pnpm install --no-frozen-lockfile
+        # Historical tags may need lockfile repair; automatic releases require a frozen lockfile.
+        run: pnpm install ${{ inputs.frozen_lockfile && '--frozen-lockfile' || '--no-frozen-lockfile' }}
 
       - name: Build package
         working-directory: ${{ inputs.package_path }}
         run: pnpm build
 
-      - name: Resolve package name
-        id: pkg
+      - name: Pack package
         working-directory: ${{ inputs.package_path }}
-        shell: bash
-        run: echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
+        # pnpm resolves workspace: dependency ranges in the published manifest.
+        run: pnpm pack --pack-destination "$RUNNER_TEMP/npm-package"
 
-      - name: Publish to npm
-        working-directory: ${{ inputs.package_path }}
-        run: pnpm publish --no-git-checks --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to npm with OIDC
+        run: npm publish "$RUNNER_TEMP/npm-package/"*.tgz --access public --provenance
 
       - name: Summary
+        env:
+          PACKAGE_NAME: ${{ steps.pkg.outputs.name }}
+          PACKAGE_VERSION: ${{ steps.pkg.outputs.version }}
+          RELEASE_TAG: ${{ inputs.tag_name }}
         run: |
-          echo "Republished \`${{ steps.pkg.outputs.name }}\` from tag \`${{ inputs.tag_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Published %s@%s from tag %s using npm Trusted Publishing.\n' \
+            "$PACKAGE_NAME" "$PACKAGE_VERSION" "$RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"

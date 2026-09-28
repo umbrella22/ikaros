@@ -24,6 +24,9 @@ pnpm add -D @ikaros-cli/ikaros
 - Node.js >= 22.12.0
 - pnpm >= 9.5.0
 
+开发本仓库需使用 Node.js `^22.18.0 || ^24.11.0 || >=26.0.0` 和
+`packageManager` 指定的 pnpm 11.27.1，以满足构建工具链的要求。
+
 ## 快速开始
 
 创建 `ikaros.config.mjs`：

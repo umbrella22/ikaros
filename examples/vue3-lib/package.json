@@ -25,8 +25,8 @@
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
     "@ikaros-cli/plugin-vue": "workspace:*",
-    "sass-embedded": "^1.103.1",
-    "vue": "^3.5.41"
+    "sass-embedded": "^1.104.1",
+    "vue": "^3.5.43"
   },
   "peerDependencies": {
     "vue": "^3.5.0"

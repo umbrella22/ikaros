@@ -63,6 +63,14 @@
         "packages/contrlibs/ikaros-platform-desktop-client": {
             "component": "@ikaros-cli/ikaros-platform-desktop-client",
             "changelog-path": "CHANGELOG.md"
+        },
+        "packages/contrlibs/plugin-react": {
+            "component": "@ikaros-cli/plugin-react",
+            "changelog-path": "CHANGELOG.md"
+        },
+        "packages/contrlibs/plugin-vue": {
+            "component": "@ikaros-cli/plugin-vue",
+            "changelog-path": "CHANGELOG.md"
         }
     }
 }

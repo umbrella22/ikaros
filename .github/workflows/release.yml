@@ -18,6 +18,7 @@ jobs:
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       paths_released: ${{ steps.release.outputs.paths_released }}
+      release_outputs: ${{ toJSON(steps.release.outputs) }}
     steps:
       - uses: googleapis/release-please-action@v5
         id: release
@@ -27,59 +28,36 @@ jobs:
           manifest-file: .github/release-please-manifest.json
 
   publish:
-    name: Build and publish
+    name: Start npm publication
     needs: release-please
     if: needs.release-please.outputs.releases_created == 'true'
     runs-on: ubuntu-latest
-    environment: production
-    timeout-minutes: 20
+    timeout-minutes: 5
     permissions:
-      contents: read
-    concurrency:
-      group: publish-${{ github.ref }}
-      cancel-in-progress: false
+      actions: write
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
-        path: ${{ fromJson(needs.release-please.outputs.paths_released) }}
+        path: ${{ fromJSON(needs.release-please.outputs.paths_released) }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          package-manager-cache: false
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.7.0 --activate
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build package
-        working-directory: ${{ matrix.path }}
-        run: pnpm build
-
-      - name: Resolve package name
-        id: pkg
-        working-directory: ${{ matrix.path }}
-        shell: bash
-        run: echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
-
-      - name: Publish to npm
-        working-directory: ${{ matrix.path }}
-        run: pnpm publish --no-git-checks --access public
+      # A separate run keeps the OIDC workflow identity set to rescue.yml.
+      - name: Start trusted publishing workflow
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Summary
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WORKFLOW_REF: ${{ github.ref_name }}
+          PACKAGE_PATH: ${{ matrix.path }}
+          RELEASE_TAG: ${{ fromJSON(needs.release-please.outputs.release_outputs)[format('{0}--tag_name', matrix.path)] }}
         run: |
-          echo "Published \`${{ steps.pkg.outputs.name }}\` from \`${{ matrix.path }}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -z "$RELEASE_TAG" ]]; then
+            echo "No release tag was returned for ${PACKAGE_PATH}." >&2
+            exit 1
+          fi
+          gh workflow run rescue.yml \
+            --ref "$WORKFLOW_REF" \
+            -f package_path="$PACKAGE_PATH" \
+            -f tag_name="$RELEASE_TAG" \
+            -f frozen_lockfile=true
+          printf 'Publication of %s from %s was dispatched to Rescue Publish. Check that workflow run for the npm publication result.\n' \
+            "$RELEASE_TAG" "$PACKAGE_PATH" >> "$GITHUB_STEP_SUMMARY"

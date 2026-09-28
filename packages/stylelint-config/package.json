@@ -43,7 +43,7 @@
     "stylelint-order": "8.1.1"
   },
   "devDependencies": {
-    "postcss": "^8.5.26",
-    "stylelint": "^17.14.1"
+    "postcss": "^8.5.28",
+    "stylelint": "^17.15.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/plugin-react",
-  "version": "3.0.0",
+  "version": "3.2.1",
   "description": "Optional Rspack React support for @ikaros-cli/ikaros",
   "type": "module",
   "publishConfig": {
@@ -38,10 +38,10 @@
   },
   "dependencies": {
     "@rspack/plugin-react-refresh": "^2.0.2",
-    "react-refresh": "^0.18.0"
+    "react-refresh": "^0.19.0"
   },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.1"
   }
 }

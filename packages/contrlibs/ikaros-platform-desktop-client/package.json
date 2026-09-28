@@ -38,9 +38,9 @@
   },
   "devDependencies": {
     "@ikaros-cli/ikaros": "workspace:*",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.1"
   },
   "dependencies": {
-    "@rspack/core": "^2.1.10"
+    "@rspack/core": "^2.2.6"
   }
 }
