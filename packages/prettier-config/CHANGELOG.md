@@ -1,5 +1,12 @@
 # @ikaros-cli/prettier-config
 
+## [1.2.1](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/prettier-config@v1.2.0...@ikaros-cli/prettier-config@v1.2.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* update dependencies and automate trusted package releases ([c612b04](https://github.com/umbrella22/ikaros/commit/c612b04a29ddd3c0eb2748cb3534dc7a0241be1d))
+
 ## [1.2.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/prettier-config@v1.1.0...@ikaros-cli/prettier-config@v1.2.0) (2026-07-20)
 
 
