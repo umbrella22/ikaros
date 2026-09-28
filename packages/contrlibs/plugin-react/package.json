@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/plugin-react",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "description": "Optional Rspack React support for @ikaros-cli/ikaros",
   "type": "module",
   "publishConfig": {
