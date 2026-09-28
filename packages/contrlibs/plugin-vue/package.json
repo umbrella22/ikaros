@@ -1,6 +1,6 @@
 {
   "name": "@ikaros-cli/plugin-vue",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "description": "Optional Rspack Vue support for @ikaros-cli/ikaros",
   "type": "module",
   "publishConfig": {
