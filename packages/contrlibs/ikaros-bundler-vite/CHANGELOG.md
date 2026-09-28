@@ -1,5 +1,12 @@
 # @ikaros-cli/ikaros-bundler-vite
 
+## [3.4.1](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/ikaros-bundler-vite@v3.4.0...@ikaros-cli/ikaros-bundler-vite@v3.4.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* update dependencies and automate trusted package releases ([c612b04](https://github.com/umbrella22/ikaros/commit/c612b04a29ddd3c0eb2748cb3534dc7a0241be1d))
+
 ## [3.4.0](https://github.com/umbrella22/ikaros/compare/@ikaros-cli/ikaros-bundler-vite@v3.3.0...@ikaros-cli/ikaros-bundler-vite@v3.4.0) (2026-08-26)
 
 
