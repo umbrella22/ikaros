@@ -3,7 +3,7 @@
   "packages/eslint-plugin": "1.4.0",
   "packages/prettier-config": "1.2.0",
   "packages/stylelint-config": "1.4.0",
-  "packages/contrlibs/ikaros-bundler-vite": "3.4.0",
+  "packages/contrlibs/ikaros-bundler-vite": "3.4.1",
   "packages/contrlibs/ikaros-platform-desktop-client": "3.3.0",
   "packages/contrlibs/plugin-react": "3.2.1",
   "packages/contrlibs/plugin-vue": "3.2.1"
